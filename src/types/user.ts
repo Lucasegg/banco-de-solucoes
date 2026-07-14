@@ -1,4 +1,5 @@
 export type UserAchievementLevel = 'bronze' | 'silver' | 'gold';
+export type UserRole = 'member' | 'curator' | 'moderator' | 'admin';
 
 export interface UserStats {
   problemsSubmitted: number;
@@ -28,6 +29,7 @@ export interface UserProfile {
   username: string;
   email: string;
   role: string;
+  roleKey: UserRole;
   organization: string;
   city: string;
   state: string;

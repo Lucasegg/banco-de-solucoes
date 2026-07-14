@@ -10,6 +10,8 @@ import { Login, Register } from './pages/Auth';
 import { Profile } from './pages/Profile';
 import { ContributionDetails, ContributionsList } from './pages/Contributions';
 import { useAuth } from './hooks/useAuth';
+import { usePermissions } from './hooks/usePermissions';
+import { AdminPanel } from './pages/Admin';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -22,6 +24,7 @@ const pageToHashPath: Record<string, string> = {
   register: '/register',
   profile: '/profile',
   contributions: '/contributions',
+  admin: '/admin',
 };
 
 function normalizeHash(hash: string) {
@@ -41,6 +44,7 @@ function pageFromHash(hash: string) {
   if (path === '/login') return 'login';
   if (path === '/register') return 'register';
   if (path === '/profile') return 'profile';
+  if (path === '/admin') return 'admin';
   if (path === '/contributions') return 'contributions';
   if (path.startsWith('/contributions/')) return `contribution:${path.replace('/contributions/', '')}`;
   return 'home';
@@ -54,7 +58,8 @@ function hashFromPage(page: string) {
 }
 
 export function App() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const permissions = usePermissions(user);
   const [page, setPageState] = useState(() => pageFromHash(window.location.hash));
   const [kind, id] = page.split(':');
   const setPage = (nextPage: string) => {
@@ -75,10 +80,13 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && (page === 'profile' || page === 'contributions' || kind === 'contribution') && !isAuthenticated) {
+    if (!isLoading && (page === 'profile' || page === 'contributions' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
       setPage('login');
     }
-  }, [isAuthenticated, isLoading, page]);
+    if (!isLoading && page === 'admin' && isAuthenticated && !permissions.canAccessAdmin) {
+      setPage('profile');
+    }
+  }, [isAuthenticated, isLoading, page, permissions.canAccessAdmin]);
 
   return (
     <Layout currentPage={kind} onNavigate={setPage}>
@@ -93,6 +101,7 @@ export function App() {
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
       {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
+      {page === 'admin' && isAuthenticated && permissions.canAccessAdmin && <AdminPanel />}
       {page === 'contributions' && isAuthenticated && <ContributionsList onNavigate={setPage} />}
       {kind === 'contribution' && isAuthenticated && <ContributionDetails id={id} />}
     </Layout>

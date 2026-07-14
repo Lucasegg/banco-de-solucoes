@@ -22,6 +22,7 @@ export const defaultAchievements: UserAchievement[] = [
     level: 'gold',
     unlockedAt: '2026-05-20',
   },
+
 ];
 
 export const defaultStats: UserStats = {
@@ -40,6 +41,7 @@ export const mockUsers: MockUser[] = [
     email: 'marina@bancodesolucoes.dev',
     password: 'solucoes123',
     role: 'Gestora de inovação social',
+    roleKey: 'admin',
     organization: 'Rede Cidadã',
     city: 'Recife',
     state: 'PE',
@@ -62,6 +64,7 @@ export const mockUsers: MockUser[] = [
     email: 'diego@bancodesolucoes.dev',
     password: 'impacto123',
     role: 'Analista de políticas públicas',
+    roleKey: 'curator',
     organization: 'Observatório Urbano',
     city: 'São Paulo',
     state: 'SP',
@@ -81,6 +84,31 @@ export const mockUsers: MockUser[] = [
       emailNotifications: true,
       publicProfile: false,
       weeklyDigest: true,
+    },
+  },
+
+
+  {
+    id: 'user-luisa-moderadora',
+    name: 'Luísa Almeida',
+    username: 'luisa.almeida',
+    email: 'luisa@bancodesolucoes.dev',
+    password: 'moderar123',
+    role: 'Moderadora comunitária',
+    roleKey: 'moderator',
+    organization: 'Rede Cidadã',
+    city: 'Belo Horizonte',
+    state: 'MG',
+    country: 'Brasil',
+    bio: 'Acompanha reportes e mantém conversas seguras e construtivas.',
+    avatarUrl: 'https://ui-avatars.com/api/?name=LA&background=0f766e&color=fff',
+    createdAt: '2026-03-12',
+    stats: defaultStats,
+    achievements: defaultAchievements.slice(0, 2),
+    settings: {
+      emailNotifications: true,
+      publicProfile: true,
+      weeklyDigest: false,
     },
   },
 ];

@@ -38,6 +38,8 @@ export interface Contribution {
   createdAt: string;
   updatedAt: string;
   reviews: ContributionReview[];
+  reviewerId: string | null;
+  reviewerName: string | null;
 }
 
 export interface ContributionStats {

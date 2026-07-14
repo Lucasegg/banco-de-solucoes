@@ -1,6 +1,6 @@
 import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { defaultAchievements, defaultStats, mockUsers } from '../data/mockUsers';
-import type { MockUser, RegisterUserInput, UserProfile, UserSettings } from '../types/user';
+import type { MockUser, RegisterUserInput, UserProfile, UserRole, UserSettings } from '../types/user';
 
 export interface AuthContextValue {
   user: UserProfile | null;
@@ -17,9 +17,17 @@ const USERS_KEY = 'banco-de-solucoes.auth.users';
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function roleKeyOrMember(value: unknown): UserRole {
+  return value === 'curator' || value === 'moderator' || value === 'admin' ? value : 'member';
+}
+
+function normalizeUser(user: MockUser): MockUser {
+  return { ...user, roleKey: roleKeyOrMember(user.roleKey) };
+}
+
 function withoutPassword(user: MockUser): UserProfile {
   const { password: _password, ...profile } = user;
-  return profile;
+  return normalizeUser(profile as MockUser);
 }
 
 function readStoredUsers() {
@@ -28,7 +36,7 @@ function readStoredUsers() {
     if (!rawValue) return [];
     const parsed: unknown = JSON.parse(rawValue);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is MockUser => Boolean(item) && typeof item === 'object' && 'email' in item && 'password' in item);
+    return parsed.filter((item): item is MockUser => Boolean(item) && typeof item === 'object' && 'email' in item && 'password' in item).map(normalizeUser);
   } catch {
     return [];
   }
@@ -66,8 +74,8 @@ function createId() {
 }
 
 function mergeUsers(defaultUsers: MockUser[], storedUsers: MockUser[]) {
-  const usersByEmail = new Map(defaultUsers.map((user) => [user.email.toLowerCase(), user]));
-  storedUsers.forEach((storedUser) => usersByEmail.set(storedUser.email.toLowerCase(), storedUser));
+  const usersByEmail = new Map(defaultUsers.map((user) => [user.email.toLowerCase(), normalizeUser(user)]));
+  storedUsers.forEach((storedUser) => usersByEmail.set(storedUser.email.toLowerCase(), normalizeUser(storedUser)));
   return Array.from(usersByEmail.values());
 }
 
@@ -82,6 +90,7 @@ function buildRegisteredUser(input: RegisterUserInput): MockUser {
     email: input.email.trim().toLowerCase(),
     password: input.password,
     role: 'Colaborador(a)',
+    roleKey: 'member',
     organization: input.organization?.trim() || 'Comunidade Banco de Soluções',
     city: input.city?.trim() || 'Brasil',
     state: input.state?.trim() || 'BR',

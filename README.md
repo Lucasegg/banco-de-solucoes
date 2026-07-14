@@ -76,3 +76,7 @@ Leia o arquivo [CONTRIBUTING.md](CONTRIBUTING.md) para entender o fluxo de contr
 ## Licença
 
 Este projeto é open source. A licença definitiva será definida antes da primeira versão pública estável.
+
+## Decisões de arquitetura
+
+As decisões sobre hash routing, persistência local, autorização no domínio, relação entre moderação/discussões/contribuições e limitações de segurança local estão documentadas em [ARCHITECTURE_DECISIONS.md](./ARCHITECTURE_DECISIONS.md).
