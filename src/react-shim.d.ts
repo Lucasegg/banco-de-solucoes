@@ -41,6 +41,8 @@ declare module 'lucide-react' {
   export const Bookmark: any;
   export const DatabaseZap: any;
   export const Eye: any;
+  export const ExternalLink: any;
+  export const GitBranch: any;
   export const Globe2: any;
   export const Heart: any;
   export const MapPin: any;

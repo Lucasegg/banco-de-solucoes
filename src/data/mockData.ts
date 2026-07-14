@@ -934,3 +934,76 @@ export function validateMockDataRelationships() {
 }
 
 validateMockDataRelationships();
+
+export const solutionVersions = solutions.flatMap((solution, index) => {
+  const baseMonth = (index % 6) + 1;
+  return [
+    {
+      id: `${solution.id}-v1`,
+      solutionId: solution.id,
+      version: 'v1',
+      summary: 'Primeiro registro público da solução com escopo mínimo, responsáveis e hipóteses de impacto.',
+      changes: ['Definição do problema-alvo', 'Mapeamento dos atores locais', 'Indicadores iniciais de acompanhamento'],
+      createdAt: `2026-${String(baseMonth).padStart(2, '0')}-01`,
+      author: solution.author,
+    },
+    {
+      id: `${solution.id}-v2`,
+      solutionId: solution.id,
+      version: 'v2',
+      summary: 'Aprimoramento do plano de implantação a partir das primeiras validações comunitárias.',
+      changes: ['Inclusão de checklist operacional', 'Ajuste de estimativa de custo', 'Registro de evidências do piloto'],
+      createdAt: `2026-${String(baseMonth + 1).padStart(2, '0')}-12`,
+      author: solution.organization,
+    },
+    {
+      id: `${solution.id}-v3`,
+      solutionId: solution.id,
+      version: 'v3',
+      summary: 'Versão preparada para replicação em novos territórios com critérios de governança.',
+      changes: ['Padronização de papéis', 'Modelo de relatório de resultados', 'Orientações para adaptação local'],
+      createdAt: `2026-${String(baseMonth + 2).padStart(2, '0')}-24`,
+      author: 'Curadoria Banco de Soluções',
+    },
+  ];
+});
+
+export const evidences = solutions.flatMap((solution) => [
+  {
+    id: `${solution.id}-relatorio`,
+    solutionId: solution.id,
+    title: `Relatório de implantação: ${solution.title}`,
+    type: 'Relatório' as const,
+    url: solution.evidenceLinks[0],
+    description: 'Documento com metodologia, indicadores acompanhados, riscos observados e recomendações para próximos ciclos.',
+  },
+  {
+    id: `${solution.id}-indicadores`,
+    solutionId: solution.id,
+    title: `Painel de indicadores: ${solution.title}`,
+    type: 'Indicador' as const,
+    url: solution.evidenceLinks[1],
+    description: 'Base resumida com métricas de uso, evolução de adesão, custos estimados e sinais de impacto no território.',
+  },
+]);
+
+export const caseStudies = solutions.map((solution, index) => ({
+  id: `${solution.id}-caso-real`,
+  solutionId: solution.id,
+  city: solution.location.split(',')[0],
+  country: solution.country,
+  organization: solution.organization,
+  results: solution.impactMetric,
+  before: 'Processo fragmentado, pouca visibilidade sobre responsáveis e dificuldade para comparar resultados entre ciclos.',
+  after: 'Rotina documentada, indicadores compartilhados e aprendizados registrados para apoiar novas versões da solução.',
+  photos: [solution.image, `https://images.unsplash.com/photo-${index % 2 === 0 ? '1497366754035-f200968a6e72' : '1517048676732-d65bc937f952'}?auto=format&fit=crop&w=900&q=80`],
+}));
+
+export const improvements = solutions.map((solution) => ({
+  id: `${solution.id}-melhoria-governanca`,
+  solutionId: solution.id,
+  title: 'Melhoria de governança e mensuração',
+  summary: 'Conecta versões, evidências e casos reais para manter a solução viva e auditável ao longo do tempo.',
+  evidenceIds: evidences.filter((evidence) => evidence.solutionId === solution.id).map((evidence) => evidence.id),
+  caseStudyIds: caseStudies.filter((caseStudy) => caseStudy.solutionId === solution.id).map((caseStudy) => caseStudy.id),
+}));

@@ -37,6 +37,48 @@ export interface Problem {
   tags: string[];
 }
 
+export interface SolutionVersion {
+  id: string;
+  solutionId: string;
+  version: string;
+  summary: string;
+  changes: string[];
+  createdAt: string;
+  author: string;
+}
+
+export type EvidenceType = 'Relatório' | 'Pesquisa' | 'Indicador' | 'Repositório' | 'Notícia';
+
+export interface Evidence {
+  id: string;
+  solutionId: string;
+  title: string;
+  type: EvidenceType;
+  url: string;
+  description: string;
+}
+
+export interface CaseStudy {
+  id: string;
+  solutionId: string;
+  city: string;
+  country: string;
+  organization: string;
+  results: string;
+  before: string;
+  after: string;
+  photos: string[];
+}
+
+export interface Improvement {
+  id: string;
+  solutionId: string;
+  title: string;
+  summary: string;
+  evidenceIds: string[];
+  caseStudyIds: string[];
+}
+
 export interface Solution {
   id: string;
   title: string;
