@@ -6,6 +6,9 @@ import { ExploreProblems } from './pages/ExploreProblems';
 import { ExploreSolutions } from './pages/ExploreSolutions';
 import { ProblemForm, SolutionForm } from './pages/Forms';
 import { Home } from './pages/Home';
+import { Login, Register } from './pages/Auth';
+import { Profile } from './pages/Profile';
+import { useAuth } from './hooks/useAuth';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -14,6 +17,9 @@ const pageToHashPath: Record<string, string> = {
   'novo-problema': '/problems/new',
   'nova-solucao': '/solutions/new',
   sobre: '/about',
+  login: '/login',
+  register: '/register',
+  profile: '/profile',
 };
 
 function normalizeHash(hash: string) {
@@ -30,6 +36,9 @@ function pageFromHash(hash: string) {
   if (path === '/solutions/new') return 'nova-solucao';
   if (path.startsWith('/solutions/')) return `solucao:${path.replace('/solutions/', '')}`;
   if (path === '/about') return 'sobre';
+  if (path === '/login') return 'login';
+  if (path === '/register') return 'register';
+  if (path === '/profile') return 'profile';
   return 'home';
 }
 
@@ -40,6 +49,7 @@ function hashFromPage(page: string) {
 }
 
 export function App() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [page, setPageState] = useState(() => pageFromHash(window.location.hash));
   const [kind, id] = page.split(':');
   const setPage = (nextPage: string) => {
@@ -59,6 +69,12 @@ export function App() {
     return () => window.removeEventListener('hashchange', sync);
   }, []);
 
+  useEffect(() => {
+    if (!isLoading && page === 'profile' && !isAuthenticated) {
+      setPage('login');
+    }
+  }, [isAuthenticated, isLoading, page]);
+
   return (
     <Layout currentPage={kind} onNavigate={setPage}>
       {page === 'home' && <Home onNavigate={setPage} />}
@@ -69,6 +85,9 @@ export function App() {
       {page === 'novo-problema' && <ProblemForm />}
       {page === 'nova-solucao' && <SolutionForm />}
       {page === 'sobre' && <About />}
+      {page === 'login' && <Login onNavigate={setPage} />}
+      {page === 'register' && <Register onNavigate={setPage} />}
+      {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
     </Layout>
   );
 }

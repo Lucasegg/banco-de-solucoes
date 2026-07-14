@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { DatabaseZap } from 'lucide-react';
+import { DatabaseZap, LogIn } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,6 +18,8 @@ const links = [
 ];
 
 export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
+  const { user, isAuthenticated } = useAuth();
+
   return (
     <div className="min-h-screen bg-slate-50 text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-white/85 backdrop-blur">
@@ -30,7 +33,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
               <span className="text-xs text-muted">Problemas conectados a ação</span>
             </span>
           </button>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {links.map(([id, label]) => (
               <button
                 key={id}
@@ -42,6 +45,22 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
                 {label}
               </button>
             ))}
+            {isAuthenticated && user ? (
+              <button
+                onClick={() => onNavigate('profile')}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'profile' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
+              >
+                <img src={user.avatarUrl} alt={`Avatar de ${user.name}`} className="h-7 w-7 rounded-full object-cover" />
+                Perfil
+              </button>
+            ) : (
+              <button
+                onClick={() => onNavigate('login')}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'login' || currentPage === 'register' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
+              >
+                <LogIn size={16} /> Entrar
+              </button>
+            )}
           </div>
         </nav>
       </header>
