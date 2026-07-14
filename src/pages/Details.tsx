@@ -77,7 +77,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
             <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400"><Sparkles size={16} /> Encontrar Soluções</button>
           </div>
           <Feedback message={feedback} />
-          {showContributionForm && <ContributionForm targetType="problem" targetId={problem.id} targetTitle={problem.title} targetOwnerName={problem.author} fields={problemFields} onClose={() => setShowContributionForm(false)} />}
+          {showContributionForm && <ContributionForm targetType="problem" targetId={problem.id} fields={problemFields} onClose={() => setShowContributionForm(false)} />}
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
@@ -154,7 +154,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
           <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
           <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para a solução ${solution.title}`} /><button onClick={() => onNavigate(`problema:${related[0]?.id ?? problems[0].id}`)} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
           <Feedback message={feedback} />
-          {showContributionForm && <ContributionForm targetType="solution" targetId={solution.id} targetTitle={solution.title} targetOwnerName={solution.author} fields={solutionFields} onClose={() => setShowContributionForm(false)} />}
+          {showContributionForm && <ContributionForm targetType="solution" targetId={solution.id} fields={solutionFields} onClose={() => setShowContributionForm(false)} />}
           <SolutionKnowledgeTabs solution={solution} versions={versions} cases={realCases} references={references} improvements={solutionImprovements} />
         </div>
       </article>

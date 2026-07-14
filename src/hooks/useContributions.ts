@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Contribution, ContributionChange, ContributionReview, ContributionStats, ContributionStatus, ContributionTargetType, ContributionType, SerializableValue } from '../types/contribution';
+import { problems, solutions } from '../data/mockData';
 import type { UserProfile } from '../types/user';
 
 const STORAGE_KEY = 'banco-de-solucoes.contributions';
@@ -8,7 +9,7 @@ const statuses: ContributionStatus[] = ['Pendente', 'Em revisão', 'Aprovada', '
 const targetTypes: ContributionTargetType[] = ['problem', 'solution'];
 
 type Result = { ok: true; contribution?: Contribution } | { ok: false; message: string };
-export type CreateContributionInput = Omit<Contribution, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'reviews'>;
+export type CreateContributionInput = Pick<Contribution, 'targetType' | 'targetId' | 'type' | 'title' | 'description' | 'justification' | 'changes'>;
 
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
 function isSerializable(value: unknown): value is SerializableValue {
@@ -55,10 +56,27 @@ function persist(contributions: Contribution[]) {
 }
 function id(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function isCurator(user: UserProfile) { return /curadoria|curador|curadora|gestora|gestor|analista/i.test(user.role); }
+function normalizeOwner(value: string) { return value.trim().toLowerCase(); }
+function resolveTarget(targetType: ContributionTargetType, targetId: string) {
+  if (targetType === 'problem') {
+    const problem = problems.find((item) => item.id === targetId);
+    return problem ? { title: problem.title, owners: [problem.author] } : null;
+  }
+
+  const solution = solutions.find((item) => item.id === targetId);
+  return solution ? { title: solution.title, owners: [solution.author, solution.organization] } : null;
+}
+function isTargetOwner(contribution: Contribution, user: UserProfile) {
+  const target = resolveTarget(contribution.targetType, contribution.targetId);
+  if (!target) return false;
+  const identities = [user.name, user.organization].map(normalizeOwner);
+  return target.owners.map(normalizeOwner).some((owner) => identities.includes(owner));
+}
 
 export function canReviewContribution(contribution: Contribution, user: UserProfile | null) {
   if (!user || contribution.authorId === user.id) return false;
-  return contribution.targetOwnerName === user.name || isCurator(user);
+  if (contribution.status !== 'Pendente' && contribution.status !== 'Em revisão') return false;
+  return isTargetOwner(contribution, user) || isCurator(user);
 }
 
 export function calculateContributionStats(contributions: Contribution[], userId: string): ContributionStats {
@@ -85,8 +103,10 @@ export function useContributions(currentUser?: UserProfile | null) {
   const createContribution = useCallback((input: CreateContributionInput): Result => {
     if (!currentUser) return { ok: false, message: 'Entre para propor alterações.' };
     if (!input.title.trim() || !input.description.trim() || !input.justification.trim() || input.changes.length === 0) return { ok: false, message: 'Preencha título, descrição, justificativa e ao menos uma alteração.' };
+    const target = resolveTarget(input.targetType, input.targetId);
+    if (!target) return { ok: false, message: 'Alvo da contribuição não encontrado.' };
     const now = new Date().toISOString();
-    const contribution: Contribution = { ...input, id: id('contribution'), status: 'Pendente', createdAt: now, updatedAt: now, reviews: [] };
+    const contribution: Contribution = { ...input, targetTitle: target.title, targetOwnerName: target.owners.join(' · '), authorId: currentUser.id, authorName: currentUser.name, id: id('contribution'), status: 'Pendente', createdAt: now, updatedAt: now, reviews: [] };
     return save([contribution, ...contributions]) ? { ok: true, contribution } : { ok: false, message: 'Falha ao salvar a contribuição.' };
   }, [contributions, currentUser, save]);
   const cancelContribution = useCallback((contributionId: string): Result => {
@@ -97,6 +117,7 @@ export function useContributions(currentUser?: UserProfile | null) {
   const reviewContribution = useCallback((contributionId: string, status: 'Aprovada' | 'Rejeitada', message: string): Result => {
     const item = contributions.find((entry) => entry.id === contributionId);
     if (!item || !currentUser || !canReviewContribution(item, currentUser)) return { ok: false, message: 'Você não tem autorização para revisar esta contribuição.' };
+    if (item.status !== 'Pendente' && item.status !== 'Em revisão') return { ok: false, message: 'Somente contribuições pendentes ou em revisão podem ser revisadas.' };
     if (status === 'Rejeitada' && !message.trim()) return { ok: false, message: 'Informe uma justificativa para rejeitar.' };
     const review: ContributionReview = { id: id('review'), status, reviewerId: currentUser.id, reviewerName: currentUser.name, message: message.trim() || 'Contribuição aprovada.', createdAt: new Date().toISOString() };
     return save(contributions.map((entry) => entry.id === contributionId ? { ...entry, status, updatedAt: review.createdAt, reviews: [...entry.reviews, review] } : entry)) ? { ok: true } : { ok: false, message: 'Falha ao revisar.' };

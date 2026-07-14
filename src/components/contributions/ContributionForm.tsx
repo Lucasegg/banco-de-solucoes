@@ -8,7 +8,7 @@ import { useContributions } from '../../hooks/useContributions';
 type FieldOption = { field: string; label: string; value: SerializableValue };
 const contributionTypes: ContributionType[] = ['Correção', 'Atualização', 'Nova evidência', 'Novo caso real', 'Nova versão', 'Nova relação', 'Melhoria geral'];
 
-export function ContributionForm({ targetType, targetId, targetTitle, targetOwnerName, fields, onClose }: { targetType: ContributionTargetType; targetId: string; targetTitle: string; targetOwnerName: string; fields: FieldOption[]; onClose: () => void }) {
+export function ContributionForm({ targetType, targetId, fields, onClose }: { targetType: ContributionTargetType; targetId: string; fields: FieldOption[]; onClose: () => void }) {
   const { user } = useAuth();
   const contributions = useContributions(user);
   const [type, setType] = useState<ContributionType>('Melhoria geral');
@@ -30,7 +30,7 @@ export function ContributionForm({ targetType, targetId, targetTitle, targetOwne
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!user) return;
-    const result = contributions.createContribution({ targetType, targetId, targetTitle, targetOwnerName, type, title, description, justification, changes, authorId: user.id, authorName: user.name });
+    const result = contributions.createContribution({ targetType, targetId, type, title, description, justification, changes });
     if (!result.ok) { setFeedback(result.message); return; }
     setFeedback('Contribuição enviada e salva localmente.'); window.setTimeout(onClose, 800);
   };
