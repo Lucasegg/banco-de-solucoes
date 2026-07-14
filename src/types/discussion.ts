@@ -2,6 +2,12 @@ export type DiscussionTargetType = 'problem' | 'solution';
 export type ReactionType = 'like' | 'support' | 'interesting' | 'needsEvidence';
 export type BadgeLevel = 'bronze' | 'silver' | 'gold';
 
+export interface CommentReport {
+  userId: string;
+  reason: string;
+  createdAt: string;
+}
+
 export interface Comment {
   id: string;
   parentId: string | null;
@@ -15,6 +21,7 @@ export interface Comment {
   edited: boolean;
   deleted: boolean;
   bestAnswer: boolean;
+  reports: CommentReport[];
 }
 
 export interface Reaction {

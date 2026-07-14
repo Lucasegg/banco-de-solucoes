@@ -1,14 +1,14 @@
 import type { ChangeEvent } from 'react';
 import { useState } from 'react';
 
-export function CommentEditor({ placeholder = 'Compartilhe contexto, evidências ou uma resposta...', submitLabel = 'Comentar', onSubmit }: { placeholder?: string; submitLabel?: string; onSubmit: (content: string) => { ok: boolean; message?: string } }) {
-  const [content, setContent] = useState('');
+export function CommentEditor({ initialValue = '', placeholder = 'Compartilhe contexto, evidências ou uma resposta...', submitLabel = 'Comentar', onSubmit }: { initialValue?: string; placeholder?: string; submitLabel?: string; onSubmit: (content: string) => { ok: boolean; message?: string } }) {
+  const [content, setContent] = useState(initialValue);
   const [message, setMessage] = useState('');
 
   const submit = () => {
     const result = onSubmit(content);
     setMessage(result.message ?? '');
-    if (result.ok) setContent('');
+    if (result.ok && !initialValue) setContent('');
   };
 
   return (
