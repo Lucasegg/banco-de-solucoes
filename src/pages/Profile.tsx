@@ -21,8 +21,8 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
           <img src={user.avatarUrl} alt={`Avatar de ${user.name}`} className="-mt-20 h-32 w-32 rounded-3xl border-4 border-white object-cover shadow-soft" />
           <div>
             <h1 className="text-4xl font-semibold tracking-tight">{user.name}</h1>
-            <p className="mt-2 text-muted">{user.role} · {user.organization}</p>
-            <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted"><span className="inline-flex items-center gap-2"><Mail size={16} /> {user.email}</span><span className="inline-flex items-center gap-2"><MapPin size={16} /> {user.city}, {user.state}</span></div>
+            <p className="mt-2 text-muted">@{user.username} · {user.role} · {user.organization}</p>
+            <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted"><span className="inline-flex items-center gap-2"><Mail size={16} /> {user.email}</span><span className="inline-flex items-center gap-2"><MapPin size={16} /> {user.city}, {user.state}, {user.country}</span></div>
           </div>
           <button onClick={signOut} className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold hover:bg-slate-50"><LogOut size={16} /> Sair</button>
         </div>

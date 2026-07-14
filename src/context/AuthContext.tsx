@@ -55,9 +55,20 @@ function findUserByEmail(email: string, users: MockUser[]) {
   return users.find((item) => item.email.toLowerCase() === normalizedEmail);
 }
 
+function findUserByUsername(username: string, users: MockUser[]) {
+  const normalizedUsername = username.trim().toLowerCase();
+  return users.find((item) => item.username.toLowerCase() === normalizedUsername);
+}
+
 function createId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function mergeUsers(defaultUsers: MockUser[], storedUsers: MockUser[]) {
+  const usersByEmail = new Map(defaultUsers.map((user) => [user.email.toLowerCase(), user]));
+  storedUsers.forEach((storedUser) => usersByEmail.set(storedUser.email.toLowerCase(), storedUser));
+  return Array.from(usersByEmail.values());
 }
 
 function buildRegisteredUser(input: RegisterUserInput): MockUser {
@@ -67,14 +78,16 @@ function buildRegisteredUser(input: RegisterUserInput): MockUser {
   return {
     id: `user-${createId()}`,
     name,
+    username: input.username.trim().toLowerCase(),
     email: input.email.trim().toLowerCase(),
     password: input.password,
     role: 'Colaborador(a)',
     organization: input.organization?.trim() || 'Comunidade Banco de Soluções',
     city: input.city?.trim() || 'Brasil',
     state: input.state?.trim() || 'BR',
-    bio: 'Novo perfil preparado para contribuir com problemas, soluções e evidências.',
-    avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=0f172a&color=fff`,
+    country: input.country?.trim() || 'Brasil',
+    bio: input.bio?.trim() || 'Novo perfil preparado para contribuir com problemas, soluções e evidências.',
+    avatarUrl: input.avatarUrl?.trim() || `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=0f172a&color=fff`,
     createdAt: new Date().toISOString().slice(0, 10),
     stats: {
       ...defaultStats,
@@ -94,7 +107,7 @@ function buildRegisteredUser(input: RegisterUserInput): MockUser {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<MockUser[]>(() => [...mockUsers, ...readStoredUsers()]);
+  const [users, setUsers] = useState<MockUser[]>(() => mergeUsers(mockUsers, readStoredUsers()));
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -123,10 +136,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, message: 'Este e-mail já está cadastrado.' };
     }
 
+    if (findUserByUsername(input.username, users)) {
+      return { ok: false, message: 'Este nome de usuário já está cadastrado.' };
+    }
+
+    if (input.password !== input.confirmPassword) {
+      return { ok: false, message: 'A confirmação de senha não confere.' };
+    }
+
+    if (!input.acceptedTerms) {
+      return { ok: false, message: 'É necessário aceitar os termos para criar a conta.' };
+    }
+
     const nextUser = buildRegisteredUser(input);
-    const storedUsers = [...readStoredUsers(), nextUser];
-    writeStoredUsers(storedUsers);
-    setUsers((current) => [...current, nextUser]);
+    const nextUsers = [...users, nextUser];
+    writeStoredUsers(nextUsers);
+    setUsers(nextUsers);
     window.localStorage.setItem(SESSION_KEY, JSON.stringify({ email: nextUser.email, signedInAt: new Date().toISOString() }));
     setUser(withoutPassword(nextUser));
     return { ok: true };
@@ -141,7 +166,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     const nextUser = { ...user, settings: { ...user.settings, ...settings } };
     setUser(nextUser);
-    setUsers((current) => current.map((item) => item.id === nextUser.id ? { ...item, settings: nextUser.settings } : item));
+    setUsers((current) => {
+      const nextUsers = current.map((item) => item.id === nextUser.id ? { ...item, settings: nextUser.settings } : item);
+      writeStoredUsers(nextUsers);
+      return nextUsers;
+    });
   };
 
   const value = useMemo<AuthContextValue>(() => ({

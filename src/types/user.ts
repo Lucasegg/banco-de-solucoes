@@ -25,11 +25,13 @@ export interface UserSettings {
 export interface UserProfile {
   id: string;
   name: string;
+  username: string;
   email: string;
   role: string;
   organization: string;
   city: string;
   state: string;
+  country: string;
   bio: string;
   avatarUrl?: string;
   createdAt: string;
@@ -44,9 +46,15 @@ export interface MockUser extends UserProfile {
 
 export type RegisterUserInput = {
   name: string;
+  username: string;
   email: string;
   password: string;
+  confirmPassword: string;
   organization?: string;
   city?: string;
   state?: string;
+  country?: string;
+  avatarUrl?: string;
+  bio?: string;
+  acceptedTerms: boolean;
 };
