@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
+import type { CaseStudy, Evidence, Improvement, Solution, SolutionVersion } from '../types/domain';
 import { useEffect, useState } from 'react';
-import { Bookmark, Calendar, Eye, Heart, Lightbulb, MapPin, MessageCircle, Share2, Sparkles, UsersRound } from 'lucide-react';
-import { problems, solutions } from '../data/mockData';
+import { Bookmark, Calendar, Eye, ExternalLink, GitBranch, Heart, Lightbulb, MapPin, MessageCircle, Share2, Sparkles, UsersRound } from 'lucide-react';
+import { caseStudies, evidences, improvements, problems, solutions, solutionVersions } from '../data/mockData';
 import { useFavorites } from '../hooks/useFavorites';
 import { shareCurrentHashUrl, type ShareStatus } from '../utils/share';
 
@@ -67,6 +68,10 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const favorites = useFavorites('solutions');
   const [feedback, setFeedback] = useState('');
   const isFavorite = favorites.isFavorite(solution.id);
+  const versions = solutionVersions.filter((version) => version.solutionId === solution.id);
+  const references = evidences.filter((evidence) => evidence.solutionId === solution.id);
+  const realCases = caseStudies.filter((caseStudy) => caseStudy.solutionId === solution.id);
+  const solutionImprovements = improvements.filter((improvement) => improvement.solutionId === solution.id);
 
   useEffect(() => {
     if (!feedback) return undefined;
@@ -106,12 +111,51 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
           <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
           <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor melhoria" /><button onClick={() => onNavigate(`problema:${related[0]?.id ?? problems[0].id}`)} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
           <Feedback message={feedback} />
-          <div className="mt-8"><h2 className="text-lg font-semibold">Links de evidência</h2><ul className="mt-3 space-y-2 text-sm text-teal-700">{solution.evidenceLinks.map((link) => <li key={link}><a className="break-all underline underline-offset-4" href={link}>{link}</a></li>)}</ul></div>
+          <SolutionKnowledgeTabs solution={solution} versions={versions} cases={realCases} references={references} improvements={solutionImprovements} />
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Problemas relacionados</h2>{related.map((problem) => <button key={problem.id} onClick={() => onNavigate(`problema:${problem.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{problem.title}</strong><p className="mt-2 text-sm text-muted">{problem.category} · {problem.city}, {problem.state} · {problem.status}</p></button>)}</aside>
     </section>
   );
+}
+
+type KnowledgeTab = 'Resumo' | 'Versões' | 'Casos reais' | 'Referências';
+
+function SolutionKnowledgeTabs({ solution, versions, cases, references, improvements }: { solution: Solution; versions: SolutionVersion[]; cases: CaseStudy[]; references: Evidence[]; improvements: Improvement[] }) {
+  const [activeTab, setActiveTab] = useState<KnowledgeTab>('Resumo');
+  const tabs: KnowledgeTab[] = ['Resumo', 'Versões', 'Casos reais', 'Referências'];
+
+  return (
+    <div className="mt-10 rounded-[1.75rem] border border-teal-100 bg-teal-50/40 p-2">
+      <div className="grid gap-2 sm:grid-cols-4" role="tablist" aria-label="Conhecimento da solução">
+        {tabs.map((tab) => (
+          <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${activeTab === tab ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}>{tab}</button>
+        ))}
+      </div>
+      <div className="p-5">
+        {activeTab === 'Resumo' && <KnowledgeSummary solution={solution} versions={versions} cases={cases} references={references} improvements={improvements} />}
+        {activeTab === 'Versões' && <VersionTimeline versions={versions} />}
+        {activeTab === 'Casos reais' && <CaseStudyGrid cases={cases} />}
+        {activeTab === 'Referências' && <EvidenceList references={references} />}
+      </div>
+    </div>
+  );
+}
+
+function KnowledgeSummary({ solution, versions, cases, references, improvements }: { solution: Solution; versions: SolutionVersion[]; cases: CaseStudy[]; references: Evidence[]; improvements: Improvement[] }) {
+  return <div className="space-y-5"><div><h2 className="text-xl font-semibold">Histórico vivo da solução</h2><p className="mt-2 text-sm leading-6 text-muted">{solution.summary} O histórico conecta melhorias, evidências, versões e casos reais para apoiar evolução contínua.</p></div><div className="grid gap-3 md:grid-cols-4"><Info label="Versões" value={String(versions.length)} /><Info label="Melhorias" value={String(improvements.length)} /><Info label="Casos reais" value={String(cases.length)} /><Info label="Referências" value={String(references.length)} /></div>{improvements.map((improvement) => <div key={improvement.id} className="rounded-3xl bg-white p-5 shadow-sm"><h3 className="flex items-center gap-2 font-semibold"><GitBranch size={18} />{improvement.title}</h3><p className="mt-2 text-sm leading-6 text-muted">{improvement.summary}</p></div>)}</div>;
+}
+
+function VersionTimeline({ versions }: { versions: SolutionVersion[] }) {
+  return <div className="space-y-4">{versions.map((version, index) => <div key={version.id} className="grid gap-4 md:grid-cols-[90px_1fr]"><div className="flex items-start gap-3 md:block"><span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-teal-700 text-sm font-bold text-white">{version.version}</span>{index < versions.length - 1 && <span className="hidden h-full min-h-16 w-px bg-teal-200 md:mx-6 md:block" />}</div><div className="rounded-3xl bg-white p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{version.summary}</h3><span className="text-xs font-semibold uppercase tracking-wide text-teal-700">{formatDate(version.createdAt)}</span></div><p className="mt-1 text-sm text-muted">Autor: {version.author}</p><ul className="mt-3 grid gap-2 text-sm text-slate-700 md:grid-cols-3">{version.changes.map((change) => <li key={change} className="rounded-2xl bg-slate-50 px-3 py-2">{change}</li>)}</ul></div></div>)}</div>;
+}
+
+function CaseStudyGrid({ cases }: { cases: CaseStudy[] }) {
+  return <div className="grid gap-4">{cases.map((study) => <article key={study.id} className="overflow-hidden rounded-3xl bg-white shadow-sm"><div className="grid gap-0 md:grid-cols-[220px_1fr]"><img src={study.photos[0]} alt={`Foto do caso real em ${study.city}`} className="h-52 w-full object-cover md:h-full" /><div className="p-5"><Badge>{study.city}, {study.country}</Badge><h3 className="mt-3 text-lg font-semibold">{study.organization}</h3><p className="mt-2 text-sm font-semibold text-teal-800">{study.results}</p><div className="mt-4 grid gap-3 md:grid-cols-2"><Info label="Antes" value={study.before} /><Info label="Depois" value={study.after} /></div></div></div></article>)}</div>;
+}
+
+function EvidenceList({ references }: { references: Evidence[] }) {
+  return <div className="grid gap-3">{references.map((reference) => <a key={reference.id} href={reference.url} className="rounded-3xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"><span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-teal-700"><ExternalLink size={14} />{reference.type}</span><h3 className="mt-2 font-semibold text-slate-900">{reference.title}</h3><p className="mt-2 text-sm leading-6 text-muted">{reference.description}</p><p className="mt-2 break-all text-sm text-teal-700 underline underline-offset-4">{reference.url}</p></a>)}</div>;
 }
 
 function Badge({ children }: { children: ReactNode }) { return <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{children}</span>; }
