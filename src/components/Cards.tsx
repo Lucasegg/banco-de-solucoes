@@ -4,6 +4,8 @@ import type { Problem, Solution, SolutionStatus } from '../types/domain';
 
 interface CardActions {
   onOpen: (id: string) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: (id: string) => void;
 }
 
 const problemStatusStyles: Record<Problem['status'], string> = {
@@ -20,11 +22,12 @@ const solutionStatusStyles: Record<SolutionStatus, string> = {
   Arquivada: 'bg-slate-100 text-slate-600',
 };
 
-export function ProblemCard({ problem, onOpen }: { problem: Problem } & CardActions) {
+export function ProblemCard({ problem, onOpen, isFavorite, onToggleFavorite }: { problem: Problem } & CardActions) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-line bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
       <div className="relative h-48 overflow-hidden">
         <img src={problem.image} alt={`Imagem do problema ${problem.title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+        <button type="button" onClick={(event: { stopPropagation: () => void }) => { event.stopPropagation(); onToggleFavorite?.(problem.id); }} aria-pressed={isFavorite} aria-label={isFavorite ? `Remover ${problem.title} dos favoritos` : `Adicionar ${problem.title} aos favoritos`} className={`absolute right-4 top-4 rounded-full p-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 ${isFavorite ? 'bg-rose-600 text-white' : 'bg-white/90 text-slate-700 hover:text-rose-600'}`}><Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} /></button>
         <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${problemStatusStyles[problem.status]}`}>{problem.status}</span>
       </div>
       <div className="p-6">
@@ -51,11 +54,12 @@ function Metric({ icon, value, label }: { icon: ReactNode; value: number; label:
   return <span className="inline-flex items-center gap-1 rounded-2xl bg-slate-50 px-2.5 py-2">{icon}{value} <span className="hidden sm:inline">{label}</span></span>;
 }
 
-export function SolutionCard({ solution, onOpen }: { solution: Solution } & CardActions) {
+export function SolutionCard({ solution, onOpen, isFavorite, onToggleFavorite }: { solution: Solution } & CardActions) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
       <div className="relative h-44 overflow-hidden">
         <img src={solution.image} alt={`Imagem da solução ${solution.title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+        <button type="button" onClick={(event: { stopPropagation: () => void }) => { event.stopPropagation(); onToggleFavorite?.(solution.id); }} aria-pressed={isFavorite} aria-label={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} className={`absolute right-4 top-4 rounded-full p-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 ${isFavorite ? 'bg-rose-600 text-white' : 'bg-white/90 text-slate-700 hover:text-rose-600'}`}><Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} /></button>
         <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${solutionStatusStyles[solution.status]}`}>{solution.status}</span>
       </div>
       <div className="p-6">

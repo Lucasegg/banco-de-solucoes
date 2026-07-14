@@ -1,10 +1,38 @@
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Bookmark, Calendar, Eye, Heart, Lightbulb, MapPin, MessageCircle, Share2, Sparkles, UsersRound } from 'lucide-react';
 import { problems, solutions } from '../data/mockData';
+import { useFavorites } from '../hooks/useFavorites';
+import { shareCurrentHashUrl, type ShareStatus } from '../utils/share';
+
+function getShareMessage(status: ShareStatus, url: string) {
+  if (status === 'shared') return 'Link compartilhado.';
+  if (status === 'copied') return 'Link copiado.';
+  return `Não foi possível copiar automaticamente. Copie o link: ${url}`;
+}
 
 export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
   const problem = problems.find((item) => item.id === id) ?? problems[0];
   const related = solutions.filter((solution) => solution.relatedProblemIds.includes(problem.id));
+  const favorites = useFavorites('problems');
+  const [feedback, setFeedback] = useState('');
+  const isFavorite = favorites.isFavorite(problem.id);
+
+  useEffect(() => {
+    if (!feedback) return undefined;
+    const timeout = window.setTimeout(() => setFeedback(''), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [feedback]);
+
+  const share = async () => {
+    const result = await shareCurrentHashUrl(problem.title, problem.summary);
+    setFeedback(getShareMessage(result.status, result.url));
+  };
+
+  const toggleFavorite = () => {
+    favorites.toggleFavorite(problem.id);
+    setFeedback(isFavorite ? 'Problema removido dos favoritos.' : 'Problema adicionado aos favoritos.');
+  };
 
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -21,10 +49,11 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
             <Info icon={<Heart size={18} />} label="Curtidas" value={String(problem.likes)} />
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Action icon={<Share2 size={16} />} label="Compartilhar" />
-            <Action icon={<Heart size={16} />} label="Curtir" />
+            <Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar problema ${problem.title}`} />
+            <Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritado' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${problem.title} dos favoritos` : `Adicionar ${problem.title} aos favoritos`} />
             <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400"><Sparkles size={16} /> Encontrar Soluções</button>
           </div>
+          <Feedback message={feedback} />
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
@@ -35,6 +64,25 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
 export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
   const solution = solutions.find((item) => item.id === id) ?? solutions[0];
   const related = problems.filter((problem) => solution.relatedProblemIds.includes(problem.id));
+  const favorites = useFavorites('solutions');
+  const [feedback, setFeedback] = useState('');
+  const isFavorite = favorites.isFavorite(solution.id);
+
+  useEffect(() => {
+    if (!feedback) return undefined;
+    const timeout = window.setTimeout(() => setFeedback(''), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [feedback]);
+
+  const share = async () => {
+    const result = await shareCurrentHashUrl(solution.title, solution.summary);
+    setFeedback(getShareMessage(result.status, result.url));
+  };
+
+  const toggleFavorite = () => {
+    favorites.toggleFavorite(solution.id);
+    setFeedback(isFavorite ? 'Solução removida dos favoritos.' : 'Solução adicionada aos favoritos.');
+  };
 
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -56,7 +104,8 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
           </div>
           <div className="mt-8 flex flex-wrap gap-2">{solution.tags.map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
           <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
-          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" /><Action icon={<Heart size={16} />} label="Curtir" /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor melhoria" /><button onClick={() => onNavigate(`problema:${related[0]?.id ?? problems[0].id}`)} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor melhoria" /><button onClick={() => onNavigate(`problema:${related[0]?.id ?? problems[0].id}`)} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
+          <Feedback message={feedback} />
           <div className="mt-8"><h2 className="text-lg font-semibold">Links de evidência</h2><ul className="mt-3 space-y-2 text-sm text-teal-700">{solution.evidenceLinks.map((link) => <li key={link}><a className="break-all underline underline-offset-4" href={link}>{link}</a></li>)}</ul></div>
         </div>
       </article>
@@ -66,7 +115,8 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
 }
 
 function Badge({ children }: { children: ReactNode }) { return <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{children}</span>; }
-function Action({ icon, label }: { icon: ReactNode; label: string }) { return <button className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400">{icon}{label}</button>; }
+function Action({ icon, label, onClick, pressed, ariaLabel }: { icon: ReactNode; label: string; onClick?: () => void; pressed?: boolean; ariaLabel?: string }) { return <button onClick={onClick} aria-pressed={pressed} aria-label={ariaLabel ?? label} className={`inline-flex items-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400 ${pressed ? 'bg-rose-50 text-rose-700' : ''}`}>{icon}{label}</button>; }
+function Feedback({ message }: { message: string }) { return <p aria-live="polite" className="mt-4 break-words text-sm font-semibold text-slate-700">{message}</p>; }
 function Info({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) { return <div className="rounded-2xl bg-slate-50 p-4"><span className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted">{icon}{label}</span><p className="mt-2 text-sm font-semibold text-slate-800">{value}</p></div>; }
 function Metric({ icon, value, label }: { icon: ReactNode; value: number; label: string }) { return <span className="inline-flex items-center gap-2 rounded-2xl bg-teal-50 px-3 py-2 text-teal-800">{icon}{value} {label}</span>; }
 function formatDate(date: string) { return new Date(date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }); }
