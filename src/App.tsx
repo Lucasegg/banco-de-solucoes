@@ -7,7 +7,7 @@ import { ExploreSolutions } from './pages/ExploreSolutions';
 import { ProblemForm, SolutionForm } from './pages/Forms';
 import { Home } from './pages/Home';
 
-const pageToPath: Record<string, string> = {
+const pageToHashPath: Record<string, string> = {
   home: '/',
   problemas: '/problems',
   solucoes: '/solutions',
@@ -16,35 +16,47 @@ const pageToPath: Record<string, string> = {
   sobre: '/about',
 };
 
-function pageFromPath(pathname: string) {
-  if (pathname === '/problems') return 'problemas';
-  if (pathname === '/problems/new') return 'novo-problema';
-  if (pathname.startsWith('/problems/')) return `problema:${pathname.replace('/problems/', '')}`;
-  if (pathname === '/solutions') return 'solucoes';
-  if (pathname === '/solutions/new') return 'nova-solucao';
-  if (pathname.startsWith('/solutions/')) return `solucao:${pathname.replace('/solutions/', '')}`;
-  if (pathname === '/about') return 'sobre';
+function normalizeHash(hash: string) {
+  return hash.replace(/^#/, '') || '/';
+}
+
+function pageFromHash(hash: string) {
+  const path = normalizeHash(hash);
+
+  if (path === '/problems') return 'problemas';
+  if (path === '/problems/new') return 'novo-problema';
+  if (path.startsWith('/problems/')) return `problema:${path.replace('/problems/', '')}`;
+  if (path === '/solutions') return 'solucoes';
+  if (path === '/solutions/new') return 'nova-solucao';
+  if (path.startsWith('/solutions/')) return `solucao:${path.replace('/solutions/', '')}`;
+  if (path === '/about') return 'sobre';
   return 'home';
 }
 
-function pathFromPage(page: string) {
-  if (page.startsWith('problema:')) return `/problems/${page.replace('problema:', '')}`;
-  if (page.startsWith('solucao:')) return `/solutions/${page.replace('solucao:', '')}`;
-  return pageToPath[page] ?? '/';
+function hashFromPage(page: string) {
+  if (page.startsWith('problema:')) return `#/problems/${page.replace('problema:', '')}`;
+  if (page.startsWith('solucao:')) return `#/solutions/${page.replace('solucao:', '')}`;
+  return `#${pageToHashPath[page] ?? '/'}`;
 }
 
 export function App() {
-  const [page, setPageState] = useState(() => pageFromPath(window.location.pathname));
+  const [page, setPageState] = useState(() => pageFromHash(window.location.hash));
   const [kind, id] = page.split(':');
   const setPage = (nextPage: string) => {
-    setPageState(nextPage);
-    window.history.pushState(null, '', pathFromPage(nextPage));
+    const nextHash = hashFromPage(nextPage);
+
+    if (window.location.hash === nextHash) {
+      setPageState(nextPage);
+      return;
+    }
+
+    window.location.hash = nextHash;
   };
 
   useEffect(() => {
-    const sync = () => setPageState(pageFromPath(window.location.pathname));
-    window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
+    const sync = () => setPageState(pageFromHash(window.location.hash));
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
   }, []);
 
   return (
