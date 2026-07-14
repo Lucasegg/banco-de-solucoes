@@ -6,11 +6,14 @@ interface CardActions {
 }
 
 export function ProblemCard({ problem, onOpen }: { problem: Problem } & CardActions) {
+  const solutionCountLabel = `${problem.relatedSolutionIds.length} ${problem.relatedSolutionIds.length === 1 ? 'solução' : 'soluções'}`;
+
   return (
     <article className="group rounded-3xl border border-line bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
       <div className="mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
         <span className="rounded-full bg-slate-100 px-3 py-1">{problem.category}</span>
         <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{problem.impactLevel}</span>
+        <span className="rounded-full bg-sky-50 px-3 py-1 text-sky-700">{solutionCountLabel}</span>
       </div>
       <h3 className="text-xl font-semibold tracking-tight">{problem.title}</h3>
       <p className="mt-3 text-sm leading-6 text-muted">{problem.summary}</p>
