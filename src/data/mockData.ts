@@ -19,7 +19,6 @@ export const problems: Problem[] = [
     comments: 3,
     impactLevel: 'local',
     tags: ['infraestrutura', 'recife', 'colaboração'],
-    relatedSolutionIds: ['sensores-comunitarios-de-agua', 'mapa-pocos-comunitarios'],
   },
   {
     id: 'evasao-em-cursos-tecnicos-de-tecnologia',
@@ -39,7 +38,6 @@ export const problems: Problem[] = [
     comments: 4,
     impactLevel: 'regional',
     tags: ['educação', 'são paulo', 'colaboração'],
-    relatedSolutionIds: ['mentoria-open-source', 'laboratorios-praticos-tecnologia'],
   },
   {
     id: 'fila-longa-para-consultas-especializadas',
@@ -59,7 +57,6 @@ export const problems: Problem[] = [
     comments: 5,
     impactLevel: 'national',
     tags: ['saúde', 'manaus', 'colaboração'],
-    relatedSolutionIds: ['roteirizacao-doacoes-alimentos', 'geladeiras-solidarias-conectadas'],
   },
   {
     id: 'iluminacao-publica-insuficiente-em-pracas',
@@ -79,7 +76,6 @@ export const problems: Problem[] = [
     comments: 6,
     impactLevel: 'global',
     tags: ['segurança', 'porto alegre', 'colaboração'],
-    relatedSolutionIds: ['cooperativa-local', 'aplicativo-de-coleta'],
   },
   {
     id: 'baixa-conectividade-em-escolas-publicas',
@@ -99,7 +95,6 @@ export const problems: Problem[] = [
     comments: 7,
     impactLevel: 'local',
     tags: ['tecnologia', 'salvador', 'colaboração'],
-    relatedSolutionIds: ['sensores-comunitarios-de-agua', 'mapa-pocos-comunitarios'],
   },
   {
     id: 'atrasos-no-transporte-coletivo-periferico',
@@ -119,7 +114,6 @@ export const problems: Problem[] = [
     comments: 8,
     impactLevel: 'regional',
     tags: ['mobilidade', 'curitiba', 'colaboração'],
-    relatedSolutionIds: ['mentoria-open-source', 'laboratorios-praticos-tecnologia'],
   },
   {
     id: 'descarte-irregular-de-residuos-em-corregos',
@@ -139,7 +133,6 @@ export const problems: Problem[] = [
     comments: 9,
     impactLevel: 'national',
     tags: ['meio ambiente', 'fortaleza', 'colaboração'],
-    relatedSolutionIds: ['roteirizacao-doacoes-alimentos', 'geladeiras-solidarias-conectadas'],
   },
   {
     id: 'familias-sem-acesso-consistente-ao-cras',
@@ -159,7 +152,6 @@ export const problems: Problem[] = [
     comments: 10,
     impactLevel: 'global',
     tags: ['assistência social', 'belo horizonte', 'colaboração'],
-    relatedSolutionIds: ['cooperativa-local', 'aplicativo-de-coleta'],
   },
   {
     id: 'calcadas-inacessiveis-para-pessoas-idosas',
@@ -179,7 +171,6 @@ export const problems: Problem[] = [
     comments: 11,
     impactLevel: 'local',
     tags: ['outros', 'belém', 'colaboração'],
-    relatedSolutionIds: ['sensores-comunitarios-de-agua', 'mapa-pocos-comunitarios'],
   },
   {
     id: 'falta-de-coleta-seletiva-residencial',
@@ -199,7 +190,6 @@ export const problems: Problem[] = [
     comments: 12,
     impactLevel: 'regional',
     tags: ['infraestrutura', 'goiânia', 'colaboração'],
-    relatedSolutionIds: ['mentoria-open-source', 'laboratorios-praticos-tecnologia'],
   },
   {
     id: 'desperdicio-de-alimentos-em-feiras-livres',
@@ -219,7 +209,6 @@ export const problems: Problem[] = [
     comments: 13,
     impactLevel: 'national',
     tags: ['educação', 'rio de janeiro', 'colaboração'],
-    relatedSolutionIds: ['roteirizacao-doacoes-alimentos', 'geladeiras-solidarias-conectadas'],
   },
   {
     id: 'ruido-urbano-proximo-a-hospitais',
@@ -239,7 +228,6 @@ export const problems: Problem[] = [
     comments: 3,
     impactLevel: 'global',
     tags: ['saúde', 'florianópolis', 'colaboração'],
-    relatedSolutionIds: ['cooperativa-local', 'aplicativo-de-coleta'],
   },
   {
     id: 'acesso-irregular-à-agua-em-comunidades-rurais',
@@ -259,7 +247,6 @@ export const problems: Problem[] = [
     comments: 4,
     impactLevel: 'local',
     tags: ['segurança', 'natal', 'colaboração'],
-    relatedSolutionIds: ['sensores-comunitarios-de-agua', 'mapa-pocos-comunitarios'],
   },
   {
     id: 'inseguranca-no-entorno-de-escolas',
@@ -279,7 +266,6 @@ export const problems: Problem[] = [
     comments: 5,
     impactLevel: 'regional',
     tags: ['tecnologia', 'cuiabá', 'colaboração'],
-    relatedSolutionIds: ['mentoria-open-source', 'laboratorios-praticos-tecnologia'],
   },
   {
     id: 'ausencia-de-dados-sobre-enchentes-locais',
@@ -299,7 +285,6 @@ export const problems: Problem[] = [
     comments: 6,
     impactLevel: 'national',
     tags: ['mobilidade', 'brasília', 'colaboração'],
-    relatedSolutionIds: ['roteirizacao-doacoes-alimentos', 'geladeiras-solidarias-conectadas'],
   },
   {
     id: 'ciclovias-desconectadas-de-terminais',
@@ -319,7 +304,6 @@ export const problems: Problem[] = [
     comments: 7,
     impactLevel: 'global',
     tags: ['meio ambiente', 'vitória', 'colaboração'],
-    relatedSolutionIds: ['cooperativa-local', 'aplicativo-de-coleta'],
   },
   {
     id: 'postos-de-saude-sem-comunicacao-digital',
@@ -339,7 +323,6 @@ export const problems: Problem[] = [
     comments: 8,
     impactLevel: 'local',
     tags: ['assistência social', 'maceió', 'colaboração'],
-    relatedSolutionIds: ['sensores-comunitarios-de-agua', 'mapa-pocos-comunitarios'],
   },
   {
     id: 'pracas-sem-manutencao-comunitaria',
@@ -359,7 +342,6 @@ export const problems: Problem[] = [
     comments: 9,
     impactLevel: 'regional',
     tags: ['outros', 'teresina', 'colaboração'],
-    relatedSolutionIds: ['mentoria-open-source', 'laboratorios-praticos-tecnologia'],
   },
   {
     id: 'baixa-inclusao-digital-de-idosos',
@@ -379,7 +361,6 @@ export const problems: Problem[] = [
     comments: 10,
     impactLevel: 'national',
     tags: ['infraestrutura', 'joão pessoa', 'colaboração'],
-    relatedSolutionIds: ['roteirizacao-doacoes-alimentos', 'geladeiras-solidarias-conectadas'],
   },
   {
     id: 'animais-abandonados-em-areas-publicas',
@@ -399,7 +380,6 @@ export const problems: Problem[] = [
     comments: 11,
     impactLevel: 'global',
     tags: ['educação', 'campo grande', 'colaboração'],
-    relatedSolutionIds: ['cooperativa-local', 'aplicativo-de-coleta'],
   }
 ];
 
@@ -452,7 +432,7 @@ export const solutions: Solution[] = [
     likes: 31,
     comments: 4,
     views: 463,
-    relatedProblemIds: ['ausencia-de-dados-sobre-enchentes-locais'],
+    relatedProblemIds: ['acesso-irregular-à-agua-em-comunidades-rurais'],
     tags: ['tecnologia', 'colaboração', 'dados abertos'],
     evidenceLinks: ['https://example.org/evidencias/mapa-pocos-comunitarios', 'https://example.org/relatorios/mapa-pocos-comunitarios'],
   },
@@ -530,7 +510,7 @@ export const solutions: Solution[] = [
     likes: 52,
     comments: 7,
     views: 892,
-    relatedProblemIds: ['baixa-conectividade-em-escolas-publicas'],
+    relatedProblemIds: ['evasao-em-cursos-tecnicos-de-tecnologia'],
     tags: ['educação', 'colaboração', 'dados abertos'],
     evidenceLinks: ['https://example.org/evidencias/laboratorios-praticos-tecnologia', 'https://example.org/relatorios/laboratorios-praticos-tecnologia'],
   },
@@ -899,14 +879,14 @@ export const solutions: Solution[] = [
     evidenceLinks: ['https://example.org/evidencias/cras-movel-digital', 'https://example.org/relatorios/cras-movel-digital'],
   },
   {
-    id: 'microcredito-bairros',
-    title: 'Microcrédito orientado para bairros',
+    id: 'fundo-manutencao-pracas',
+    title: 'Fundo comunitário para manutenção de praças',
     summary: 'Iniciativa reutilizável com dados abertos, governança simples e implantação guiada para responder a problemas reais do território.',
     description: 'Esta solução documenta um caminho de implementação replicável, com responsáveis, indicadores de acompanhamento, evidências públicas e etapas práticas para adaptação por comunidades, organizações e governos locais.',
-    category: 'Empreendedorismo',
+    category: 'Infraestrutura',
     image: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=1200&q=80',
-    organization: 'Fundo Empreende Local',
-    author: 'Fundo Empreende Local',
+    organization: 'Zeladoria Compartilhada',
+    author: 'Zeladoria Compartilhada',
     createdAt: '2026-02-20',
     updatedAt: '2026-04-21',
     status: 'Proposta',
@@ -921,7 +901,36 @@ export const solutions: Solution[] = [
     comments: 4,
     views: 3037,
     relatedProblemIds: ['pracas-sem-manutencao-comunitaria'],
-    tags: ['empreendedorismo', 'colaboração', 'dados abertos'],
-    evidenceLinks: ['https://example.org/evidencias/microcredito-bairros', 'https://example.org/relatorios/microcredito-bairros'],
+    tags: ['infraestrutura', 'zeladoria', 'dados abertos'],
+    evidenceLinks: ['https://example.org/evidencias/fundo-manutencao-pracas', 'https://example.org/relatorios/fundo-manutencao-pracas'],
   },
 ];
+
+
+export function validateMockDataRelationships() {
+  const problemIds = new Set(problems.map((problem) => problem.id));
+  const solutionIds = new Set(solutions.map((solution) => solution.id));
+  const invalidProblemIds = solutions.flatMap((solution) =>
+    solution.relatedProblemIds
+      .filter((problemId) => !problemIds.has(problemId))
+      .map((problemId) => `${solution.id} -> ${problemId}`),
+  );
+  const duplicatedSolutionIds = solutions
+    .map((solution) => solution.id)
+    .filter((solutionId, index, allIds) => allIds.indexOf(solutionId) !== index);
+  const duplicatedProblemIds = problems
+    .map((problem) => problem.id)
+    .filter((problemId, index, allIds) => allIds.indexOf(problemId) !== index);
+
+  if (invalidProblemIds.length > 0 || duplicatedSolutionIds.length > 0 || duplicatedProblemIds.length > 0) {
+    throw new Error([
+      'Relacionamentos mockados inválidos.',
+      invalidProblemIds.length > 0 ? `IDs de problema inexistentes: ${invalidProblemIds.join(', ')}` : '',
+      duplicatedSolutionIds.length > 0 ? `IDs de solução duplicados: ${duplicatedSolutionIds.join(', ')}` : '',
+      duplicatedProblemIds.length > 0 ? `IDs de problema duplicados: ${duplicatedProblemIds.join(', ')}` : '',
+      `Total de soluções únicas validadas: ${solutionIds.size}`,
+    ].filter(Boolean).join(' '));
+  }
+}
+
+validateMockDataRelationships();

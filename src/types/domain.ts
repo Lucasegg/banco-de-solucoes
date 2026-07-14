@@ -35,7 +35,6 @@ export interface Problem {
   comments: number;
   impactLevel: ImpactLevel;
   tags: string[];
-  relatedSolutionIds: string[];
 }
 
 export interface Solution {
