@@ -4,16 +4,24 @@ import { Award, BarChart3, Bell, Eye, LogOut, Mail, MapPin, MessageCircle, Shiel
 import { useAuth } from '../hooks/useAuth';
 import { useContributions } from '../hooks/useContributions';
 import { useDiscussions } from '../hooks/useDiscussions';
+import { useModeration } from '../hooks/useModeration';
+import { usePermissions } from '../hooks/usePermissions';
 
 export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { user, logout, updateSettings } = useAuth();
   const discussions = useDiscussions();
   const contributionData = useContributions(user);
+  const moderation = useModeration(user);
+  const permissions = usePermissions(user);
 
   if (!user) return null;
 
   const reputation = discussions.reputations.find((item) => item.userId === user?.id);
   const userComments = discussions.allComments.filter((comment) => comment.authorId === user?.id && !comment.deleted);
+  const adminActions = moderation.actions.filter((action) => action.moderatorId === user.id);
+  const reviewedContributions = contributionData.contributions.filter((item) => item.reviewerId === user.id || item.reviews.some((review) => review.reviewerId === user.id));
+  const reviewedCases = moderation.cases.filter((item) => item.assignedToId === user.id);
+  const resolvedCases = reviewedCases.filter((item) => item.status === 'resolved');
 
   const signOut = () => {
     logout();
@@ -49,6 +57,16 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
               <Stat label="Reputação" value={reputation?.points ?? 0} suffix="pts" />
             </div>
           </section>
+
+          {permissions.canViewModerationHistory && <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck size={22} /> Métricas administrativas</h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-4">
+              <Stat label="Casos revisados" value={reviewedCases.length} />
+              <Stat label="Contribuições revisadas" value={reviewedContributions.length} />
+              <Stat label="Ações administrativas" value={adminActions.length} />
+              <Stat label="Casos resolvidos" value={resolvedCases.length} />
+            </div>
+          </section>}
 
           <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck size={22} /> Reputação</h2>

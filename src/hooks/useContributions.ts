@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import type { Contribution, ContributionChange, ContributionReview, ContributionStats, ContributionStatus, ContributionTargetType, ContributionType, SerializableValue } from '../types/contribution';
 import { problems, solutions } from '../data/mockData';
 import type { UserProfile } from '../types/user';
+import { addModerationAction } from './useModeration';
+import { getPermissions } from './usePermissions';
 
 const STORAGE_KEY = 'banco-de-solucoes.contributions';
 const contributionTypes: ContributionType[] = ['Correção', 'Atualização', 'Nova evidência', 'Novo caso real', 'Nova versão', 'Nova relação', 'Melhoria geral'];
@@ -43,19 +45,22 @@ function isContribution(value: unknown): value is Contribution {
     && typeof value.updatedAt === 'string'
     && Array.isArray(value.reviews) && value.reviews.every(isReview);
 }
+function normalizeContribution(value: unknown): Contribution | null {
+  if (!isContribution(value)) return null;
+  return { ...value, reviewerId: typeof value.reviewerId === 'string' ? value.reviewerId : null, reviewerName: typeof value.reviewerName === 'string' ? value.reviewerName : null };
+}
 function readContributions(): Contribution[] {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isContribution) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeContribution).filter((item): item is Contribution => item !== null) : [];
   } catch { return []; }
 }
 function persist(contributions: Contribution[]) {
   try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(contributions)); return true; } catch { return false; }
 }
 function id(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
-function isCurator(user: UserProfile) { return /curadoria|curador|curadora|gestora|gestor|analista/i.test(user.role); }
 function normalizeOwner(value: string) { return value.trim().toLowerCase(); }
 function resolveTarget(targetType: ContributionTargetType, targetId: string) {
   if (targetType === 'problem') {
@@ -76,7 +81,7 @@ function isTargetOwner(contribution: Contribution, user: UserProfile) {
 export function canReviewContribution(contribution: Contribution, user: UserProfile | null) {
   if (!user || contribution.authorId === user.id) return false;
   if (contribution.status !== 'Pendente' && contribution.status !== 'Em revisão') return false;
-  return isTargetOwner(contribution, user) || isCurator(user);
+  return isTargetOwner(contribution, user) || getPermissions(user).canReviewContributions;
 }
 
 export function calculateContributionStats(contributions: Contribution[], userId: string): ContributionStats {
@@ -106,7 +111,7 @@ export function useContributions(currentUser?: UserProfile | null) {
     const target = resolveTarget(input.targetType, input.targetId);
     if (!target) return { ok: false, message: 'Alvo da contribuição não encontrado.' };
     const now = new Date().toISOString();
-    const contribution: Contribution = { ...input, targetTitle: target.title, targetOwnerName: target.owners.join(' · '), authorId: currentUser.id, authorName: currentUser.name, id: id('contribution'), status: 'Pendente', createdAt: now, updatedAt: now, reviews: [] };
+    const contribution: Contribution = { ...input, targetTitle: target.title, targetOwnerName: target.owners.join(' · '), authorId: currentUser.id, authorName: currentUser.name, id: id('contribution'), status: 'Pendente', createdAt: now, updatedAt: now, reviews: [], reviewerId: null, reviewerName: null };
     return save([contribution, ...contributions]) ? { ok: true, contribution } : { ok: false, message: 'Falha ao salvar a contribuição.' };
   }, [contributions, currentUser, save]);
   const cancelContribution = useCallback((contributionId: string): Result => {
@@ -114,14 +119,27 @@ export function useContributions(currentUser?: UserProfile | null) {
     if (!item || !currentUser || item.authorId !== currentUser.id || item.status !== 'Pendente') return { ok: false, message: 'Somente o autor pode cancelar contribuição pendente.' };
     return save(contributions.map((entry) => entry.id === contributionId ? { ...entry, status: 'Cancelada', updatedAt: new Date().toISOString() } : entry)) ? { ok: true } : { ok: false, message: 'Falha ao cancelar.' };
   }, [contributions, currentUser, save]);
+  const assignReview = useCallback((contributionId: string): Result => {
+    const item = contributions.find((entry) => entry.id === contributionId);
+    if (!item || !currentUser || !canReviewContribution(item, currentUser)) return { ok: false, message: 'Você não tem autorização para assumir esta revisão.' };
+    if (item.reviewerId && item.reviewerId !== currentUser.id && currentUser.roleKey !== 'admin') return { ok: false, message: 'Revisão já atribuída a outro usuário.' };
+    const now = new Date().toISOString();
+    const next = { ...item, status: 'Em revisão' as const, reviewerId: currentUser.id, reviewerName: currentUser.name, updatedAt: now };
+    if (!save(contributions.map((entry) => entry.id === contributionId ? next : entry))) return { ok: false, message: 'Falha ao assumir revisão.' };
+    addModerationAction({ caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: 'contribution_assigned', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: 'Revisão de contribuição assumida.' });
+    return { ok: true, contribution: next };
+  }, [contributions, currentUser, save]);
   const reviewContribution = useCallback((contributionId: string, status: 'Aprovada' | 'Rejeitada', message: string): Result => {
     const item = contributions.find((entry) => entry.id === contributionId);
     if (!item || !currentUser || !canReviewContribution(item, currentUser)) return { ok: false, message: 'Você não tem autorização para revisar esta contribuição.' };
     if (item.status !== 'Pendente' && item.status !== 'Em revisão') return { ok: false, message: 'Somente contribuições pendentes ou em revisão podem ser revisadas.' };
+    if (item.reviewerId && item.reviewerId !== currentUser.id && currentUser.roleKey !== 'admin') return { ok: false, message: 'Somente o revisor responsável ou admin pode concluir esta revisão.' };
     if (status === 'Rejeitada' && !message.trim()) return { ok: false, message: 'Informe uma justificativa para rejeitar.' };
     const review: ContributionReview = { id: id('review'), status, reviewerId: currentUser.id, reviewerName: currentUser.name, message: message.trim() || 'Contribuição aprovada.', createdAt: new Date().toISOString() };
-    return save(contributions.map((entry) => entry.id === contributionId ? { ...entry, status, updatedAt: review.createdAt, reviews: [...entry.reviews, review] } : entry)) ? { ok: true } : { ok: false, message: 'Falha ao revisar.' };
+    const ok = save(contributions.map((entry) => entry.id === contributionId ? { ...entry, status, reviewerId: item.reviewerId ?? currentUser.id, reviewerName: item.reviewerName ?? currentUser.name, updatedAt: review.createdAt, reviews: [...entry.reviews, review] } : entry));
+    if (ok) addModerationAction({ caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: status === 'Aprovada' ? 'contribution_approved' : 'contribution_rejected', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: review.message });
+    return ok ? { ok: true } : { ok: false, message: 'Falha ao revisar.' };
   }, [contributions, currentUser, save]);
   const stats = useMemo(() => currentUser ? calculateContributionStats(contributions, currentUser.id) : null, [contributions, currentUser]);
-  return { contributions, storageError, stats, createContribution, cancelContribution, approveContribution: (idValue: string, msg = '') => reviewContribution(idValue, 'Aprovada', msg), rejectContribution: (idValue: string, msg: string) => reviewContribution(idValue, 'Rejeitada', msg), canReview: (c: Contribution) => canReviewContribution(c, currentUser ?? null) };
+  return { contributions, storageError, stats, createContribution, cancelContribution, approveContribution: (idValue: string, msg = '') => reviewContribution(idValue, 'Aprovada', msg), rejectContribution: (idValue: string, msg: string) => reviewContribution(idValue, 'Rejeitada', msg), assignReview, canReview: (c: Contribution) => canReviewContribution(c, currentUser ?? null) };
 }

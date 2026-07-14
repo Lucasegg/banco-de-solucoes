@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { ContentVisibility } from '../types/moderation';
 import type { Badge, Comment, CommentReport, DiscussionTargetType, Reaction, ReactionType, UserReputation } from '../types/discussion';
 import type { UserProfile } from '../types/user';
 import { useAuth } from './useAuth';
@@ -20,25 +21,13 @@ function isCommentReport(value: unknown): value is CommentReport {
   return isString(item.userId) && isString(item.reason) && isString(item.createdAt);
 }
 
-function isComment(value: unknown): value is Comment {
-  if (!value || typeof value !== 'object') return false;
+function isContentVisibility(value: unknown): value is ContentVisibility { return value === 'visible' || value === 'hidden' || value === 'removed'; }
+function normalizeComment(value: unknown): Comment | null {
+  if (!value || typeof value !== 'object') return null;
   const item = value as Record<string, unknown>;
-  return isString(item.id)
-    && (item.parentId === null || isString(item.parentId))
-    && (item.targetType === 'problem' || item.targetType === 'solution')
-    && isString(item.targetId)
-    && isString(item.authorId)
-    && isString(item.authorName)
-    && isString(item.content)
-    && isString(item.createdAt)
-    && isString(item.updatedAt)
-    && typeof item.edited === 'boolean'
-    && typeof item.deleted === 'boolean'
-    && typeof item.bestAnswer === 'boolean'
-    && Array.isArray(item.reports)
-    && item.reports.every(isCommentReport);
+  if (!(isString(item.id) && (item.parentId === null || isString(item.parentId)) && (item.targetType === 'problem' || item.targetType === 'solution') && isString(item.targetId) && isString(item.authorId) && isString(item.authorName) && isString(item.content) && isString(item.createdAt) && isString(item.updatedAt) && typeof item.edited === 'boolean' && typeof item.deleted === 'boolean' && typeof item.bestAnswer === 'boolean' && Array.isArray(item.reports) && item.reports.every(isCommentReport))) return null;
+  return { id: item.id, parentId: item.parentId, targetType: item.targetType, targetId: item.targetId, authorId: item.authorId, authorName: item.authorName, content: item.content, createdAt: item.createdAt, updatedAt: item.updatedAt, edited: item.edited, deleted: item.deleted, visibility: isContentVisibility(item.visibility) ? item.visibility : item.deleted ? 'removed' : 'visible', bestAnswer: item.bestAnswer, reports: item.reports };
 }
-
 function isReaction(value: unknown): value is Reaction {
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
@@ -50,7 +39,10 @@ function isReaction(value: unknown): value is Reaction {
 }
 
 function isCommentArray(value: unknown): value is Comment[] {
-  return Array.isArray(value) && value.every(isComment);
+  return Array.isArray(value) && value.every((item) => normalizeComment(item) !== null);
+}
+function normalizeCommentArray(value: unknown): Comment[] {
+  return Array.isArray(value) ? value.map(normalizeComment).filter((item): item is Comment => item !== null) : [];
 }
 
 function isReactionArray(value: unknown): value is Reaction[] {
@@ -90,7 +82,7 @@ function canManageTarget(user: UserProfile | null, targetOwnerNames: string[]) {
 
 export function useDiscussions(targetType?: DiscussionTargetType, targetId?: string, targetOwnerNames: string[] = []) {
   const { user } = useAuth();
-  const [comments, setComments, commentsStorageError] = useLocalStorageState<Comment[]>(COMMENTS_KEY, [], isCommentArray);
+  const [comments, setComments, commentsStorageError] = useLocalStorageState<Comment[]>(COMMENTS_KEY, [], isCommentArray, normalizeCommentArray);
   const [reactions, setReactions, reactionsStorageError] = useLocalStorageState<Reaction[]>(REACTIONS_KEY, [], isReactionArray);
   const canMarkBestAnswer = canManageTarget(user, targetOwnerNames);
 
@@ -101,7 +93,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (!content.trim()) return { ok: false, message: 'Escreva um comentário antes de publicar.' };
     if (getDepth(comments, parentId) > MAX_DEPTH) return { ok: false, message: 'Respostas são permitidas até três níveis.' };
     const now = new Date().toISOString();
-    const comment: Comment = { id: createId('comment'), parentId, targetType, targetId, authorId: user.id, authorName: user.name, content: content.trim(), createdAt: now, updatedAt: now, edited: false, deleted: false, bestAnswer: false, reports: [] };
+    const comment: Comment = { id: createId('comment'), parentId, targetType, targetId, authorId: user.id, authorName: user.name, content: content.trim(), createdAt: now, updatedAt: now, edited: false, deleted: false, visibility: 'visible', bestAnswer: false, reports: [] };
     setComments((current) => [comment, ...current]);
     return { ok: true };
   };
@@ -119,7 +111,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (!user) return { ok: false, message: 'Entre para excluir.' };
     const comment = comments.find((item) => item.id === commentId);
     if (!comment || comment.authorId !== user.id || comment.deleted) return { ok: false, message: 'Você só pode excluir seus comentários ativos.' };
-    setComments((current) => current.map((item) => item.id === commentId ? { ...item, deleted: true, bestAnswer: false, updatedAt: new Date().toISOString() } : item));
+    setComments((current) => current.map((item) => item.id === commentId ? { ...item, deleted: true, visibility: 'removed', bestAnswer: false, updatedAt: new Date().toISOString() } : item));
     return { ok: true };
   };
 

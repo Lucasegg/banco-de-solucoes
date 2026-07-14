@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { DatabaseZap, LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { usePermissions } from '../hooks/usePermissions';
 
 interface LayoutProps {
   children: ReactNode;
@@ -19,6 +20,7 @@ const links = [
 
 export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   const { user, isAuthenticated } = useAuth();
+  const permissions = usePermissions(user);
 
   return (
     <div className="min-h-screen bg-slate-50 text-ink">
@@ -53,6 +55,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
               >
                 Contribuições
               </button>
+              {permissions.canAccessAdmin && <button onClick={() => onNavigate('admin')} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'admin' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>Admin</button>}
               <button
                 onClick={() => onNavigate('profile')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'profile' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}

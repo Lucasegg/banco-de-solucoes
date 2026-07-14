@@ -1,6 +1,7 @@
 export type DiscussionTargetType = 'problem' | 'solution';
 export type ReactionType = 'like' | 'support' | 'interesting' | 'needsEvidence';
 export type BadgeLevel = 'bronze' | 'silver' | 'gold';
+import type { ContentVisibility } from './moderation';
 
 export interface CommentReport {
   userId: string;
@@ -20,6 +21,7 @@ export interface Comment {
   updatedAt: string;
   edited: boolean;
   deleted: boolean;
+  visibility: ContentVisibility;
   bestAnswer: boolean;
   reports: CommentReport[];
 }
