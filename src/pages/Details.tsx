@@ -2,9 +2,12 @@ import type { ReactNode } from 'react';
 import type { CaseStudy, Evidence, Improvement, Solution, SolutionVersion } from '../types/domain';
 import { useEffect, useState } from 'react';
 import { Bookmark, Calendar, Eye, ExternalLink, GitBranch, Heart, Lightbulb, MapPin, MessageCircle, Share2, Sparkles, UsersRound } from 'lucide-react';
+import { DiscussionList } from '../components/discussions/DiscussionList';
 import { caseStudies, evidences, improvements, problems, solutions, solutionVersions } from '../data/mockData';
+import { useDiscussions } from '../hooks/useDiscussions';
 import { useFavorites } from '../hooks/useFavorites';
 import { shareCurrentHashUrl, type ShareStatus } from '../utils/share';
+
 
 function getShareMessage(status: ShareStatus, url: string) {
   if (status === 'shared') return 'Link compartilhado.';
@@ -16,6 +19,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   const problem = problems.find((item) => item.id === id) ?? problems[0];
   const related = solutions.filter((solution) => solution.relatedProblemIds.includes(problem.id));
   const favorites = useFavorites('problems');
+  const discussion = useDiscussions('problem', problem.id, [problem.author]);
   const [feedback, setFeedback] = useState('');
   const isFavorite = favorites.isFavorite(problem.id);
 
@@ -58,6 +62,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
+      <div className="lg:col-span-2"><DiscussionList title="Discussão do problema" targetType="problem" comments={discussion.comments} reactions={discussion.reactions} currentUserId={discussion.currentUserId} canMarkBestAnswer={discussion.canMarkBestAnswer} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onReply={(content, parentId) => discussion.addComment(content, parentId)} onReact={discussion.toggleReaction} onMarkBestAnswer={discussion.markBestAnswer} onEdit={discussion.editComment} onDelete={discussion.deleteComment} onReport={discussion.reportComment} /></div>
     </section>
   );
 }
@@ -66,6 +71,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const solution = solutions.find((item) => item.id === id) ?? solutions[0];
   const related = problems.filter((problem) => solution.relatedProblemIds.includes(problem.id));
   const favorites = useFavorites('solutions');
+  const discussion = useDiscussions('solution', solution.id, [solution.author, solution.organization]);
   const [feedback, setFeedback] = useState('');
   const isFavorite = favorites.isFavorite(solution.id);
   const versions = solutionVersions.filter((version) => version.solutionId === solution.id);
@@ -115,6 +121,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Problemas relacionados</h2>{related.map((problem) => <button key={problem.id} onClick={() => onNavigate(`problema:${problem.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{problem.title}</strong><p className="mt-2 text-sm text-muted">{problem.category} · {problem.city}, {problem.state} · {problem.status}</p></button>)}</aside>
+      <div className="lg:col-span-2"><DiscussionList title="Discussão da solução" targetType="solution" comments={discussion.comments} reactions={discussion.reactions} currentUserId={discussion.currentUserId} canMarkBestAnswer={discussion.canMarkBestAnswer} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onReply={(content, parentId) => discussion.addComment(content, parentId)} onReact={discussion.toggleReaction} onMarkBestAnswer={discussion.markBestAnswer} onEdit={discussion.editComment} onDelete={discussion.deleteComment} onReport={discussion.reportComment} /></div>
     </section>
   );
 }

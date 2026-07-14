@@ -1,12 +1,17 @@
 import type { ChangeEvent } from 'react';
 import type { UserAchievement } from '../types/user';
-import { Award, BarChart3, Bell, Eye, LogOut, Mail, MapPin, ShieldCheck } from 'lucide-react';
+import { Award, BarChart3, Bell, Eye, LogOut, Mail, MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useDiscussions } from '../hooks/useDiscussions';
 
 export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { user, logout, updateSettings } = useAuth();
+  const discussions = useDiscussions();
 
   if (!user) return null;
+
+  const reputation = discussions.reputations.find((item) => item.userId === user?.id);
+  const userComments = discussions.allComments.filter((comment) => comment.authorId === user?.id && !comment.deleted);
 
   const signOut = () => {
     logout();
@@ -38,19 +43,38 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
               <Stat label="Favoritos" value={user.stats.favoritesSaved} />
               <Stat label="Revisões" value={user.stats.contributionsReviewed} />
               <Stat label="Impacto" value={user.stats.impactScore} suffix="pts" />
+              <Stat label="Comentários" value={reputation?.comments ?? 0} />
+              <Stat label="Reputação" value={reputation?.points ?? 0} suffix="pts" />
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck size={22} /> Reputação</h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-4">
+              <Stat label="Pontos" value={reputation?.points ?? 0} />
+              <Stat label="Discussões" value={reputation?.discussions ?? 0} />
+              <Stat label="Melhores respostas" value={reputation?.bestAnswers ?? 0} />
+              <Stat label="Reações recebidas" value={reputation?.reactionsReceived ?? 0} />
             </div>
           </section>
 
           <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-2xl font-semibold"><Award size={22} /> Conquistas</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
-              {user.achievements.map((achievement: UserAchievement) => (
+              {[...user.achievements, ...(reputation?.badges ?? [])].map((achievement: UserAchievement | NonNullable<typeof reputation>['badges'][number]) => (
                 <article key={achievement.id} className="rounded-3xl border border-line bg-slate-50 p-5">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase text-teal-700">{achievement.level}</span>
                   <h3 className="mt-4 font-semibold">{achievement.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-muted">{achievement.description}</p>
                 </article>
               ))}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold"><MessageCircle size={22} /> Comentários e discussões</h2>
+            <div className="mt-5 space-y-3">
+              {userComments.length > 0 ? userComments.slice(0, 6).map((comment) => <article key={comment.id} className="rounded-3xl bg-slate-50 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{comment.targetType === 'problem' ? 'Problema' : 'Solução'} · {new Date(comment.createdAt).toLocaleDateString('pt-BR')}</p><p className="mt-2 text-sm leading-6 text-slate-700">{comment.content}</p></article>) : <p className="rounded-3xl bg-slate-50 p-5 text-sm text-muted">Seus comentários e discussões aparecerão aqui.</p>}
             </div>
           </section>
         </div>
