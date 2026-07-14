@@ -36,7 +36,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
                 key={id}
                 onClick={() => onNavigate(id)}
                 className={`rounded-full px-3 py-2 text-sm transition ${
-                  currentPage === id ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+                  (currentPage === id || (currentPage === 'problema' && id === 'problemas') || (currentPage === 'solucao' && id === 'solucoes')) ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
                 }`}
               >
                 {label}

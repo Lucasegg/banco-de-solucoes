@@ -11,7 +11,9 @@ declare namespace JSX {
 declare module 'react' {
   export type ReactNode = unknown;
   export type FormEvent<T = Element> = { preventDefault(): void; currentTarget: T };
-  export function useState<T>(initialValue: T): [T, (value: T) => void];
+  export type ChangeEvent<T = Element> = { target: T; currentTarget: T };
+  export function useState<T>(initialValue: T | (() => T)): [T, (value: T | ((current: T) => T)) => void];
+  export function useEffect(effect: () => void | (() => void), deps?: unknown[]): void;
   export const StrictMode: (props: { children?: ReactNode }) => JSX.Element;
 }
 
@@ -30,11 +32,17 @@ declare module 'react-dom/client' {
 
 declare module 'lucide-react' {
   export const ArrowRight: any;
+  export const Calendar: any;
   export const Building2: any;
   export const DatabaseZap: any;
+  export const Eye: any;
   export const Globe2: any;
+  export const Heart: any;
   export const MapPin: any;
+  export const MessageCircle: any;
   export const Network: any;
+  export const Plus: any;
+  export const Share2: any;
   export const Sparkles: any;
   export const UsersRound: any;
 }
