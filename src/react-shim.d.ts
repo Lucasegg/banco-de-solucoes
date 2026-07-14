@@ -34,6 +34,10 @@ declare module 'lucide-react' {
   export const ArrowRight: any;
   export const Calendar: any;
   export const Building2: any;
+  export const CheckCircle2: any;
+  export const Gauge: any;
+  export const Lightbulb: any;
+  export const Bookmark: any;
   export const DatabaseZap: any;
   export const Eye: any;
   export const Globe2: any;

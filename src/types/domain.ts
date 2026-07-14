@@ -1,6 +1,8 @@
 export type ImpactLevel = 'local' | 'regional' | 'national' | 'global';
-export type Maturity = 'ideia' | 'piloto' | 'validada' | 'escala';
 export type ProblemStatus = 'Aberto' | 'Em andamento' | 'Resolvido';
+export type SolutionStatus = 'Proposta' | 'Em teste' | 'Implementada' | 'Validada' | 'Arquivada';
+export type SolutionMaturityLevel = 'Ideia' | 'Protótipo' | 'Piloto' | 'Em operação' | 'Escalável';
+export type ImplementationDifficulty = 'Baixa' | 'Média' | 'Alta';
 export type ProblemCategory =
   | 'Infraestrutura'
   | 'Educação'
@@ -10,7 +12,10 @@ export type ProblemCategory =
   | 'Mobilidade'
   | 'Meio Ambiente'
   | 'Assistência Social'
+  | 'Empreendedorismo'
   | 'Outros';
+
+export type SolutionCategory = ProblemCategory;
 
 export interface Problem {
   id: string;
@@ -30,7 +35,6 @@ export interface Problem {
   comments: number;
   impactLevel: ImpactLevel;
   tags: string[];
-  relatedSolutionIds: string[];
 }
 
 export interface Solution {
@@ -38,10 +42,24 @@ export interface Solution {
   title: string;
   summary: string;
   description: string;
-  maturity: Maturity;
+  category: SolutionCategory;
+  image: string;
   organization: string;
-  impactMetric: string;
-  tags: string[];
-  relatedProblemIds: string[];
+  author: string;
   createdAt: string;
+  updatedAt: string;
+  status: SolutionStatus;
+  maturityLevel: SolutionMaturityLevel;
+  implementationDifficulty: ImplementationDifficulty;
+  estimatedCost: string;
+  implementationTime: string;
+  location: string;
+  country: string;
+  impactMetric: string;
+  likes: number;
+  comments: number;
+  views: number;
+  relatedProblemIds: string[];
+  tags: string[];
+  evidenceLinks: string[];
 }
