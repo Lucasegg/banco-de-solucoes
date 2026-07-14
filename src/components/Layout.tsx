@@ -46,6 +46,13 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
               </button>
             ))}
             {isAuthenticated && user ? (
+              <>
+              <button
+                onClick={() => onNavigate('contributions')}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'contributions' || currentPage === 'contribution' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
+              >
+                Contribuições
+              </button>
               <button
                 onClick={() => onNavigate('profile')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'profile' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
@@ -53,6 +60,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
                 <img src={user.avatarUrl} alt={`Avatar de ${user.name}`} className="h-7 w-7 rounded-full object-cover" />
                 Perfil
               </button>
+              </>
             ) : (
               <button
                 onClick={() => onNavigate('login')}
