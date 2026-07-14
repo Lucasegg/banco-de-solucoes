@@ -2,9 +2,11 @@ import type { ReactNode } from 'react';
 import type { CaseStudy, Evidence, Improvement, Solution, SolutionVersion } from '../types/domain';
 import { useEffect, useState } from 'react';
 import { Bookmark, Calendar, Eye, ExternalLink, GitBranch, Heart, Lightbulb, MapPin, MessageCircle, Share2, Sparkles, UsersRound } from 'lucide-react';
+import { ContributionForm } from '../components/contributions/ContributionForm';
 import { DiscussionList } from '../components/discussions/DiscussionList';
 import { caseStudies, evidences, improvements, problems, solutions, solutionVersions } from '../data/mockData';
 import { useDiscussions } from '../hooks/useDiscussions';
+import { useAuth } from '../hooks/useAuth';
 import { useFavorites } from '../hooks/useFavorites';
 import { shareCurrentHashUrl, type ShareStatus } from '../utils/share';
 
@@ -19,6 +21,8 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   const problem = problems.find((item) => item.id === id) ?? problems[0];
   const related = solutions.filter((solution) => solution.relatedProblemIds.includes(problem.id));
   const favorites = useFavorites('problems');
+  const { user } = useAuth();
+  const [showContributionForm, setShowContributionForm] = useState(false);
   const discussion = useDiscussions('problem', problem.id, [problem.author]);
   const [feedback, setFeedback] = useState('');
   const isFavorite = favorites.isFavorite(problem.id);
@@ -39,6 +43,19 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
     setFeedback(isFavorite ? 'Problema removido dos favoritos.' : 'Problema adicionado aos favoritos.');
   };
 
+  const proposeContribution = () => {
+    if (!user) { setFeedback('Entre na sua conta para propor alteração.'); onNavigate('login'); return; }
+    setShowContributionForm(true);
+  };
+  const problemFields = [
+    { field: 'title', label: 'Título', value: problem.title },
+    { field: 'summary', label: 'Resumo', value: problem.summary },
+    { field: 'description', label: 'Descrição', value: problem.description },
+    { field: 'category', label: 'Categoria', value: problem.category },
+    { field: 'status', label: 'Status', value: problem.status },
+    { field: 'tags', label: 'Tags', value: problem.tags },
+  ];
+
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <article className="overflow-hidden rounded-[2rem] border border-line bg-white shadow-sm">
@@ -56,9 +73,11 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
           <div className="mt-8 flex flex-wrap gap-3">
             <Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar problema ${problem.title}`} />
             <Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritado' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${problem.title} dos favoritos` : `Adicionar ${problem.title} aos favoritos`} />
+            <Action icon={<GitBranch size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para o problema ${problem.title}`} />
             <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400"><Sparkles size={16} /> Encontrar Soluções</button>
           </div>
           <Feedback message={feedback} />
+          {showContributionForm && <ContributionForm targetType="problem" targetId={problem.id} targetTitle={problem.title} targetOwnerName={problem.author} fields={problemFields} onClose={() => setShowContributionForm(false)} />}
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
@@ -71,6 +90,8 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const solution = solutions.find((item) => item.id === id) ?? solutions[0];
   const related = problems.filter((problem) => solution.relatedProblemIds.includes(problem.id));
   const favorites = useFavorites('solutions');
+  const { user } = useAuth();
+  const [showContributionForm, setShowContributionForm] = useState(false);
   const discussion = useDiscussions('solution', solution.id, [solution.author, solution.organization]);
   const [feedback, setFeedback] = useState('');
   const isFavorite = favorites.isFavorite(solution.id);
@@ -95,6 +116,22 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
     setFeedback(isFavorite ? 'Solução removida dos favoritos.' : 'Solução adicionada aos favoritos.');
   };
 
+  const proposeContribution = () => {
+    if (!user) { setFeedback('Entre na sua conta para propor alteração.'); onNavigate('login'); return; }
+    setShowContributionForm(true);
+  };
+  const solutionFields = [
+    { field: 'title', label: 'Título', value: solution.title },
+    { field: 'summary', label: 'Resumo', value: solution.summary },
+    { field: 'description', label: 'Descrição', value: solution.description },
+    { field: 'category', label: 'Categoria', value: solution.category },
+    { field: 'status', label: 'Status', value: solution.status },
+    { field: 'maturityLevel', label: 'Maturidade', value: solution.maturityLevel },
+    { field: 'impactMetric', label: 'Métrica de impacto', value: solution.impactMetric },
+    { field: 'tags', label: 'Tags', value: solution.tags },
+    { field: 'relatedProblemIds', label: 'Problemas relacionados', value: solution.relatedProblemIds },
+  ];
+
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <article className="overflow-hidden rounded-[2rem] border border-teal-100 bg-white shadow-sm">
@@ -115,8 +152,9 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
           </div>
           <div className="mt-8 flex flex-wrap gap-2">{solution.tags.map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
           <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
-          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor melhoria" /><button onClick={() => onNavigate(`problema:${related[0]?.id ?? problems[0].id}`)} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para a solução ${solution.title}`} /><button onClick={() => onNavigate(`problema:${related[0]?.id ?? problems[0].id}`)} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
           <Feedback message={feedback} />
+          {showContributionForm && <ContributionForm targetType="solution" targetId={solution.id} targetTitle={solution.title} targetOwnerName={solution.author} fields={solutionFields} onClose={() => setShowContributionForm(false)} />}
           <SolutionKnowledgeTabs solution={solution} versions={versions} cases={realCases} references={references} improvements={solutionImprovements} />
         </div>
       </article>

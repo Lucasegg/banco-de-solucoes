@@ -8,6 +8,7 @@ import { ProblemForm, SolutionForm } from './pages/Forms';
 import { Home } from './pages/Home';
 import { Login, Register } from './pages/Auth';
 import { Profile } from './pages/Profile';
+import { ContributionDetails, ContributionsList } from './pages/Contributions';
 import { useAuth } from './hooks/useAuth';
 
 const pageToHashPath: Record<string, string> = {
@@ -20,6 +21,7 @@ const pageToHashPath: Record<string, string> = {
   login: '/login',
   register: '/register',
   profile: '/profile',
+  contributions: '/contributions',
 };
 
 function normalizeHash(hash: string) {
@@ -39,12 +41,15 @@ function pageFromHash(hash: string) {
   if (path === '/login') return 'login';
   if (path === '/register') return 'register';
   if (path === '/profile') return 'profile';
+  if (path === '/contributions') return 'contributions';
+  if (path.startsWith('/contributions/')) return `contribution:${path.replace('/contributions/', '')}`;
   return 'home';
 }
 
 function hashFromPage(page: string) {
   if (page.startsWith('problema:')) return `#/problems/${page.replace('problema:', '')}`;
   if (page.startsWith('solucao:')) return `#/solutions/${page.replace('solucao:', '')}`;
+  if (page.startsWith('contribution:')) return `#/contributions/${page.replace('contribution:', '')}`;
   return `#${pageToHashPath[page] ?? '/'}`;
 }
 
@@ -70,7 +75,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && page === 'profile' && !isAuthenticated) {
+    if (!isLoading && (page === 'profile' || page === 'contributions' || kind === 'contribution') && !isAuthenticated) {
       setPage('login');
     }
   }, [isAuthenticated, isLoading, page]);
@@ -88,6 +93,8 @@ export function App() {
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
       {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
+      {page === 'contributions' && isAuthenticated && <ContributionsList onNavigate={setPage} />}
+      {kind === 'contribution' && isAuthenticated && <ContributionDetails id={id} />}
     </Layout>
   );
 }

@@ -16,6 +16,8 @@ declare module 'react' {
   export function useState<T>(initialValue: T | (() => T)): [T, (value: T | ((current: T) => T)) => void];
   export function useEffect(effect: () => void | (() => void), deps?: unknown[]): void;
   export function useMemo<T>(factory: () => T, deps?: unknown[]): T;
+  export function useCallback<T extends (...args: any[]) => any>(callback: T, deps?: unknown[]): T;
+  export function useRef<T>(initialValue: T): { current: T };
   export function createContext<T>(defaultValue: T): { Provider: (props: { value: T; children?: ReactNode }) => JSX.Element };
   export function useContext<T>(context: { Provider: unknown }): T;
   const React: { StrictMode: (props: { children?: ReactNode }) => JSX.Element };

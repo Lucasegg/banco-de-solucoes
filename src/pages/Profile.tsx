@@ -2,11 +2,13 @@ import type { ChangeEvent } from 'react';
 import type { UserAchievement } from '../types/user';
 import { Award, BarChart3, Bell, Eye, LogOut, Mail, MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useContributions } from '../hooks/useContributions';
 import { useDiscussions } from '../hooks/useDiscussions';
 
 export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { user, logout, updateSettings } = useAuth();
   const discussions = useDiscussions();
+  const contributionData = useContributions(user);
 
   if (!user) return null;
 
@@ -58,10 +60,26 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
             </div>
           </section>
 
+
+          <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-2xl font-semibold"><Award size={22} /> Contribuições</h2><button onClick={() => onNavigate('contributions')} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Ver contribuições</button></div>
+            <div className="mt-5 grid gap-4 md:grid-cols-5">
+              <Stat label="Enviadas" value={contributionData.stats?.sent ?? 0} />
+              <Stat label="Aprovadas" value={contributionData.stats?.approved ?? 0} />
+              <Stat label="Rejeitadas" value={contributionData.stats?.rejected ?? 0} />
+              <Stat label="Taxa de aprovação" value={contributionData.stats?.approvalRate ?? 0} suffix="%" />
+              <Stat label="Reputação por contribuições" value={contributionData.stats?.reputationPoints ?? 0} suffix="pts" />
+            </div>
+            <div className="mt-5 space-y-3">
+              {contributionData.contributions.filter((item) => item.authorId === user.id).slice(0, 3).map((item) => <article key={item.id} className="rounded-3xl bg-slate-50 p-4 text-sm"><strong>{item.title}</strong><p className="mt-1 text-muted">{item.status} · {item.type} · {item.targetTitle}</p></article>)}
+              {contributionData.stats?.sent === 0 && <p className="rounded-3xl bg-slate-50 p-5 text-sm text-muted">Suas contribuições recentes aparecerão aqui.</p>}
+            </div>
+          </section>
+
           <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-2xl font-semibold"><Award size={22} /> Conquistas</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
-              {[...user.achievements, ...(reputation?.badges ?? [])].map((achievement: UserAchievement | NonNullable<typeof reputation>['badges'][number]) => (
+              {[...user.achievements, ...(reputation?.badges ?? []), ...(contributionData.stats?.badges ?? [])].map((achievement: UserAchievement | NonNullable<typeof reputation>['badges'][number]) => (
                 <article key={achievement.id} className="rounded-3xl border border-line bg-slate-50 p-5">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase text-teal-700">{achievement.level}</span>
                   <h3 className="mt-4 font-semibold">{achievement.title}</h3>
