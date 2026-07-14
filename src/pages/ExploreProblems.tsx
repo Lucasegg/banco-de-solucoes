@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { CatalogToolbar, type FilterSelectConfig } from '../components/CatalogToolbar';
+import { EmptyState } from '../components/EmptyState';
+import { Pagination } from '../components/Pagination';
 import { ProblemCard } from '../components/Cards';
 import { problems } from '../data/mockData';
 import type { ImpactLevel, Problem, ProblemCategory, ProblemStatus } from '../types/domain';
+import { useFavorites } from '../hooks/useFavorites';
+import { readHashQuery, updateHashQuery, parseBooleanParam, parseEnumParam, parsePositiveInteger } from '../utils/hashQuery';
 import { applyFilters, compareNewest, compareTitleAsc, getUniqueOptions, matchesSearch, sortItems, type FilterConfig, type SortOption } from '../utils/catalog';
 
 type ProblemFilters = Record<'category' | 'status' | 'city' | 'state' | 'impact', string>;
@@ -11,6 +15,8 @@ type ProblemFilters = Record<'category' | 'status' | 'city' | 'state' | 'impact'
 type ProblemSort = 'recent' | 'liked' | 'commented' | 'viewed' | 'alphabetical';
 
 const defaultFilters: ProblemFilters = { category: '', status: '', city: '', state: '', impact: '' };
+const itemsPerPage = 9;
+const problemSortValues: readonly ProblemSort[] = ['recent', 'liked', 'commented', 'viewed', 'alphabetical'];
 
 const impactLabels: Record<ImpactLevel, string> = {
   local: 'Local',
@@ -35,25 +41,18 @@ const filterConfig: FilterConfig<Problem, ProblemFilters> = {
   impact: (problem) => problem.impactLevel,
 };
 
-function getHashSearchParams() {
-  return new URLSearchParams((window.location.hash.split('?')[1] ?? '').split('#')[0]);
-}
-
-function updateHashQuery(params: URLSearchParams) {
-  const [path = '#/problems'] = window.location.hash.split('?');
-  const query = params.toString();
-  window.history.replaceState(null, '', `${path}${query ? `?${query}` : ''}`);
-}
-
 export function ExploreProblems({ onOpen, onNavigate }: { onOpen: (id: string) => void; onNavigate: (page: string) => void }) {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<ProblemFilters>(defaultFilters);
   const [sort, setSort] = useState<ProblemSort>('recent');
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const favorites = useFavorites('problems');
 
   useEffect(() => {
-    const params = getHashSearchParams();
+    const params = readHashQuery();
     setSearch(params.get('q') ?? '');
-    setSort((params.get('sort') as ProblemSort) || 'recent');
+    setSort(parseEnumParam(params.get('sort'), problemSortValues, 'recent'));
     setFilters({
       category: params.get('category') ?? '',
       status: params.get('status') ?? '',
@@ -61,22 +60,28 @@ export function ExploreProblems({ onOpen, onNavigate }: { onOpen: (id: string) =
       state: params.get('state') ?? '',
       impact: params.get('impact') ?? '',
     });
+    setFavoritesOnly(parseBooleanParam(params.get('favorites')));
+    setPage(parsePositiveInteger(params.get('page')));
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (search) params.set('q', search);
-    if (sort !== 'recent') params.set('sort', sort);
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.set(key, value);
-    });
-    updateHashQuery(params);
-  }, [filters, search, sort]);
+    updateHashQuery({ q: search, sort: sort !== 'recent' ? sort : '', favorites: favoritesOnly, page: page > 1 ? page : '', ...filters });
+  }, [favoritesOnly, filters, page, search, sort]);
 
   const filteredProblems = useMemo(() => {
     const searched = problems.filter((problem) => matchesSearch(problem, search, { fields: [(item) => item.title, (item) => item.description, (item) => item.tags] }));
-    return sortItems(applyFilters(searched, filters, filterConfig), sort, problemSortOptions);
-  }, [filters, search, sort]);
+    const filtered = applyFilters(searched, filters, filterConfig);
+    const favoritesFiltered = favoritesOnly ? filtered.filter((problem) => favorites.isFavorite(problem.id)) : filtered;
+    return sortItems(favoritesFiltered, sort, problemSortOptions);
+  }, [favorites, favoritesOnly, filters, search, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProblems.length / itemsPerPage));
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const paginatedProblems = filteredProblems.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const filterSelects: FilterSelectConfig[] = [
     { key: 'category', label: 'Categoria', value: filters.category, options: getUniqueOptions(problems, (problem) => problem.category).map((value) => ({ value: value as ProblemCategory, label: value })) },
@@ -86,11 +91,14 @@ export function ExploreProblems({ onOpen, onNavigate }: { onOpen: (id: string) =
     { key: 'impact', label: 'Impacto', value: filters.impact, options: getUniqueOptions(problems, (problem) => problem.impactLevel).map((value) => ({ value, label: impactLabels[value as ImpactLevel] })) },
   ];
 
-  const updateFilter = (key: string, value: string) => setFilters((current) => ({ ...current, [key]: value }));
+  const resetPage = () => setPage(1);
+  const updateFilter = (key: string, value: string) => { resetPage(); setFilters((current) => ({ ...current, [key]: value })); };
   const clearFilters = () => {
     setSearch('');
     setSort('recent');
     setFilters(defaultFilters);
+    setFavoritesOnly(false);
+    setPage(1);
   };
 
   return (
@@ -103,10 +111,13 @@ export function ExploreProblems({ onOpen, onNavigate }: { onOpen: (id: string) =
         </div>
         <button onClick={() => onNavigate('novo-problema')} className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"><Plus size={16} /> Novo problema</button>
       </div>
-      <CatalogToolbar search={search} searchPlaceholder="Pesquisar por título, descrição ou tags" filters={filterSelects} sort={sort} sortOptions={problemSortOptions} resultLabel={`${filteredProblems.length} ${filteredProblems.length === 1 ? 'problema encontrado' : 'problemas encontrados'}`} onSearchChange={setSearch} onFilterChange={updateFilter} onSortChange={(value) => setSort(value as ProblemSort)} onClear={clearFilters} />
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {filteredProblems.map((problem) => <ProblemCard key={problem.id} problem={problem} onOpen={onOpen} />)}
-      </div>
+      <CatalogToolbar search={search} searchPlaceholder="Pesquisar por título, descrição ou tags" filters={filterSelects} sort={sort} sortOptions={problemSortOptions} resultLabel={`${filteredProblems.length} ${filteredProblems.length === 1 ? 'problema encontrado' : 'problemas encontrados'}`} favoritesOnly={favoritesOnly} onSearchChange={(value) => { resetPage(); setSearch(value); }} onFilterChange={updateFilter} onSortChange={(value) => { resetPage(); setSort(value as ProblemSort); }} onFavoritesOnlyChange={(value) => { resetPage(); setFavoritesOnly(value); }} onClear={clearFilters} />
+      {filteredProblems.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite problemas para encontrá-los rapidamente neste filtro.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outros problemas.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {paginatedProblems.map((problem) => <ProblemCard key={problem.id} problem={problem} onOpen={onOpen} isFavorite={favorites.isFavorite(problem.id)} onToggleFavorite={favorites.toggleFavorite} />)}
+        </div>
+        <Pagination currentPage={page} totalItems={filteredProblems.length} itemsPerPage={itemsPerPage} onPageChange={setPage} />
+      </>}
     </section>
   );
 }

@@ -22,10 +22,12 @@ interface CatalogToolbarProps {
   onSearchChange: (value: string) => void;
   onFilterChange: (key: string, value: string) => void;
   onSortChange: (value: string) => void;
+  favoritesOnly: boolean;
+  onFavoritesOnlyChange: (value: boolean) => void;
   onClear: () => void;
 }
 
-export function CatalogToolbar({ search, searchPlaceholder, filters, sort, sortOptions, resultLabel, onSearchChange, onFilterChange, onSortChange, onClear }: CatalogToolbarProps) {
+export function CatalogToolbar({ search, searchPlaceholder, filters, sort, sortOptions, resultLabel, favoritesOnly, onSearchChange, onFilterChange, onSortChange, onFavoritesOnlyChange, onClear }: CatalogToolbarProps) {
   return (
     <div className="rounded-[2rem] border border-line bg-white p-4 shadow-sm md:p-5">
       <div className="flex flex-col gap-4">
@@ -55,7 +57,13 @@ export function CatalogToolbar({ search, searchPlaceholder, filters, sort, sortO
           ))}
         </div>
         <div className="flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-semibold text-slate-700">{resultLabel}</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <p className="text-sm font-semibold text-slate-700">{resultLabel}</p>
+            <label className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-slate-700">
+              <input type="checkbox" checked={favoritesOnly} onChange={(event: { target: { checked: boolean } }) => onFavoritesOnlyChange(event.target.checked)} className="h-4 w-4 rounded border-line text-slate-950 focus:ring-slate-300" />
+              Somente favoritos
+            </label>
+          </div>
           <button type="button" onClick={onClear} className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200">
             <X size={16} /> Limpar filtros
           </button>
