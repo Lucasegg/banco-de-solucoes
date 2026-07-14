@@ -63,7 +63,7 @@ export function App() {
     <Layout currentPage={kind} onNavigate={setPage}>
       {page === 'home' && <Home onNavigate={setPage} />}
       {page === 'problemas' && <ExploreProblems onNavigate={setPage} onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
-      {page === 'solucoes' && <ExploreSolutions onOpen={(solutionId) => setPage(`solucao:${solutionId}`)} />}
+      {page === 'solucoes' && <ExploreSolutions onNavigate={setPage} onOpen={(solutionId) => setPage(`solucao:${solutionId}`)} />}
       {kind === 'problema' && <ProblemDetails id={id} onNavigate={setPage} />}
       {kind === 'solucao' && <SolutionDetails id={id} onNavigate={setPage} />}
       {page === 'novo-problema' && <ProblemForm />}

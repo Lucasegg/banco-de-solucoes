@@ -1,23 +1,31 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Building2, Eye, Heart, MapPin, MessageCircle, Sparkles } from 'lucide-react';
-import type { Problem, Solution } from '../types/domain';
+import { ArrowRight, Building2, Eye, Gauge, Heart, MapPin, MessageCircle, Sparkles } from 'lucide-react';
+import type { Problem, Solution, SolutionStatus } from '../types/domain';
 
 interface CardActions {
   onOpen: (id: string) => void;
 }
 
-const statusStyles: Record<Problem['status'], string> = {
+const problemStatusStyles: Record<Problem['status'], string> = {
   Aberto: 'bg-amber-50 text-amber-700',
   'Em andamento': 'bg-sky-50 text-sky-700',
   Resolvido: 'bg-emerald-50 text-emerald-700',
+};
+
+const solutionStatusStyles: Record<SolutionStatus, string> = {
+  Proposta: 'bg-indigo-50 text-indigo-700',
+  'Em teste': 'bg-amber-50 text-amber-700',
+  Implementada: 'bg-emerald-50 text-emerald-700',
+  Validada: 'bg-teal-50 text-teal-700',
+  Arquivada: 'bg-slate-100 text-slate-600',
 };
 
 export function ProblemCard({ problem, onOpen }: { problem: Problem } & CardActions) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-line bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
       <div className="relative h-48 overflow-hidden">
-        <img src={problem.image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[problem.status]}`}>{problem.status}</span>
+        <img src={problem.image} alt={`Imagem do problema ${problem.title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${problemStatusStyles[problem.status]}`}>{problem.status}</span>
       </div>
       <div className="p-6">
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600">
@@ -31,7 +39,7 @@ export function ProblemCard({ problem, onOpen }: { problem: Problem } & CardActi
           <Metric icon={<MessageCircle size={15} />} value={problem.comments} label="comentários" />
           <Metric icon={<Eye size={15} />} value={problem.views} label="views" />
         </div>
-        <button className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white" onClick={() => onOpen(problem.id)}>
+        <button className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400" onClick={() => onOpen(problem.id)}>
           Ver detalhes <ArrowRight size={16} className="transition group-hover:translate-x-1" />
         </button>
       </div>
@@ -45,16 +53,28 @@ function Metric({ icon, value, label }: { icon: ReactNode; value: number; label:
 
 export function SolutionCard({ solution, onOpen }: { solution: Solution } & CardActions) {
   return (
-    <article className="group rounded-3xl border border-line bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
-      <div className="mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
-        <span className="rounded-full bg-violet-50 px-3 py-1 text-violet-700">{solution.maturity}</span>
-        <span className="rounded-full bg-slate-100 px-3 py-1">{solution.relatedProblemIds.length} problema(s)</span>
+    <article className="group overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
+      <div className="relative h-44 overflow-hidden">
+        <img src={solution.image} alt={`Imagem da solução ${solution.title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${solutionStatusStyles[solution.status]}`}>{solution.status}</span>
       </div>
-      <h3 className="text-xl font-semibold tracking-tight">{solution.title}</h3>
-      <p className="mt-3 text-sm leading-6 text-muted">{solution.summary}</p>
-      <div className="mt-5 flex items-center gap-2 text-sm text-slate-500"><Building2 size={16} /> {solution.organization}</div>
-      <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"><Sparkles size={16} className="mb-2" /> {solution.impactMetric}</div>
-      <button className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-950" onClick={() => onOpen(solution.id)}>Ver detalhes <ArrowRight size={16} className="transition group-hover:translate-x-1" /></button>
+      <div className="p-6">
+        <div className="mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
+          <span className="rounded-full bg-teal-50 px-3 py-1 text-teal-700">{solution.category}</span>
+          <span className="rounded-full bg-violet-50 px-3 py-1 text-violet-700">{solution.maturityLevel}</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1"><Gauge size={13} /> {solution.implementationDifficulty}</span>
+        </div>
+        <h3 className="text-xl font-semibold tracking-tight">{solution.title}</h3>
+        <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted">{solution.summary}</p>
+        <div className="mt-5 flex items-center gap-2 text-sm text-slate-500"><Building2 size={16} /> {solution.organization}</div>
+        <div className="mt-5 rounded-2xl bg-teal-50 p-4 text-sm text-teal-800"><Sparkles size={16} className="mb-2" /> {solution.impactMetric}</div>
+        <div className="mt-5 grid grid-cols-3 gap-2 text-xs text-slate-500">
+          <Metric icon={<Heart size={15} />} value={solution.likes} label="curtidas" />
+          <Metric icon={<MessageCircle size={15} />} value={solution.comments} label="comentários" />
+          <Metric icon={<Eye size={15} />} value={solution.views} label="views" />
+        </div>
+        <button className="mt-6 inline-flex items-center gap-2 rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400" onClick={() => onOpen(solution.id)}>Ver detalhes <ArrowRight size={16} className="transition group-hover:translate-x-1" /></button>
+      </div>
     </article>
   );
 }
