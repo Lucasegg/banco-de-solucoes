@@ -12,9 +12,14 @@ declare module 'react' {
   export type ReactNode = unknown;
   export type FormEvent<T = Element> = { preventDefault(): void; currentTarget: T };
   export type ChangeEvent<T = Element> = { target: T; currentTarget: T };
+  export type ContextType<T> = T extends { Provider: (props: { value: infer V; children?: ReactNode }) => JSX.Element } ? V : never;
   export function useState<T>(initialValue: T | (() => T)): [T, (value: T | ((current: T) => T)) => void];
   export function useEffect(effect: () => void | (() => void), deps?: unknown[]): void;
   export function useMemo<T>(factory: () => T, deps?: unknown[]): T;
+  export function createContext<T>(defaultValue: T): { Provider: (props: { value: T; children?: ReactNode }) => JSX.Element };
+  export function useContext<T>(context: { Provider: unknown }): T;
+  const React: { StrictMode: (props: { children?: ReactNode }) => JSX.Element };
+  export default React;
   export const StrictMode: (props: { children?: ReactNode }) => JSX.Element;
 }
 
@@ -55,6 +60,15 @@ declare module 'lucide-react' {
   export const Sparkles: any;
   export const UsersRound: any;
   export const X: any;
+  export const LogIn: any;
+  export const LockKeyhole: any;
+  export const UserPlus: any;
+  export const Award: any;
+  export const BarChart3: any;
+  export const Bell: any;
+  export const LogOut: any;
+  export const Mail: any;
+  export const ShieldCheck: any;
 }
 
 declare module '*.css';
