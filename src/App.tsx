@@ -21,7 +21,7 @@ function normalizeHash(hash: string) {
 }
 
 function pageFromHash(hash: string) {
-  const path = normalizeHash(hash);
+  const path = normalizeHash(hash).split('?')[0];
 
   if (path === '/problems') return 'problemas';
   if (path === '/problems/new') return 'novo-problema';

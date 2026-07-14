@@ -14,6 +14,7 @@ declare module 'react' {
   export type ChangeEvent<T = Element> = { target: T; currentTarget: T };
   export function useState<T>(initialValue: T | (() => T)): [T, (value: T | ((current: T) => T)) => void];
   export function useEffect(effect: () => void | (() => void), deps?: unknown[]): void;
+  export function useMemo<T>(factory: () => T, deps?: unknown[]): T;
   export const StrictMode: (props: { children?: ReactNode }) => JSX.Element;
 }
 
@@ -46,9 +47,12 @@ declare module 'lucide-react' {
   export const MessageCircle: any;
   export const Network: any;
   export const Plus: any;
+  export const Search: any;
   export const Share2: any;
+  export const SlidersHorizontal: any;
   export const Sparkles: any;
   export const UsersRound: any;
+  export const X: any;
 }
 
 declare module '*.css';
