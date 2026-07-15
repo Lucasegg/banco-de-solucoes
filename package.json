@@ -14,7 +14,7 @@
     "react": "latest",
     "react-dom": "latest",
     "lucide-react": "latest",
-    "@supabase/supabase-js": "latest"
+    "@supabase/supabase-js": "2.110.5"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17",

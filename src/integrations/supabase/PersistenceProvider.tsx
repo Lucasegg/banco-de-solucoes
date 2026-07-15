@@ -1,18 +1,15 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { localStorageAdapter } from '../../storage/LocalStorageAdapter';
 import type { StorageAdapter } from '../../storage/StorageAdapter';
-import { supabaseAdapter } from './SupabaseAdapter';
+import { supabaseAdapter, type AsyncSupabaseAdapter } from './SupabaseAdapter';
 
-export type PersistenceMode = 'local' | 'supabase';
+export type PersistenceMode = 'local';
 
 export interface PersistenceContextValue {
   activeAdapter: StorageAdapter;
-  activeAdapterName: 'LocalStorageAdapter' | 'SupabaseAdapter';
+  activeAdapterName: 'LocalStorageAdapter';
   mode: PersistenceMode;
-  availableAdapters: {
-    local: StorageAdapter;
-    supabase: StorageAdapter;
-  };
+  futureSupabaseAdapter: AsyncSupabaseAdapter;
 }
 
 const PersistenceContext = createContext<PersistenceContextValue | undefined>(undefined);
@@ -22,10 +19,7 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
     activeAdapter: localStorageAdapter,
     activeAdapterName: 'LocalStorageAdapter',
     mode: 'local',
-    availableAdapters: {
-      local: localStorageAdapter,
-      supabase: supabaseAdapter,
-    },
+    futureSupabaseAdapter: supabaseAdapter,
   }), []);
 
   return <PersistenceContext.Provider value={value}>{children}</PersistenceContext.Provider>;

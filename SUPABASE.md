@@ -9,13 +9,13 @@ O client fica em `src/integrations/supabase/client.ts` e usa as variáveis públ
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-Quando as variáveis não estão preenchidas, o client exportado é `null`. Isso permite que a aplicação rode localmente sem credenciais e evita ativar Supabase por acidente.
+Quando as variáveis não estão preenchidas, o client exportado é `null`. Isso permite que a aplicação rode localmente sem credenciais e evita ativar Supabase por acidente. O health check da tela de diagnósticos usa a REST API do projeto, com `HEAD /rest/v1/`, em vez de tratar sessão de Auth como conectividade geral.
 
 ## Adapter
 
-`src/integrations/supabase/SupabaseAdapter.ts` implementa a mesma interface de `StorageAdapter`. Nesta etapa, os métodos preservam as assinaturas compatíveis e retornam estados seguros temporários, registrando que a implementação ainda não foi ativada.
+`src/integrations/supabase/SupabaseAdapter.ts` é um scaffold assíncrono para uma migração futura. Ele não é registrado como substituto direto do `StorageAdapter`, porque o adapter atual é síncrono e Supabase depende de rede.
 
-O objetivo é permitir uma migração futura controlada, com baixo impacto nos hooks e repositórios.
+O objetivo é evitar uma falsa intercambialidade: antes de trocar o mecanismo ativo, os repositórios e hooks precisarão receber uma API assíncrona ou uma camada de serviço própria por domínio.
 
 ## Provider
 
@@ -23,7 +23,7 @@ O objetivo é permitir uma migração futura controlada, com baixo impacto nos h
 
 - adapter ativo: `LocalStorageAdapter`
 - modo: `local`
-- adapter Supabase disponível para troca futura
+- scaffold Supabase disponível como adapter futuro assíncrono
 
 A API pública dos hooks existentes não foi alterada.
 
@@ -51,9 +51,10 @@ Uma migração segura deve acontecer por etapas:
 1. modelar tabelas e políticas RLS;
 2. implementar métodos reais no `SupabaseAdapter`;
 3. criar testes de paridade entre adapters;
-4. ativar o `PersistenceProvider` por feature flag;
-5. migrar um domínio por vez;
-6. validar rollback para `LocalStorageAdapter` enquanto a migração estiver em progresso.
+4. adaptar hooks/repositórios para uma fronteira assíncrona ou criar serviços por domínio;
+5. ativar o `PersistenceProvider` por feature flag;
+6. migrar um domínio por vez;
+7. validar rollback para `LocalStorageAdapter` enquanto a migração estiver em progresso.
 
 ## Diagnósticos
 

@@ -1,46 +1,50 @@
-import type { StorageAdapter, StorageListOptions, StorageReadOptions, StorageTransactionOperation } from '../../storage/StorageAdapter';
 import { supabaseClient } from './client';
 
-function reportNotImplemented(method: string) {
-  console.info(`[SupabaseAdapter] ${method} ainda não implementado. LocalStorageAdapter segue ativo.`);
+export type SupabaseTransactionOperation =
+  | { type: 'set'; table: string; value: unknown }
+  | { type: 'remove'; table: string; filters: Record<string, unknown> };
+
+export interface AsyncSupabaseAdapter {
+  get<T>(table: string, id: string): Promise<T | null>;
+  set<T>(table: string, value: T): Promise<boolean>;
+  remove(table: string, id: string): Promise<boolean>;
+  list<T>(table: string): Promise<T[]>;
+  transaction(operations: SupabaseTransactionOperation[]): Promise<boolean>;
+  healthCheck(): Promise<boolean>;
 }
 
-export class SupabaseAdapter implements StorageAdapter {
+/**
+ * Adapter assíncrono preparado para uma migração futura.
+ *
+ * Ele NÃO substitui o StorageAdapter síncrono atual nesta sprint. O provider
+ * mantém o LocalStorageAdapter ativo porque chamadas Supabase dependem de rede
+ * e devem ser integradas com uma API assíncrona em uma migração dedicada.
+ */
+export class SupabaseAdapter implements AsyncSupabaseAdapter {
   readonly client = supabaseClient;
 
-  get<T>(_key: string, options: StorageReadOptions<T>): T {
-    reportNotImplemented('get');
-    return options.fallback;
+  async get<T>(_table: string, _id: string): Promise<T | null> {
+    return Promise.reject(new Error('SupabaseAdapter.get ainda não implementado.'));
   }
 
-  set<T>(_key: string, _value: T): boolean {
-    reportNotImplemented('set');
-    return false;
+  async set<T>(_table: string, _value: T): Promise<boolean> {
+    return Promise.reject(new Error('SupabaseAdapter.set ainda não implementado.'));
   }
 
-  remove(_key: string): boolean {
-    reportNotImplemented('remove');
-    return false;
+  async remove(_table: string, _id: string): Promise<boolean> {
+    return Promise.reject(new Error('SupabaseAdapter.remove ainda não implementado.'));
   }
 
-  list<T>(_key: string, _options: StorageListOptions<T>): T[] {
-    reportNotImplemented('list');
-    return [];
+  async list<T>(_table: string): Promise<T[]> {
+    return Promise.reject(new Error('SupabaseAdapter.list ainda não implementado.'));
   }
 
-  transaction(_operations: StorageTransactionOperation[]): boolean {
-    reportNotImplemented('transaction');
-    return false;
+  async transaction(_operations: SupabaseTransactionOperation[]): Promise<boolean> {
+    return Promise.reject(new Error('SupabaseAdapter.transaction exige desenho transacional específico por domínio.'));
   }
 
-  clear(_keys?: string[]): boolean {
-    reportNotImplemented('clear');
-    return false;
-  }
-
-  has(_key: string): boolean {
-    reportNotImplemented('has');
-    return false;
+  async healthCheck(): Promise<boolean> {
+    return Boolean(this.client);
   }
 }
 

@@ -1,44 +1,31 @@
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { supabaseConfig } from './config';
 
-type SupabaseSessionResult = { error?: { message?: string } | null };
-type SupabaseClient = {
-  auth: {
-    getSession: () => Promise<SupabaseSessionResult>;
-  };
-};
-
-type SupabaseModule = {
-  createClient: (url: string, anonKey: string, options: { auth: { persistSession: boolean; autoRefreshToken: boolean } }) => SupabaseClient;
-};
-
-let cachedClient: SupabaseClient | null | undefined;
-
-export async function getSupabaseClient() {
-  if (!supabaseConfig.isConfigured) return null;
-  if (cachedClient !== undefined) return cachedClient;
-
-  const module = await import(/* @vite-ignore */ '@supabase/supabase-js') as SupabaseModule;
-  cachedClient = module.createClient(supabaseConfig.url!, supabaseConfig.anonKey!, {
+export const supabaseClient: SupabaseClient | null = supabaseConfig.isConfigured
+  ? createClient(supabaseConfig.url!, supabaseConfig.anonKey!, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
-  });
-
-  return cachedClient;
-}
-
-export const supabaseClient = null;
+  })
+  : null;
 
 export async function checkSupabaseHealth() {
-  if (!supabaseConfig.isConfigured) return { ok: false, message: 'Supabase não configurado.' };
+  if (!supabaseConfig.isConfigured || !supabaseConfig.url || !supabaseConfig.anonKey) {
+    return { ok: false, message: 'Supabase não configurado.' };
+  }
 
   try {
-    const client = await getSupabaseClient();
-    if (!client) return { ok: false, message: 'Cliente Supabase indisponível.' };
-    const { error } = await client.auth.getSession();
-    if (error) return { ok: false, message: error.message ?? 'Falha no health check.' };
-    return { ok: true, message: 'Cliente Supabase respondeu.' };
+    const response = await fetch(`${supabaseConfig.url.replace(/\/$/, '')}/rest/v1/`, {
+      method: 'HEAD',
+      headers: {
+        apikey: supabaseConfig.anonKey,
+        Authorization: `Bearer ${supabaseConfig.anonKey}`,
+      },
+    });
+
+    if (!response.ok) return { ok: false, message: `Projeto respondeu com HTTP ${response.status}.` };
+    return { ok: true, message: 'Projeto Supabase acessível via REST API.' };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Falha desconhecida.' };
   }
