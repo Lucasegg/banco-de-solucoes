@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 import { Bookmark, Calendar, Eye, ExternalLink, GitBranch, Heart, Lightbulb, MapPin, MessageCircle, Share2, Sparkles, UsersRound } from 'lucide-react';
 import { ContributionForm } from '../components/contributions/ContributionForm';
 import { DiscussionList } from '../components/discussions/DiscussionList';
-import { caseStudies, evidences, improvements, problems, solutions, solutionVersions } from '../data/mockData';
+import { caseStudies, evidences, improvements, solutionVersions } from '../data/mockData';
+import { ProblemRepository } from '../repositories/problems';
+import { SolutionRepository } from '../repositories/solutions';
+import type { Problem } from '../types/domain';
 import { useDiscussions } from '../hooks/useDiscussions';
 import { useAuth } from '../hooks/useAuth';
 import { useFavorites } from '../hooks/useFavorites';
@@ -18,14 +21,33 @@ function getShareMessage(status: ShareStatus, url: string) {
 }
 
 export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
-  const problem = problems.find((item) => item.id === id) ?? problems[0];
-  const related = solutions.filter((solution) => solution.relatedProblemIds.includes(problem.id));
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [related, setRelated] = useState<Solution[]>([]);
+  const [loadError, setLoadError] = useState('');
   const favorites = useFavorites('problems');
   const { user } = useAuth();
   const [showContributionForm, setShowContributionForm] = useState(false);
-  const discussion = useDiscussions('problem', problem.id, [problem.author]);
+  const discussion = useDiscussions('problem', problem?.id ?? id, problem ? [problem.author] : []);
   const [feedback, setFeedback] = useState('');
-  const isFavorite = favorites.isFavorite(problem.id);
+  const isFavorite = problem ? favorites.isFavorite(problem.id) : false;
+
+  useEffect(() => {
+    let active = true;
+    async function loadProblem() {
+      if (!ProblemRepository || !SolutionRepository) { setLoadError('Supabase não configurado.'); return; }
+      const problemResult = await ProblemRepository.findById(id);
+      if (!active) return;
+      if (!problemResult.ok || !problemResult.data) { setLoadError(problemResult.ok ? 'Problema não encontrado.' : problemResult.message); return; }
+      setProblem(problemResult.data);
+      const solutionsResult = await SolutionRepository.listByProblemId(problemResult.data.id);
+      if (!active) return;
+      if (solutionsResult.ok) setRelated(solutionsResult.data); else setLoadError(solutionsResult.message);
+    }
+    void loadProblem();
+    return () => { active = false; };
+  }, [id]);
+
+  if (!problem) return <EmptyDetail message={loadError || 'Carregando problema no Supabase.'} />;
 
   useEffect(() => {
     if (!feedback) return undefined;
@@ -87,14 +109,33 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
 }
 
 export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
-  const solution = solutions.find((item) => item.id === id) ?? solutions[0];
-  const related = problems.filter((problem) => solution.relatedProblemIds.includes(problem.id));
+  const [solution, setSolution] = useState<Solution | null>(null);
+  const [related, setRelated] = useState<Problem[]>([]);
+  const [loadError, setLoadError] = useState('');
   const favorites = useFavorites('solutions');
   const { user } = useAuth();
   const [showContributionForm, setShowContributionForm] = useState(false);
-  const discussion = useDiscussions('solution', solution.id, [solution.author, solution.organization]);
+  const discussion = useDiscussions('solution', solution?.id ?? id, solution ? [solution.author, solution.organization] : []);
   const [feedback, setFeedback] = useState('');
-  const isFavorite = favorites.isFavorite(solution.id);
+  const isFavorite = solution ? favorites.isFavorite(solution.id) : false;
+
+  useEffect(() => {
+    let active = true;
+    async function loadSolution() {
+      if (!SolutionRepository || !ProblemRepository) { setLoadError('Supabase não configurado.'); return; }
+      const solutionResult = await SolutionRepository.findById(id);
+      if (!active) return;
+      if (!solutionResult.ok || !solutionResult.data) { setLoadError(solutionResult.ok ? 'Solução não encontrada.' : solutionResult.message); return; }
+      setSolution(solutionResult.data);
+      const problemsResult = await ProblemRepository.list();
+      if (!active) return;
+      if (problemsResult.ok) setRelated(problemsResult.data.filter((problem) => solutionResult.data!.relatedProblemIds.includes(problem.id))); else setLoadError(problemsResult.message);
+    }
+    void loadSolution();
+    return () => { active = false; };
+  }, [id]);
+
+  if (!solution) return <EmptyDetail message={loadError || 'Carregando solução no Supabase.'} />;
   const versions = solutionVersions.filter((version) => version.solutionId === solution.id);
   const references = evidences.filter((evidence) => evidence.solutionId === solution.id);
   const realCases = caseStudies.filter((caseStudy) => caseStudy.solutionId === solution.id);
@@ -152,7 +193,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
           </div>
           <div className="mt-8 flex flex-wrap gap-2">{solution.tags.map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
           <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
-          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para a solução ${solution.title}`} /><button onClick={() => onNavigate(`problema:${related[0]?.id ?? problems[0].id}`)} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para a solução ${solution.title}`} /><button onClick={() => onNavigate(related[0] ? `problema:${related[0].id}` : 'problemas')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
           <Feedback message={feedback} />
           {showContributionForm && <ContributionForm targetType="solution" targetId={solution.id} fields={solutionFields} onClose={() => setShowContributionForm(false)} />}
           <SolutionKnowledgeTabs solution={solution} versions={versions} cases={realCases} references={references} improvements={solutionImprovements} />
@@ -203,6 +244,7 @@ function EvidenceList({ references }: { references: Evidence[] }) {
   return <div className="grid gap-3">{references.map((reference) => <a key={reference.id} href={reference.url} className="rounded-3xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft"><span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-teal-700"><ExternalLink size={14} />{reference.type}</span><h3 className="mt-2 font-semibold text-slate-900">{reference.title}</h3><p className="mt-2 text-sm leading-6 text-muted">{reference.description}</p><p className="mt-2 break-all text-sm text-teal-700 underline underline-offset-4">{reference.url}</p></a>)}</div>;
 }
 
+function EmptyDetail({ message }: { message: string }) { return <section className="rounded-[2rem] border border-line bg-white p-8 text-sm font-semibold text-slate-700 shadow-sm">{message}</section>; }
 function Badge({ children }: { children: ReactNode }) { return <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{children}</span>; }
 function Action({ icon, label, onClick, pressed, ariaLabel }: { icon: ReactNode; label: string; onClick?: () => void; pressed?: boolean; ariaLabel?: string }) { return <button onClick={onClick} aria-pressed={pressed} aria-label={ariaLabel ?? label} className={`inline-flex items-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400 ${pressed ? 'bg-rose-50 text-rose-700' : ''}`}>{icon}{label}</button>; }
 function Feedback({ message }: { message: string }) { return <p aria-live="polite" className="mt-4 break-words text-sm font-semibold text-slate-700">{message}</p>; }

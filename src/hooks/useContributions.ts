@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Contribution, ContributionReview, ContributionStats, ContributionTargetType } from '../types/contribution';
 import { ContributionRepository, isContribution } from '../repositories/contributions';
-import { ProblemRepository } from '../repositories/problems';
-import { SolutionRepository } from '../repositories/solutions';
+import { problems, solutions } from '../data/mockData';
 import type { UserProfile } from '../types/user';
 import { getPermissions } from './usePermissions';
 
@@ -18,11 +17,11 @@ function id(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().to
 function normalizeOwner(value: string) { return value.trim().toLowerCase(); }
 function resolveTarget(targetType: ContributionTargetType, targetId: string) {
   if (targetType === 'problem') {
-    const problem = ProblemRepository.findById(targetId);
+    const problem = problems.find((item) => item.id === targetId) ?? null;
     return problem ? { title: problem.title, owners: [problem.author] } : null;
   }
 
-  const solution = SolutionRepository.findById(targetId);
+  const solution = solutions.find((item) => item.id === targetId) ?? null;
   return solution ? { title: solution.title, owners: [solution.author, solution.organization] } : null;
 }
 function isTargetOwner(contribution: Contribution, user: UserProfile) {

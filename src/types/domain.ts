@@ -105,3 +105,6 @@ export interface Solution {
   tags: string[];
   evidenceLinks: string[];
 }
+
+export type { ProblemRow } from '../repositories/problems/ProblemRepository';
+export type { SolutionRow } from '../repositories/solutions/SolutionRepository';
