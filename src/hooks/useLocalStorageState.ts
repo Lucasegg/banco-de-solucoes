@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { LOCAL_STORAGE_EVENT, localStorageAdapter, notifyStorageKey } from '../storage/LocalStorageAdapter';
 
 type Validator<T> = (value: unknown) => value is T;
 type Normalizer<T> = (value: unknown) => T;
@@ -7,12 +8,6 @@ type StoredValue<T> = {
   value: T;
   serialized: string | null;
 };
-
-const LOCAL_STORAGE_EVENT = 'banco-de-solucoes.local-storage';
-
-function notifyStorageKey(key: string, sourceId: string) {
-  window.dispatchEvent(new CustomEvent(LOCAL_STORAGE_EVENT, { detail: { key, sourceId } }));
-}
 
 function isStorageNotification(value: Event): value is CustomEvent<{ key: string; sourceId?: string }> {
   return value instanceof CustomEvent && typeof value.detail?.key === 'string';
@@ -25,11 +20,8 @@ export function useLocalStorageState<T>(key: string, initialValue: T, validator?
 
   const readStoredValue = useCallback((): StoredValue<T> => {
     try {
-      const stored = window.localStorage.getItem(key);
-      if (!stored) return { value: initialValue, serialized: null };
-      const parsed: unknown = JSON.parse(stored);
-      const value = normalizer ? normalizer(parsed) : validator && !validator(parsed) ? initialValue : parsed as T;
-      return { value, serialized: JSON.stringify(value) };
+      const value = localStorageAdapter.get(key, { fallback: initialValue, validator, normalizer });
+      return { value, serialized: localStorageAdapter.has(key) ? JSON.stringify(value) : null };
     } catch {
       return { value: initialValue, serialized: null };
     }
@@ -48,7 +40,7 @@ export function useLocalStorageState<T>(key: string, initialValue: T, validator?
         setStorageError(null);
         return;
       }
-      window.localStorage.setItem(key, serialized);
+      if (!localStorageAdapter.set(key, value)) throw new Error('Não foi possível persistir os dados locais.');
       lastSerializedValue.current = serialized;
       notifyStorageKey(key, sourceId.current);
       setStorageError(null);

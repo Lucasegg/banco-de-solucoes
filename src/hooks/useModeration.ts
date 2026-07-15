@@ -1,60 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Comment } from '../types/discussion';
-import type { ContentVisibility, ModerationAction, ModerationActionType, ModerationCase, ModerationStatus } from '../types/moderation';
+import type { ContentVisibility, ModerationAction, ModerationActionType, ModerationCase } from '../types/moderation';
 import type { UserProfile } from '../types/user';
+import { LOCAL_STORAGE_EVENT } from '../storage/LocalStorageAdapter';
+import { ModerationRepository, createAction, isAction, isCase } from '../repositories/moderation';
 import { getPermissions } from './usePermissions';
 
-const CASES_KEY = 'banco-de-solucoes.moderation.cases';
-const ACTIONS_KEY = 'banco-de-solucoes.moderation.actions';
-const COMMENTS_KEY = 'banco-de-solucoes.discussions.comments';
-const LOCAL_STORAGE_EVENT = 'banco-de-solucoes.local-storage';
-
-const statuses: ModerationStatus[] = ['open', 'under_review', 'resolved', 'dismissed'];
-const actionTypes: ModerationActionType[] = ['case_created', 'assigned', 'review_started', 'note_added', 'comment_hidden', 'comment_restored', 'comment_removed', 'report_dismissed', 'case_resolved', 'contribution_assigned', 'contribution_approved', 'contribution_rejected'];
+const CASES_KEY = ModerationRepository.keys.cases;
+const ACTIONS_KEY = ModerationRepository.keys.actions;
 
 type Result = { ok: true } | { ok: false; message: string };
-type StoredSnapshot = Array<{ key: string; value: string | null }>;
 
-type ModerationTransaction = {
-  cases: ModerationCase[];
-  actions: ModerationAction[];
-  comments?: Comment[];
-};
+function readCases() { return ModerationRepository.listCases(); }
+function readActions() { return ModerationRepository.listActions(); }
+function readComments() { return ModerationRepository.listComments(); }
+function id(prefix: string) { return ModerationRepository.createId(prefix); }
 
-function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
-function isContentVisibility(value: unknown): value is ContentVisibility { return value === 'visible' || value === 'hidden' || value === 'removed'; }
-function isCase(value: unknown): value is ModerationCase { return isRecord(value) && typeof value.id === 'string' && value.targetType === 'comment' && typeof value.targetId === 'string' && statuses.includes(value.status as ModerationStatus) && isContentVisibility(value.visibility) && Array.isArray(value.reportIds) && value.reportIds.every((reportId) => typeof reportId === 'string') && (value.assignedToId === null || typeof value.assignedToId === 'string') && (value.assignedToName === null || typeof value.assignedToName === 'string') && typeof value.internalNote === 'string' && typeof value.createdAt === 'string' && typeof value.updatedAt === 'string' && (value.resolvedAt === null || typeof value.resolvedAt === 'string'); }
-function isAction(value: unknown): value is ModerationAction { return isRecord(value) && typeof value.id === 'string' && typeof value.caseId === 'string' && (value.targetType === 'comment' || value.targetType === 'contribution') && typeof value.targetId === 'string' && actionTypes.includes(value.action as ModerationActionType) && typeof value.moderatorId === 'string' && typeof value.moderatorName === 'string' && typeof value.reason === 'string' && typeof value.createdAt === 'string'; }
-function isComment(value: unknown): value is Comment { return isRecord(value) && typeof value.id === 'string' && Array.isArray(value.reports); }
-function readArray<T>(key: string, validator: (value: unknown) => value is T): T[] { try { const raw = window.localStorage.getItem(key); if (!raw) return []; const parsed: unknown = JSON.parse(raw); return Array.isArray(parsed) ? parsed.filter(validator) : []; } catch { return []; } }
-function id(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
-function readCases() { return readArray(CASES_KEY, isCase); }
-function readActions() { return readArray(ACTIONS_KEY, isAction); }
-function readComments() { return readArray(COMMENTS_KEY, isComment); }
-function notifyStorageKey(key: string) { window.dispatchEvent(new CustomEvent(LOCAL_STORAGE_EVENT, { detail: { key } })); }
-function writeJson(key: string, value: unknown) { window.localStorage.setItem(key, JSON.stringify(value)); notifyStorageKey(key); }
-function snapshot(keys: string[]): StoredSnapshot { return keys.map((key) => ({ key, value: window.localStorage.getItem(key) })); }
-function restoreSnapshot(items: StoredSnapshot) { items.forEach((item) => { if (item.value === null) window.localStorage.removeItem(item.key); else window.localStorage.setItem(item.key, item.value); notifyStorageKey(item.key); }); }
-function createAction(action: Omit<ModerationAction, 'id' | 'createdAt'>): ModerationAction { return { ...action, id: id('action'), createdAt: new Date().toISOString() }; }
-
-function persistModerationTransaction(transaction: ModerationTransaction): boolean {
-  const keys = transaction.comments ? [CASES_KEY, ACTIONS_KEY, COMMENTS_KEY] : [CASES_KEY, ACTIONS_KEY];
-  const previous = snapshot(keys);
-  try {
-    writeJson(CASES_KEY, transaction.cases);
-    writeJson(ACTIONS_KEY, transaction.actions);
-    if (transaction.comments) writeJson(COMMENTS_KEY, transaction.comments);
-    return true;
-  } catch {
-    restoreSnapshot(previous);
-    return false;
-  }
-}
-
-export function addModerationAction(action: Omit<ModerationAction, 'id' | 'createdAt'>): boolean {
-  const next = [createAction(action), ...readActions()];
-  const previous = snapshot([ACTIONS_KEY]);
-  try { writeJson(ACTIONS_KEY, next); return true; } catch { restoreSnapshot(previous); return false; }
+export function addModerationAction(action: Parameters<typeof ModerationRepository.addAction>[0]): boolean {
+  return ModerationRepository.addAction(action);
 }
 
 export function useModeration(user: UserProfile | null | undefined) {
@@ -90,8 +52,7 @@ export function useModeration(user: UserProfile | null | undefined) {
     });
     const generatedTargetIds = new Set(generated.map((item) => item.targetId));
     const next = [...generated, ...persisted.filter((item) => !generatedTargetIds.has(item.targetId) && item.status !== 'open')];
-    const previous = snapshot([CASES_KEY]);
-    try { writeJson(CASES_KEY, next); setCases(next); setStorageError(''); } catch { restoreSnapshot(previous); setStorageError('Não foi possível persistir casos de moderação.'); }
+    if (ModerationRepository.saveCases(next)) { setCases(next); setStorageError(''); } else { setStorageError('Não foi possível persistir casos de moderação.'); }
     return next;
   }, []);
 
@@ -111,7 +72,7 @@ export function useModeration(user: UserProfile | null | undefined) {
     const nextCases = currentCases.map((entry) => entry.id === caseId ? updated : entry).filter(isCase);
     const nextActions = [createAction({ caseId: updated.id, targetType: updated.targetType, targetId: updated.targetId, action, moderatorId: user.id, moderatorName: user.name, reason: reason.trim() || action }), ...currentActions].filter(isAction);
     const nextComments = visibility ? currentComments.map((entry) => entry.id === updated.targetId ? { ...entry, visibility, deleted: visibility === 'removed' ? true : entry.deleted, updatedAt: now } : entry) : undefined;
-    const ok = persistModerationTransaction({ cases: nextCases, actions: nextActions, comments: nextComments });
+    const ok = ModerationRepository.persistTransaction({ cases: nextCases, actions: nextActions, comments: nextComments });
     if (!ok) return fail('Não foi possível salvar a ação de moderação. Nenhuma alteração foi mantida.');
     setCases(nextCases); setActions(nextActions); setStorageError('');
     return { ok: true };
