@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { CaseStudy, Evidence, Improvement, Solution, SolutionVersion } from '../types/domain';
+import type { CaseStudy, Evidence, Improvement, ProblemStatus, Solution, SolutionStatus, SolutionVersion } from '../types/domain';
 import { useEffect, useState } from 'react';
 import { Bookmark, Calendar, Eye, ExternalLink, GitBranch, Heart, Lightbulb, MapPin, MessageCircle, Share2, Sparkles, UsersRound } from 'lucide-react';
 import { ContributionForm } from '../components/contributions/ContributionForm';
@@ -29,7 +29,12 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   const [showContributionForm, setShowContributionForm] = useState(false);
   const discussion = useDiscussions('problem', problem?.id ?? id, problem ? [problem.author] : []);
   const [feedback, setFeedback] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editSummary, setEditSummary] = useState('');
+  const [editStatus, setEditStatus] = useState<ProblemStatus>('Aberto');
   const isFavorite = problem ? favorites.isFavorite(problem.id) : false;
+  const canManage = Boolean(user && problem?.authorId === user.id);
 
   useEffect(() => {
     let active = true;
@@ -39,6 +44,9 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
       if (!active) return;
       if (!problemResult.ok || !problemResult.data) { setLoadError(problemResult.ok ? 'Problema não encontrado.' : problemResult.message); return; }
       setProblem(problemResult.data);
+      setEditTitle(problemResult.data.title);
+      setEditSummary(problemResult.data.summary);
+      setEditStatus(problemResult.data.status);
       const solutionsResult = await SolutionRepository.listByProblemId(problemResult.data.id);
       if (!active) return;
       if (solutionsResult.ok) setRelated(solutionsResult.data); else setLoadError(solutionsResult.message);
@@ -47,8 +55,6 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
     return () => { active = false; };
   }, [id]);
 
-  if (!problem) return <EmptyDetail message={loadError || 'Carregando problema no Supabase.'} />;
-
   useEffect(() => {
     if (!feedback) return undefined;
     const timeout = window.setTimeout(() => setFeedback(''), 5000);
@@ -56,11 +62,13 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   }, [feedback]);
 
   const share = async () => {
+    if (!problem) return;
     const result = await shareCurrentHashUrl(problem.title, problem.summary);
     setFeedback(getShareMessage(result.status, result.url));
   };
 
   const toggleFavorite = () => {
+    if (!problem) return;
     favorites.toggleFavorite(problem.id);
     setFeedback(isFavorite ? 'Problema removido dos favoritos.' : 'Problema adicionado aos favoritos.');
   };
@@ -69,6 +77,21 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
     if (!user) { setFeedback('Entre na sua conta para propor alteração.'); onNavigate('login'); return; }
     setShowContributionForm(true);
   };
+
+  const saveProblemEdit = async () => {
+    if (!problem || !ProblemRepository || !canManage) return;
+    const result = await ProblemRepository.update(problem.id, { title: editTitle, summary: editSummary, status: editStatus });
+    if (result.ok) { setProblem(result.data); setIsEditing(false); setFeedback('Problema atualizado.'); } else setFeedback(result.message);
+  };
+
+  const deleteProblem = async () => {
+    if (!problem || !ProblemRepository || !canManage) return;
+    if (!window.confirm('Excluir este problema? Esta ação não pode ser desfeita.')) return;
+    const result = await ProblemRepository.delete(problem.id);
+    if (result.ok) { setFeedback('Problema excluído.'); onNavigate('problemas'); } else setFeedback(result.message);
+  };
+
+  if (!problem) return <EmptyDetail message={loadError || 'Carregando problema no Supabase.'} />;
   const problemFields = [
     { field: 'title', label: 'Título', value: problem.title },
     { field: 'summary', label: 'Resumo', value: problem.summary },
@@ -97,7 +120,10 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
             <Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritado' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${problem.title} dos favoritos` : `Adicionar ${problem.title} aos favoritos`} />
             <Action icon={<GitBranch size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para o problema ${problem.title}`} />
             <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400"><Sparkles size={16} /> Encontrar Soluções</button>
+            {canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}
+            {canManage && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteProblem} />}
           </div>
+          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}><option>Aberto</option><option>Em andamento</option><option>Resolvido</option></select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit}>Salvar edição</button></div>}
           <Feedback message={feedback} />
           {showContributionForm && <ContributionForm targetType="problem" targetId={problem.id} fields={problemFields} onClose={() => setShowContributionForm(false)} />}
         </div>
@@ -117,7 +143,12 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const [showContributionForm, setShowContributionForm] = useState(false);
   const discussion = useDiscussions('solution', solution?.id ?? id, solution ? [solution.author, solution.organization] : []);
   const [feedback, setFeedback] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editSummary, setEditSummary] = useState('');
+  const [editStatus, setEditStatus] = useState<SolutionStatus>('Proposta');
   const isFavorite = solution ? favorites.isFavorite(solution.id) : false;
+  const canManage = Boolean(user && solution?.authorId === user.id);
 
   useEffect(() => {
     let active = true;
@@ -127,6 +158,9 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
       if (!active) return;
       if (!solutionResult.ok || !solutionResult.data) { setLoadError(solutionResult.ok ? 'Solução não encontrada.' : solutionResult.message); return; }
       setSolution(solutionResult.data);
+      setEditTitle(solutionResult.data.title);
+      setEditSummary(solutionResult.data.summary);
+      setEditStatus(solutionResult.data.status);
       const problemsResult = await ProblemRepository.list();
       if (!active) return;
       if (problemsResult.ok) setRelated(problemsResult.data.filter((problem) => solutionResult.data!.relatedProblemIds.includes(problem.id))); else setLoadError(problemsResult.message);
@@ -135,12 +169,6 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
     return () => { active = false; };
   }, [id]);
 
-  if (!solution) return <EmptyDetail message={loadError || 'Carregando solução no Supabase.'} />;
-  const versions = solutionVersions.filter((version) => version.solutionId === solution.id);
-  const references = evidences.filter((evidence) => evidence.solutionId === solution.id);
-  const realCases = caseStudies.filter((caseStudy) => caseStudy.solutionId === solution.id);
-  const solutionImprovements = improvements.filter((improvement) => improvement.solutionId === solution.id);
-
   useEffect(() => {
     if (!feedback) return undefined;
     const timeout = window.setTimeout(() => setFeedback(''), 5000);
@@ -148,11 +176,13 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   }, [feedback]);
 
   const share = async () => {
+    if (!solution) return;
     const result = await shareCurrentHashUrl(solution.title, solution.summary);
     setFeedback(getShareMessage(result.status, result.url));
   };
 
   const toggleFavorite = () => {
+    if (!solution) return;
     favorites.toggleFavorite(solution.id);
     setFeedback(isFavorite ? 'Solução removida dos favoritos.' : 'Solução adicionada aos favoritos.');
   };
@@ -161,6 +191,25 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
     if (!user) { setFeedback('Entre na sua conta para propor alteração.'); onNavigate('login'); return; }
     setShowContributionForm(true);
   };
+
+  const saveSolutionEdit = async () => {
+    if (!solution || !SolutionRepository || !canManage) return;
+    const result = await SolutionRepository.update(solution.id, { title: editTitle, summary: editSummary, status: editStatus });
+    if (result.ok) { setSolution(result.data); setIsEditing(false); setFeedback('Solução atualizada.'); } else setFeedback(result.message);
+  };
+
+  const deleteSolution = async () => {
+    if (!solution || !SolutionRepository || !canManage) return;
+    if (!window.confirm('Excluir esta solução? Esta ação não pode ser desfeita.')) return;
+    const result = await SolutionRepository.delete(solution.id);
+    if (result.ok) { setFeedback('Solução excluída.'); onNavigate('solucoes'); } else setFeedback(result.message);
+  };
+
+  if (!solution) return <EmptyDetail message={loadError || 'Carregando solução no Supabase.'} />;
+  const versions = solutionVersions.filter((version) => version.solutionId === solution.id);
+  const references = evidences.filter((evidence) => evidence.solutionId === solution.id);
+  const realCases = caseStudies.filter((caseStudy) => caseStudy.solutionId === solution.id);
+  const solutionImprovements = improvements.filter((improvement) => improvement.solutionId === solution.id);
   const solutionFields = [
     { field: 'title', label: 'Título', value: solution.title },
     { field: 'summary', label: 'Resumo', value: solution.summary },
@@ -193,7 +242,8 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
           </div>
           <div className="mt-8 flex flex-wrap gap-2">{solution.tags.map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
           <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
-          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para a solução ${solution.title}`} /><button onClick={() => onNavigate(related[0] ? `problema:${related[0].id}` : 'problemas')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para a solução ${solution.title}`} />{canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}{canManage && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteSolution} />}<button onClick={() => onNavigate(related[0] ? `problema:${related[0].id}` : 'problemas')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
+          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-teal-50 p-4"><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as SolutionStatus)}><option>Proposta</option><option>Em teste</option><option>Implementada</option><option>Validada</option><option>Arquivada</option></select><button className="rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white" onClick={saveSolutionEdit}>Salvar edição</button></div>}
           <Feedback message={feedback} />
           {showContributionForm && <ContributionForm targetType="solution" targetId={solution.id} fields={solutionFields} onClose={() => setShowContributionForm(false)} />}
           <SolutionKnowledgeTabs solution={solution} versions={versions} cases={realCases} references={references} improvements={solutionImprovements} />
