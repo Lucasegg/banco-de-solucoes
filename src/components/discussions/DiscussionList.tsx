@@ -30,7 +30,7 @@ export function DiscussionList({ title, comments, reactions, currentUserId, canM
         <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">{comments.length} comentários</span>
       </div>
       {storageError && <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">{storageError}</p>}
-      <div className="mt-5"><CommentEditor onSubmit={onComment} /></div>
+      {currentUserId ? <div className="mt-5"><CommentEditor onSubmit={onComment} /></div> : <p className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-700">Faça login para comentar.</p>}
       <div className="mt-6 space-y-4">
         {rootComments.length > 0 ? rootComments.map((comment) => renderComment(comment, 1)) : <p className="rounded-3xl bg-slate-50 p-6 text-sm text-muted">Seja a primeira pessoa a iniciar a discussão.</p>}
       </div>
