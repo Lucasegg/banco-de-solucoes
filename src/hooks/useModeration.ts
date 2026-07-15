@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ContentVisibility, ModerationAction, ModerationActionType, ModerationCase } from '../types/moderation';
 import type { UserProfile } from '../types/user';
 import { ModerationRepository, createAction, isAction, isCase } from '../repositories/moderation';
+import { CommentRepository } from '../repositories/comments';
 import { getPermissions } from './usePermissions';
 
 const CASES_KEY = ModerationRepository.keys.cases;
@@ -44,6 +45,19 @@ export function useModeration(user: UserProfile | null | undefined) {
     const persisted = readCases();
     const byTarget = new Map(persisted.map((item) => [item.targetId, item]));
     const comments = readComments();
+    if (CommentRepository) {
+      void CommentRepository.listReported().then((result) => {
+        if (!result.ok) { setStorageError(result.message); return; }
+        const remoteGenerated = result.data.filter((comment) => comment.reports.length > 0).map((comment) => {
+          const existing = byTarget.get(comment.id);
+          const reportIds = comment.reports.map((report) => `${comment.id}:${report.userId}:${report.createdAt}`);
+          return existing ? { ...existing, reportIds, visibility: comment.visibility ?? (comment.deleted ? 'removed' : 'visible') } : { id: id('case'), targetType: 'comment' as const, targetId: comment.id, status: 'open' as const, visibility: comment.visibility ?? 'visible', reportIds, assignedToId: null, assignedToName: null, internalNote: '', createdAt: comment.reports[0]?.createdAt ?? new Date().toISOString(), updatedAt: new Date().toISOString(), resolvedAt: null };
+        });
+        const remoteTargetIds = new Set(remoteGenerated.map((item) => item.targetId));
+        const nextRemote = [...remoteGenerated, ...persisted.filter((item) => !remoteTargetIds.has(item.targetId) && item.status !== 'open')];
+        if (ModerationRepository.saveCases(nextRemote)) { setCases(nextRemote); setStorageError(''); } else setStorageError('Não foi possível persistir casos de moderação.');
+      });
+    }
     const generated = comments.filter((comment) => comment.reports.length > 0).map((comment) => {
       const existing = byTarget.get(comment.id);
       const reportIds = comment.reports.map((report) => `${comment.id}:${report.userId}:${report.createdAt}`);

@@ -6,8 +6,9 @@ import { CommentEditor } from './CommentEditor';
 import { ReactionBar } from './ReactionBar';
 
 type ActionResult = { ok: boolean; message?: string };
+type MaybePromise<T> = T | Promise<T>;
 
-export function CommentCard({ comment, children, depth, reactions, currentUserId, canMarkBestAnswer, onReply, onReact, onMarkBestAnswer, onEdit, onDelete, onReport }: { comment: Comment; children?: ReactNode; depth: number; reactions: Reaction[]; currentUserId: string | null; canMarkBestAnswer: boolean; onReply: (content: string, parentId: string) => ActionResult; onReact: (commentId: string, type: ReactionType) => void; onMarkBestAnswer: (commentId: string) => ActionResult; onEdit: (commentId: string, content: string) => ActionResult; onDelete: (commentId: string) => ActionResult; onReport: (commentId: string, reason: string) => ActionResult }) {
+export function CommentCard({ comment, children, depth, reactions, currentUserId, canMarkBestAnswer, onReply, onReact, onMarkBestAnswer, onEdit, onDelete, onReport }: { comment: Comment; children?: ReactNode; depth: number; reactions: Reaction[]; currentUserId: string | null; canMarkBestAnswer: boolean; onReply: (content: string, parentId: string) => MaybePromise<ActionResult>; onReact: (commentId: string, type: ReactionType) => void; onMarkBestAnswer: (commentId: string) => MaybePromise<ActionResult>; onEdit: (commentId: string, content: string) => MaybePromise<ActionResult>; onDelete: (commentId: string) => MaybePromise<ActionResult>; onReport: (commentId: string, reason: string) => MaybePromise<ActionResult> }) {
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -17,18 +18,18 @@ export function CommentCard({ comment, children, depth, reactions, currentUserId
   const isHidden = comment.visibility === 'hidden';
   const isRemoved = comment.visibility === 'removed' || comment.deleted;
 
-  const markBestAnswer = () => {
-    const result = onMarkBestAnswer(comment.id);
+  const markBestAnswer = async () => {
+    const result = await onMarkBestAnswer(comment.id);
     setMessage(result.message ?? '');
   };
 
-  const deleteComment = () => {
-    const result = onDelete(comment.id);
+  const deleteComment = async () => {
+    const result = await onDelete(comment.id);
     setMessage(result.message ?? '');
   };
 
-  const reportComment = () => {
-    const result = onReport(comment.id, reportReason);
+  const reportComment = async () => {
+    const result = await onReport(comment.id, reportReason);
     setMessage(result.message ?? '');
     if (result.ok) {
       setReporting(false);
@@ -45,7 +46,7 @@ export function CommentCard({ comment, children, depth, reactions, currentUserId
         </div>
         {comment.bestAnswer && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white"><Award size={14} /> Melhor resposta</span>}
       </div>
-      {editing && !isRemoved && !isHidden ? <div className="mt-4"><CommentEditor initialValue={comment.content} submitLabel="Salvar edição" onSubmit={(content) => { const result = onEdit(comment.id, content); if (result.ok) setEditing(false); return result; }} /></div> : <p className="mt-4 whitespace-pre-line leading-7 text-slate-700">{isRemoved ? 'Comentário removido.' : isHidden ? 'Conteúdo ocultado pela moderação.' : comment.content}</p>}
+      {editing && !isRemoved && !isHidden ? <div className="mt-4"><CommentEditor initialValue={comment.content} submitLabel="Salvar edição" onSubmit={async (content) => { const result = await onEdit(comment.id, content); if (result.ok) setEditing(false); return result; }} /></div> : <p className="mt-4 whitespace-pre-line leading-7 text-slate-700">{isRemoved ? 'Comentário removido.' : isHidden ? 'Conteúdo ocultado pela moderação.' : comment.content}</p>}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <ReactionBar commentId={comment.id} reactions={reactions} currentUserId={currentUserId} onToggle={(type) => onReact(comment.id, type)} />
         {depth < 3 && !isRemoved && !isHidden && <button type="button" onClick={() => setReplying((value) => !value)} className="inline-flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-slate-600"><GitBranch size={15} /> Responder</button>}
@@ -56,7 +57,7 @@ export function CommentCard({ comment, children, depth, reactions, currentUserId
       </div>
       {message && <p className="mt-3 text-sm font-semibold text-slate-700">{message}</p>}
       {reporting && <div className="mt-4 rounded-2xl bg-amber-50 p-3"><textarea value={reportReason} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setReportReason(event.target.value)} rows={2} placeholder="Descreva o motivo do reporte" className="w-full rounded-xl border border-amber-100 bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-amber-300" /><button type="button" onClick={reportComment} className="mt-2 rounded-full bg-amber-600 px-4 py-2 text-xs font-semibold text-white">Enviar reporte</button></div>}
-      {replying && <div className="mt-4"><CommentEditor submitLabel="Responder" onSubmit={(content) => { const result = onReply(content, comment.id); if (result.ok) setReplying(false); return result; }} /></div>}
+      {replying && <div className="mt-4"><CommentEditor submitLabel="Responder" onSubmit={async (content) => { const result = await onReply(content, comment.id); if (result.ok) setReplying(false); return result; }} /></div>}
       {children && <div className="mt-4 space-y-4 border-l-2 border-slate-100 pl-4">{children}</div>}
     </article>
   );
