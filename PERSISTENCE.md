@@ -22,7 +22,7 @@ LocalStorage
 - **Hooks** mantêm a mesma API pública, mas delegam leitura e escrita para repositórios ou para utilitários baseados no adapter.
 - **Repositories** concentram chaves, validações, normalizações e operações de persistência de cada domínio.
 - **Storage Adapter** define o contrato mínimo para persistir dados sem expor `localStorage` para as camadas superiores.
-- **LocalStorageAdapter** é a implementação atual, com `try/catch`, validação, normalização, notificações locais e rollback transacional quando aplicável.
+- **LocalStorageAdapter** é a implementação atual, com `try/catch`, validação, normalização, notificações locais e rollback transacional quando aplicável. Notificações de transações só são emitidas após o commit completo; rollbacks não disparam eventos intermediários.
 
 ## Storage Adapter
 
@@ -42,8 +42,10 @@ Os repositórios ficam em `src/repositories` e encapsulam persistência por dom�
 
 - `comments`: comentários e reações de discussões.
 - `contributions`: contribuições e rollback em ações compostas com moderação.
+- `favorites`: favoritos de problemas e soluções.
 - `moderation`: casos, ações e transações que também alteram comentários.
-- `users`: usuários registrados, sessão e configurações.
+- `storageState`: ponte genérica para estados locais legados usados por hooks, mantendo o fluxo Hook → Repository → Adapter.
+- `users`: usuários registrados, sessão e configurações com operações compostas de usuário/sessão transacionais.
 - `problems`: catálogo mockado de problemas.
 - `solutions`: catálogo mockado de soluções.
 

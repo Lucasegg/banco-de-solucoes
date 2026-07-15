@@ -37,6 +37,10 @@ export const UserRepository = {
   listStoredUsers: () => localStorageAdapter.list(USERS_KEY, { normalizer: normalizeStoredUser }),
   listUsers: () => mergeUsers(mockUsers, localStorageAdapter.list(USERS_KEY, { normalizer: normalizeStoredUser })),
   saveUsers: (users: MockUser[]) => localStorageAdapter.set(USERS_KEY, users.map(normalizeUser)),
+  saveUsersAndSession: (users: MockUser[], email: string) => localStorageAdapter.transaction([
+    { type: 'set', key: USERS_KEY, value: users.map(normalizeUser) },
+    { type: 'set', key: SESSION_KEY, value: { email, signedInAt: new Date().toISOString() } },
+  ]),
   readSessionEmail: () => localStorageAdapter.get(SESSION_KEY, { fallback: null as string | null, normalizer: (value) => isSession(value) ? value.email : null }),
   saveSession: (email: string) => localStorageAdapter.set(SESSION_KEY, { email, signedInAt: new Date().toISOString() }),
   clearSession: () => localStorageAdapter.remove(SESSION_KEY),

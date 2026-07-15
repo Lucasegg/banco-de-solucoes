@@ -1,6 +1,6 @@
 import type { Comment } from '../../types/discussion';
 import type { ContentVisibility, ModerationAction, ModerationActionType, ModerationCase, ModerationStatus } from '../../types/moderation';
-import { localStorageAdapter } from '../../storage/LocalStorageAdapter';
+import { LOCAL_STORAGE_EVENT, localStorageAdapter } from '../../storage/LocalStorageAdapter';
 import { COMMENTS_KEY, isComment } from '../comments';
 
 const CASES_KEY = 'banco-de-solucoes.moderation.cases';
@@ -18,6 +18,7 @@ function id(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().to
 export function createAction(action: Omit<ModerationAction, 'id' | 'createdAt'>): ModerationAction { return { ...action, id: id('action'), createdAt: new Date().toISOString() }; }
 
 export const ModerationRepository = {
+  eventName: LOCAL_STORAGE_EVENT,
   keys: { cases: CASES_KEY, actions: ACTIONS_KEY, comments: COMMENTS_KEY },
   createId: id,
   listCases: () => localStorageAdapter.list(CASES_KEY, { validator: isCase }),

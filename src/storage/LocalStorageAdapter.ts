@@ -72,13 +72,14 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   transaction(operations: StorageTransactionOperation[]): boolean {
     if (!canUseLocalStorage()) return false;
-    const snapshot = this.snapshot(Array.from(new Set(operations.map((operation) => operation.key))));
+    const changedKeys = Array.from(new Set(operations.map((operation) => operation.key)));
+    const snapshot = this.snapshot(changedKeys);
     try {
       operations.forEach((operation) => {
         if (operation.type === 'remove') window.localStorage.removeItem(operation.key);
         else window.localStorage.setItem(operation.key, toStoredValue(operation.value));
-        notifyStorageKey(operation.key);
       });
+      changedKeys.forEach((key) => notifyStorageKey(key));
       return true;
     } catch {
       this.restore(snapshot);
@@ -120,7 +121,6 @@ export class LocalStorageAdapter implements StorageAdapter {
     items.forEach((item) => {
       if (item.value === null) window.localStorage.removeItem(item.key);
       else window.localStorage.setItem(item.key, item.value);
-      notifyStorageKey(item.key);
     });
   }
 }

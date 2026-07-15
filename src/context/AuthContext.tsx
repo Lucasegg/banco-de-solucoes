@@ -34,7 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, message: 'E-mail ou senha inválidos.' };
     }
 
-    UserRepository.saveSession(foundUser.email);
+    if (!UserRepository.saveSession(foundUser.email)) {
+      return { ok: false, message: 'Não foi possível salvar a sessão local.' };
+    }
+
     setUser(withoutPassword(foundUser));
     return { ok: true };
   };
@@ -58,9 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const nextUser = buildRegisteredUser(input);
     const nextUsers = [...users, nextUser];
-    UserRepository.saveUsers(nextUsers);
+    if (!UserRepository.saveUsersAndSession(nextUsers, nextUser.email)) {
+      return { ok: false, message: 'Não foi possível salvar o cadastro local.' };
+    }
+
     setUsers(nextUsers);
-    UserRepository.saveSession(nextUser.email);
     setUser(withoutPassword(nextUser));
     return { ok: true };
   };
@@ -73,10 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateSettings = (settings: Partial<UserSettings>) => {
     if (!user) return;
     const nextUser = { ...user, settings: { ...user.settings, ...settings } };
-    setUser(nextUser);
     setUsers((current) => {
       const nextUsers = UserRepository.updateSettings(current, nextUser.id, nextUser.settings);
-      UserRepository.saveUsers(nextUsers);
+      if (!UserRepository.saveUsers(nextUsers)) return current;
+      setUser(nextUser);
       return nextUsers;
     });
   };

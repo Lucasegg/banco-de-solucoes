@@ -1,27 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { localStorageAdapter } from '../storage/LocalStorageAdapter';
+import { FavoriteRepository, type FavoriteKind } from '../repositories/favorites';
 
-export type FavoriteKind = 'problems' | 'solutions';
-
-const storageKeys: Record<FavoriteKind, string> = {
-  problems: 'banco-de-solucoes.favoriteProblems',
-  solutions: 'banco-de-solucoes.favoriteSolutions',
-};
+export type { FavoriteKind };
 
 function readFavoriteIds(kind: FavoriteKind) {
-  try {
-    return Array.from(new Set(localStorageAdapter.list(storageKeys[kind], { validator: (item): item is string => typeof item === 'string' && item.trim().length > 0 })));
-  } catch {
-    return [];
-  }
+  return FavoriteRepository.listIds(kind);
 }
 
 function writeFavoriteIds(kind: FavoriteKind, ids: string[]) {
-  try {
-    localStorageAdapter.set(storageKeys[kind], ids);
-  } catch {
-    // Favoritos são um aprimoramento local; a UI não deve quebrar se o armazenamento estiver indisponível.
-  }
+  FavoriteRepository.saveIds(kind, ids);
 }
 
 export function useFavorites(kind: FavoriteKind) {

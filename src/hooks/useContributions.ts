@@ -4,7 +4,6 @@ import { ContributionRepository, isContribution } from '../repositories/contribu
 import { ProblemRepository } from '../repositories/problems';
 import { SolutionRepository } from '../repositories/solutions';
 import type { UserProfile } from '../types/user';
-import { addModerationAction } from './useModeration';
 import { getPermissions } from './usePermissions';
 
 type Result = { ok: true; contribution?: Contribution } | { ok: false; message: string };
@@ -12,8 +11,8 @@ export type CreateContributionInput = Pick<Contribution, 'targetType' | 'targetI
 
 function readContributions(): Contribution[] { return ContributionRepository.list(); }
 function persist(contributions: Contribution[]) { return ContributionRepository.save(contributions); }
-function saveWithModerationAction(previous: Contribution[], next: Contribution[], action: Parameters<typeof addModerationAction>[0]) {
-  return ContributionRepository.transactionSave(previous, next, () => addModerationAction(action));
+function saveWithModerationAction(next: Contribution[], action: Parameters<typeof ContributionRepository.saveWithModerationAction>[1]) {
+  return ContributionRepository.saveWithModerationAction(next, action);
 }
 function id(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function normalizeOwner(value: string) { return value.trim().toLowerCase(); }
@@ -81,7 +80,7 @@ export function useContributions(currentUser?: UserProfile | null) {
     const now = new Date().toISOString();
     const next = { ...item, status: 'Em revisão' as const, reviewerId: currentUser.id, reviewerName: currentUser.name, updatedAt: now };
     const nextContributions = contributions.map((entry) => entry.id === contributionId ? next : entry);
-    const ok = saveWithModerationAction(contributions, nextContributions, { caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: 'contribution_assigned', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: 'Revisão de contribuição assumida.' });
+    const ok = saveWithModerationAction(nextContributions, { caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: 'contribution_assigned', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: 'Revisão de contribuição assumida.' });
     if (!ok) { setStorageError('Falha ao assumir revisão e registrar histórico. Nenhuma alteração foi mantida.'); return { ok: false, message: 'Falha ao assumir revisão e registrar histórico.' }; }
     setStorageError(''); setContributions(nextContributions); return { ok: true, contribution: next };
   }, [contributions, currentUser, save]);
@@ -93,7 +92,7 @@ export function useContributions(currentUser?: UserProfile | null) {
     if (status === 'Rejeitada' && !message.trim()) return { ok: false, message: 'Informe uma justificativa para rejeitar.' };
     const review: ContributionReview = { id: id('review'), status, reviewerId: currentUser.id, reviewerName: currentUser.name, message: message.trim() || 'Contribuição aprovada.', createdAt: new Date().toISOString() };
     const nextContributions = contributions.map((entry) => entry.id === contributionId ? { ...entry, status, reviewerId: item.reviewerId ?? currentUser.id, reviewerName: item.reviewerName ?? currentUser.name, updatedAt: review.createdAt, reviews: [...entry.reviews, review] } : entry);
-    const ok = saveWithModerationAction(contributions, nextContributions, { caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: status === 'Aprovada' ? 'contribution_approved' : 'contribution_rejected', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: review.message });
+    const ok = saveWithModerationAction(nextContributions, { caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: status === 'Aprovada' ? 'contribution_approved' : 'contribution_rejected', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: review.message });
     if (!ok) { setStorageError('Falha ao revisar e registrar histórico. Nenhuma alteração foi mantida.'); return { ok: false, message: 'Falha ao revisar e registrar histórico.' }; }
     setStorageError(''); setContributions(nextContributions); return { ok: true };
   }, [contributions, currentUser, save]);

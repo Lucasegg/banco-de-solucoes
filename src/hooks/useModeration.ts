@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ContentVisibility, ModerationAction, ModerationActionType, ModerationCase } from '../types/moderation';
 import type { UserProfile } from '../types/user';
-import { LOCAL_STORAGE_EVENT } from '../storage/LocalStorageAdapter';
 import { ModerationRepository, createAction, isAction, isCase } from '../repositories/moderation';
 import { getPermissions } from './usePermissions';
 
@@ -33,10 +32,10 @@ export function useModeration(user: UserProfile | null | undefined) {
       refreshState();
     };
     window.addEventListener('storage', sync);
-    window.addEventListener(LOCAL_STORAGE_EVENT, sync);
+    window.addEventListener(ModerationRepository.eventName, sync);
     return () => {
       window.removeEventListener('storage', sync);
-      window.removeEventListener(LOCAL_STORAGE_EVENT, sync);
+      window.removeEventListener(ModerationRepository.eventName, sync);
     };
   }, [refreshState]);
   const fail = useCallback((message: string): Result => { setStorageError(message); refreshState(); return { ok: false, message }; }, [refreshState]);
