@@ -29,6 +29,7 @@ export interface Problem {
   image: string;
   createdAt: string;
   author: string;
+  authorId?: string;
   status: ProblemStatus;
   views: number;
   likes: number;
@@ -88,6 +89,7 @@ export interface Solution {
   image: string;
   organization: string;
   author: string;
+  authorId?: string;
   createdAt: string;
   updatedAt: string;
   status: SolutionStatus;
@@ -105,3 +107,6 @@ export interface Solution {
   tags: string[];
   evidenceLinks: string[];
 }
+
+export type { ProblemRow } from '../repositories/problems/ProblemRepository';
+export type { SolutionRow } from '../repositories/solutions/SolutionRepository';

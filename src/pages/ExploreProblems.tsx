@@ -4,7 +4,7 @@ import { CatalogToolbar, type FilterSelectConfig } from '../components/CatalogTo
 import { EmptyState } from '../components/EmptyState';
 import { Pagination } from '../components/Pagination';
 import { ProblemCard } from '../components/Cards';
-import { problems } from '../data/mockData';
+import { ProblemRepository } from '../repositories/problems';
 import type { ImpactLevel, Problem, ProblemCategory, ProblemStatus } from '../types/domain';
 import { useFavorites } from '../hooks/useFavorites';
 import { readHashQuery, updateHashQuery, parseBooleanParam, parseEnumParam, parsePositiveInteger } from '../utils/hashQuery';
@@ -48,6 +48,23 @@ export function ExploreProblems({ onOpen, onNavigate }: { onOpen: (id: string) =
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [page, setPage] = useState(1);
   const favorites = useFavorites('problems');
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    async function loadProblems() {
+      setLoading(true);
+      if (!ProblemRepository) { setError('Supabase não configurado para carregar problemas.'); setLoading(false); return; }
+      const result = await ProblemRepository.list();
+      if (!active) return;
+      if (result.ok) { setProblems(result.data); setError(''); } else setError(result.message);
+      setLoading(false);
+    }
+    void loadProblems();
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const params = readHashQuery();
@@ -112,7 +129,8 @@ export function ExploreProblems({ onOpen, onNavigate }: { onOpen: (id: string) =
         <button onClick={() => onNavigate('novo-problema')} className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"><Plus size={16} /> Novo problema</button>
       </div>
       <CatalogToolbar search={search} searchPlaceholder="Pesquisar por título, descrição ou tags" filters={filterSelects} sort={sort} sortOptions={problemSortOptions} resultLabel={`${filteredProblems.length} ${filteredProblems.length === 1 ? 'problema encontrado' : 'problemas encontrados'}`} favoritesOnly={favoritesOnly} onSearchChange={(value) => { resetPage(); setSearch(value); }} onFilterChange={updateFilter} onSortChange={(value) => { resetPage(); setSort(value as ProblemSort); }} onFavoritesOnlyChange={(value) => { resetPage(); setFavoritesOnly(value); }} onClear={clearFilters} />
-      {filteredProblems.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite problemas para encontrá-los rapidamente neste filtro.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outros problemas.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
+      {error && <div className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+      {loading ? <EmptyState title="Carregando problemas" message="Buscando dados reais no Supabase." /> : filteredProblems.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite problemas para encontrá-los rapidamente neste filtro.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outros problemas.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {paginatedProblems.map((problem) => <ProblemCard key={problem.id} problem={problem} onOpen={onOpen} isFavorite={favorites.isFavorite(problem.id)} onToggleFavorite={favorites.toggleFavorite} />)}
         </div>
