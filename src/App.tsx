@@ -12,6 +12,7 @@ import { ContributionDetails, ContributionsList } from './pages/Contributions';
 import { useAuth } from './hooks/useAuth';
 import { usePermissions } from './hooks/usePermissions';
 import { AdminPanel } from './pages/Admin';
+import { SupabaseStatus } from './integrations/supabase/SupabaseStatus';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -24,6 +25,7 @@ const pageToHashPath: Record<string, string> = {
   register: '/register',
   profile: '/profile',
   contributions: '/contributions',
+  diagnostics: '/diagnostics',
   admin: '/admin',
 };
 
@@ -46,6 +48,7 @@ function pageFromHash(hash: string) {
   if (path === '/profile') return 'profile';
   if (path === '/admin') return 'admin';
   if (path === '/contributions') return 'contributions';
+  if (path === '/diagnostics') return 'diagnostics';
   if (path.startsWith('/contributions/')) return `contribution:${path.replace('/contributions/', '')}`;
   return 'home';
 }
@@ -103,6 +106,7 @@ export function App() {
       {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
       {page === 'admin' && isAuthenticated && permissions.canAccessAdmin && <AdminPanel />}
       {page === 'contributions' && isAuthenticated && <ContributionsList onNavigate={setPage} />}
+      {page === 'diagnostics' && <SupabaseStatus />}
       {kind === 'contribution' && isAuthenticated && <ContributionDetails id={id} />}
     </Layout>
   );

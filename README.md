@@ -67,7 +67,7 @@ src/
 
 ## Integração futura com Supabase
 
-A integração ainda não está ativa. A pasta `src/lib` contém um módulo de configuração preparado para centralizar variáveis públicas do Supabase quando o backend for introduzido.
+A integração ainda não está ativa para dados da aplicação. A infraestrutura inicial está documentada em [SUPABASE.md](SUPABASE.md), incluindo client, adapter, provider, diagnósticos, RLS, Auth, Storage e plano de migração futura. A rota `#/diagnostics` exibe o status atual sem substituir o `LocalStorageAdapter`.
 
 ## Como contribuir
 

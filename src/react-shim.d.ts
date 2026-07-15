@@ -84,3 +84,7 @@ declare const process: { env: Record<string, string | undefined> };
 declare module 'vite' {
   export function defineConfig(config: unknown): unknown;
 }
+
+declare module '@supabase/supabase-js' {
+  export function createClient(url: string, anonKey: string, options?: unknown): unknown;
+}
