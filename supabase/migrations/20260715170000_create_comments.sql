@@ -9,7 +9,6 @@ create table if not exists public.comments (
   deleted boolean not null default false,
   visibility text not null default 'visible',
   best_answer boolean not null default false,
-  reports jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint comments_single_target_check check (
@@ -17,14 +16,27 @@ create table if not exists public.comments (
     or (problem_id is null and solution_id is not null)
   ),
   constraint comments_content_length_check check (char_length(btrim(content)) between 1 and 2000),
-  constraint comments_visibility_check check (visibility in ('visible', 'hidden', 'removed')),
-  constraint comments_reports_array_check check (jsonb_typeof(reports) = 'array')
+  constraint comments_visibility_check check (visibility in ('visible', 'hidden', 'removed'))
 );
 
 create index if not exists comments_parent_id_idx on public.comments(parent_id);
 create index if not exists comments_author_id_idx on public.comments(author_id);
 create index if not exists comments_problem_id_created_at_idx on public.comments(problem_id, created_at desc) where problem_id is not null;
 create index if not exists comments_solution_id_created_at_idx on public.comments(solution_id, created_at desc) where solution_id is not null;
+
+
+create table if not exists public.comment_reports (
+  id uuid primary key default gen_random_uuid(),
+  comment_id uuid not null references public.comments(id) on delete cascade,
+  reporter_id uuid not null references public.profiles(id) on delete cascade,
+  reason text not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  constraint comment_reports_reason_check check (char_length(btrim(reason)) between 1 and 1000),
+  constraint comment_reports_unique_reporter_per_comment unique (comment_id, reporter_id)
+);
+
+create index if not exists comment_reports_comment_id_idx on public.comment_reports(comment_id);
+create index if not exists comment_reports_reporter_id_idx on public.comment_reports(reporter_id);
 
 
 
@@ -85,7 +97,6 @@ begin
 
   if auth.uid() = old.author_id and current_user in ('authenticated', 'anon') and (new.best_answer is distinct from old.best_answer
     or new.visibility is distinct from old.visibility
-    or new.reports is distinct from old.reports
     or new.deleted is distinct from old.deleted) then
     raise exception 'Comment administrative fields cannot be changed directly' using errcode = '42501';
   end if;
@@ -178,16 +189,12 @@ begin
     raise exception 'Authentication required' using errcode = '42501';
   end if;
 
-  update public.comments
-  set reports = reports || jsonb_build_array(jsonb_build_object('userId', reporter_id::text, 'reason', btrim(p_reason), 'createdAt', timezone('utc', now())::text))
-  where id = p_comment_id
-    and author_id <> reporter_id
-    and btrim(p_reason) <> ''
-    and not exists (select 1 from jsonb_array_elements(reports) report where report ->> 'userId' = reporter_id::text);
-
-  if not found then
+  if not exists (select 1 from public.comments where id = p_comment_id and author_id <> reporter_id) then
     raise exception 'Comment report was not accepted' using errcode = '42501';
   end if;
+
+  insert into public.comment_reports (comment_id, reporter_id, reason)
+  values (p_comment_id, reporter_id, btrim(p_reason));
 
   return p_comment_id;
 end;
@@ -230,6 +237,48 @@ end;
 $$;
 
 
+
+alter table public.comment_reports enable row level security;
+
+drop policy if exists "Moderators can read comment reports" on public.comment_reports;
+create policy "Moderators can read comment reports" on public.comment_reports for select to authenticated using (exists (select 1 from public.profiles where id = auth.uid() and role in ('moderator', 'admin')));
+drop policy if exists "Authenticated users can create comment reports" on public.comment_reports;
+create policy "Authenticated users can create comment reports" on public.comment_reports for insert to authenticated with check (auth.uid() = reporter_id);
+
+create or replace function public.list_reported_comments()
+returns table (
+  id uuid,
+  author_id uuid,
+  parent_id uuid,
+  problem_id uuid,
+  solution_id uuid,
+  content text,
+  edited boolean,
+  deleted boolean,
+  visibility text,
+  best_answer boolean,
+  reports jsonb,
+  created_at timestamptz,
+  updated_at timestamptz,
+  display_name text,
+  username text,
+  avatar_url text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select c.id, c.author_id, c.parent_id, c.problem_id, c.solution_id, c.content, c.edited, c.deleted, c.visibility, c.best_answer,
+    coalesce(jsonb_agg(jsonb_build_object('userId', cr.reporter_id::text, 'reason', cr.reason, 'createdAt', cr.created_at::text) order by cr.created_at) filter (where cr.id is not null), '[]'::jsonb) as reports,
+    c.created_at, c.updated_at, p.display_name, p.username, p.avatar_url
+  from public.comments c
+  join public.comment_reports cr on cr.comment_id = c.id
+  left join public.profiles p on p.id = c.author_id
+  where exists (select 1 from public.profiles moderator where moderator.id = auth.uid() and moderator.role in ('moderator', 'admin'))
+  group by c.id, p.display_name, p.username, p.avatar_url
+  order by c.updated_at desc;
+$$;
+
 create or replace function public.moderate_comment_visibility(p_comment_id uuid, p_visibility text)
 returns uuid
 language plpgsql
@@ -264,3 +313,13 @@ begin
   return p_comment_id;
 end;
 $$;
+
+
+revoke all on function public.report_comment(uuid, text) from public;
+grant execute on function public.report_comment(uuid, text) to authenticated;
+revoke all on function public.mark_comment_best_answer(uuid) from public;
+grant execute on function public.mark_comment_best_answer(uuid) to authenticated;
+revoke all on function public.moderate_comment_visibility(uuid, text) from public;
+grant execute on function public.moderate_comment_visibility(uuid, text) to authenticated;
+revoke all on function public.list_reported_comments() from public;
+grant execute on function public.list_reported_comments() to authenticated;

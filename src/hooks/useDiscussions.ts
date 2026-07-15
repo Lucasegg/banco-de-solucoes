@@ -120,7 +120,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     const nextReports = [...comment.reports, report];
     if (CommentRepository) {
       const result = await CommentRepository.report(commentId, reason);
-      if (result.ok) { setRemoteComments((current) => current.map((item) => item.id === commentId ? result.data : item)); setRemoteError(''); } else { setRemoteError(result.message); return result; }
+      if (result.ok) { setRemoteComments((current) => current.map((item) => item.id === commentId ? { ...item, reports: nextReports } : item)); setRemoteError(''); } else { setRemoteError(result.message); return result; }
     } else {
       setLocalComments((current) => current.map((item) => item.id === commentId ? { ...item, reports: nextReports } : item));
     }
