@@ -79,7 +79,7 @@ O cadastro chama `supabase.auth.signUp` e envia em `options.data` apenas `userna
 
 ### Profiles, trigger e RLS
 
-A migração versionada `supabase/migrations/20260715130000_create_profiles.sql` cria `public.profiles`, constraints de username/role, timestamps, trigger de `updated_at`, trigger `security definer` em `auth.users` e RLS. A trigger cria o profile automaticamente a partir de `raw_user_meta_data`, atribui sempre `member` e ignora qualquer role em metadata. Usuários autenticados leem perfis e atualizam apenas o próprio perfil; `id`, `role` e `created_at` não podem ser alterados pelo usuário comum. Permissões administrativas críticas ainda exigirão claims confiáveis ou validação segura no backend em sprint posterior.
+A migração versionada `supabase/migrations/20260715130000_create_profiles.sql` cria `public.profiles`, constraints de username/role, timestamps, trigger de `updated_at`, trigger `security definer` em `auth.users` e RLS. Ela remove triggers/policies pelo nome antes de recriá-los, reduzindo risco em reexecuções após falhas parciais. A trigger cria o profile automaticamente a partir de `raw_user_meta_data`, atribui sempre `member` e ignora qualquer role em metadata. Usuários autenticados leem perfis e atualizam apenas o próprio perfil; `id`, `role` e `created_at` não podem ser alterados pelo usuário comum. A policy de update não consulta `profiles` dentro de `WITH CHECK`, evitando recursão de RLS; o bloqueio de campos imutáveis fica em trigger. Permissões administrativas críticas ainda exigirão claims confiáveis ou validação segura no backend em sprint posterior.
 
 ### Como aplicar a migração pelo SQL Editor
 

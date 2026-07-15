@@ -23,6 +23,7 @@ comment on column public.profiles.username is 'Normalized unique public username
 create index if not exists profiles_username_idx on public.profiles (username);
 create index if not exists profiles_role_idx on public.profiles (role);
 
+drop trigger if exists normalize_profile_username_before_write on public.profiles;
 create or replace function public.normalize_profile_username()
 returns trigger
 language plpgsql
@@ -35,11 +36,11 @@ begin
   return new;
 end;
 $$;
-
 create trigger normalize_profile_username_before_write
 before insert or update on public.profiles
 for each row execute function public.normalize_profile_username();
 
+drop trigger if exists set_profile_updated_at_before_update on public.profiles;
 create or replace function public.set_profile_updated_at()
 returns trigger
 language plpgsql
@@ -50,12 +51,12 @@ begin
   return new;
 end;
 $$;
-
 create trigger set_profile_updated_at_before_update
 before update on public.profiles
 for each row execute function public.set_profile_updated_at();
 
-create or replace function public.prevent_profile_role_self_change()
+drop trigger if exists prevent_profile_immutable_self_change_before_update on public.profiles;
+create or replace function public.prevent_profile_immutable_self_change()
 returns trigger
 language plpgsql
 security definer
@@ -71,11 +72,11 @@ begin
   return new;
 end;
 $$;
-
-create trigger prevent_profile_role_self_change_before_update
+create trigger prevent_profile_immutable_self_change_before_update
 before update on public.profiles
-for each row execute function public.prevent_profile_role_self_change();
+for each row execute function public.prevent_profile_immutable_self_change();
 
+drop trigger if exists on_auth_user_created_create_profile on auth.users;
 create or replace function public.handle_new_auth_user_profile()
 returns trigger
 language plpgsql
@@ -105,24 +106,24 @@ begin
   return new;
 end;
 $$;
-
-drop trigger if exists on_auth_user_created_create_profile on auth.users;
 create trigger on_auth_user_created_create_profile
 after insert on auth.users
 for each row execute function public.handle_new_auth_user_profile();
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "Authenticated users can read public profiles" on public.profiles;
 create policy "Authenticated users can read public profiles"
 on public.profiles for select
 to authenticated
 using (true);
 
+drop policy if exists "Authenticated users update own editable profile" on public.profiles;
 create policy "Authenticated users update own editable profile"
 on public.profiles for update
 to authenticated
 using (auth.uid() = id)
-with check (auth.uid() = id and role = (select p.role from public.profiles p where p.id = auth.uid()) and created_at = (select p.created_at from public.profiles p where p.id = auth.uid()));
+with check (auth.uid() = id);
 
 comment on policy "Authenticated users can read public profiles" on public.profiles is 'Current product rule: profiles are readable only to authenticated users.';
-comment on policy "Authenticated users update own editable profile" on public.profiles is 'Common users may update only their profile and not id, role or created_at. Critical admin permissions need trusted claims/backend validation in a later sprint.';
+comment on policy "Authenticated users update own editable profile" on public.profiles is 'Common users may update only their profile. A trigger blocks user changes to id, role and created_at without querying profiles from RLS. Critical admin permissions need trusted claims/backend validation in a later sprint.';

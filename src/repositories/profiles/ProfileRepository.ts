@@ -20,29 +20,43 @@ export type ProfileLoadResult = { ok: true; profile: UserProfile } | { ok: false
 const editableColumns = ['username', 'display_name', 'country', 'bio', 'avatar_url'] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
+function isNullableString(value: unknown): value is string | null | undefined { return value === null || value === undefined || typeof value === 'string'; }
+function requiredString(value: unknown): value is string { return typeof value === 'string' && value.trim().length > 0; }
+function safeTrim(value: string | null | undefined) { return value?.trim() ?? ''; }
 function roleKey(value: unknown): UserRole { return value === 'curator' || value === 'moderator' || value === 'admin' ? value : 'member'; }
 function roleLabel(role: UserRole) { return ({ member: 'Colaborador(a)', curator: 'Curador(a)', moderator: 'Moderador(a)', admin: 'Administrador(a)' } as const)[role]; }
 function normalizeUsername(value: string) { return value.trim().toLowerCase(); }
-function isProfileRow(value: unknown): value is ProfileRow { return isRecord(value) && typeof value.id === 'string'; }
+function isProfileRow(value: unknown): value is ProfileRow {
+  return isRecord(value)
+    && requiredString(value.id)
+    && isNullableString(value.username)
+    && isNullableString(value.display_name)
+    && isNullableString(value.country)
+    && isNullableString(value.bio)
+    && isNullableString(value.avatar_url)
+    && isNullableString(value.role)
+    && isNullableString(value.created_at)
+    && isNullableString(value.updated_at);
+}
 function initials(name: string) { return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'BS'; }
 
 export function mapProfileRowToUserProfile(row: ProfileRow, email = ''): UserProfile | null {
   if (!isProfileRow(row)) return null;
-  const name = row.display_name?.trim() || row.username?.trim() || 'Usuário Banco de Soluções';
+  const name = safeTrim(row.display_name) || safeTrim(row.username) || 'Usuário Banco de Soluções';
   const role = roleKey(row.role);
   return {
     id: row.id,
     name,
-    username: row.username?.trim() || row.id.slice(0, 8),
+    username: safeTrim(row.username) || row.id.slice(0, 8),
     email,
     role: roleLabel(role),
     roleKey: role,
     organization: 'Comunidade Banco de Soluções',
     city: '—',
     state: '—',
-    country: row.country?.trim() || 'Brasil',
-    bio: row.bio?.trim() || 'Perfil sem biografia pública.',
-    avatarUrl: row.avatar_url?.trim() || `https://ui-avatars.com/api/?name=${encodeURIComponent(initials(name))}&background=0f172a&color=fff`,
+    country: safeTrim(row.country) || 'Brasil',
+    bio: safeTrim(row.bio) || 'Perfil sem biografia pública.',
+    avatarUrl: safeTrim(row.avatar_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent(initials(name))}&background=0f172a&color=fff`,
     createdAt: row.created_at || new Date().toISOString(),
     stats: { ...defaultStats },
     achievements: defaultAchievements.slice(0, 1),

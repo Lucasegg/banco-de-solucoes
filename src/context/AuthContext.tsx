@@ -6,6 +6,8 @@ import { ProfileRepository } from '../repositories/profiles';
 import { SupabaseUserRepository } from '../repositories/users/SupabaseUserRepository';
 import type { RegisterUserInput, UserProfile, UserSettings } from '../types/user';
 
+const SUPABASE_LOCAL_SETTINGS_KEY = 'banco-de-solucoes.supabase.profile-settings';
+
 export type AuthStatus = 'supabase-unconfigured' | 'loading-session' | 'anonymous' | 'authenticated' | 'profile-missing' | 'email-confirmation-pending' | 'network-error' | 'session-expired';
 
 export interface AuthContextValue {
@@ -23,6 +25,29 @@ export interface AuthContextValue {
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function readLocalSettings(userId: string): Partial<UserSettings> {
+  try {
+    const raw = window.localStorage.getItem(SUPABASE_LOCAL_SETTINGS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, Partial<UserSettings>>;
+    return parsed[userId] ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalSettings(userId: string, settings: UserSettings) {
+  try {
+    const raw = window.localStorage.getItem(SUPABASE_LOCAL_SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) as Record<string, Partial<UserSettings>> : {};
+    parsed[userId] = settings;
+    window.localStorage.setItem(SUPABASE_LOCAL_SETTINGS_KEY, JSON.stringify(parsed));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function networkMessage(message?: string) {
   if (!message) return 'Não foi possível conectar ao serviço de autenticação.';
@@ -45,32 +70,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { users: new SupabaseUserRepository(supabaseClient), profiles: new ProfileRepository(supabaseClient) };
   }, []);
 
-  const loadProfile = async (nextSession: Session | null, mounted: () => boolean) => {
-    if (!repositories) return;
+  const loadProfile = async (nextSession: Session | null, mounted: () => boolean): Promise<{ ok: boolean; message?: string }> => {
+    if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
     setSession(nextSession);
     if (!nextSession?.user) {
       setUser(null);
       setAuthStatus('anonymous');
       setAuthMessage(undefined);
-      return;
+      return { ok: true };
     }
     const expiresAt = nextSession.expires_at ? nextSession.expires_at * 1000 : undefined;
     if (expiresAt && expiresAt < Date.now()) {
       setUser(null);
       setAuthStatus('session-expired');
       setAuthMessage('A sessão expirou. Entre novamente.');
-      return;
+      return { ok: false, message: 'A sessão expirou. Entre novamente.' };
     }
     const result = await repositories.profiles.getByAuthUserId(nextSession.user.id, nextSession.user.email ?? '');
-    if (!mounted()) return;
+    if (!mounted()) return { ok: false, message: 'Operação cancelada.' };
     if (result.ok) {
-      setUser(result.profile);
+      setUser({ ...result.profile, settings: { ...result.profile.settings, ...readLocalSettings(result.profile.id) } });
       setAuthStatus('authenticated');
       setAuthMessage(undefined);
+      return { ok: true };
     } else {
       setUser(null);
       setAuthStatus(result.reason === 'missing' ? 'profile-missing' : 'network-error');
       setAuthMessage(result.message);
+      return { ok: false, message: result.message };
     }
   };
 
@@ -110,8 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthMessage(message);
       return { ok: false, message };
     }
-    await loadProfile(data.session, () => true);
-    return { ok: true };
+    return loadProfile(data.session, () => true);
   };
 
   const register: AuthContextValue['register'] = async (input) => {
@@ -125,8 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthMessage('Cadastro recebido. Confirme seu e-mail antes de entrar.');
       return { ok: true, message: 'Cadastro recebido. Confirme seu e-mail antes de entrar.' };
     }
-    await loadProfile(data.session, () => true);
-    return { ok: true };
+    return loadProfile(data.session, () => true);
   };
 
   const logout: AuthContextValue['logout'] = async () => {
@@ -155,10 +180,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (hasRemote) {
       const result = await repositories.profiles.updateEditableFields(user.id, editable, user.email);
       if (!result.ok) return { ok: false, message: result.message };
-      setUser({ ...result.profile, settings: { ...user.settings, ...localSettings } });
+      const nextSettings = { ...user.settings, ...localSettings };
+      if (!saveLocalSettings(user.id, nextSettings)) return { ok: false, message: 'Não foi possível salvar as preferências locais.' };
+      setUser({ ...result.profile, settings: nextSettings });
       return { ok: true };
     }
-    setUser({ ...user, settings: { ...user.settings, ...localSettings } });
+    const nextSettings = { ...user.settings, ...localSettings };
+    if (!saveLocalSettings(user.id, nextSettings)) return { ok: false, message: 'Não foi possível salvar as preferências locais.' };
+    setUser({ ...user, settings: nextSettings });
     return { ok: true };
   };
 
