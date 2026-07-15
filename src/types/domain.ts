@@ -110,3 +110,4 @@ export interface Solution {
 
 export type { ProblemRow } from '../repositories/problems/ProblemRepository';
 export type { SolutionRow } from '../repositories/solutions/SolutionRepository';
+export type { Comment, CommentRow } from '../repositories/comments/CommentRepository';
