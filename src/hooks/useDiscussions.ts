@@ -53,8 +53,8 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
   useEffect(() => {
     let active = true;
     async function loadRemoteComments() {
-      if (!CommentRepository || !targetType || !targetId) return;
-      const result = targetType === 'problem' ? await CommentRepository.listByProblem(targetId) : await CommentRepository.listBySolution(targetId);
+      if (!CommentRepository) return;
+      const result = targetType && targetId ? (targetType === 'problem' ? await CommentRepository.listByProblem(targetId) : await CommentRepository.listBySolution(targetId)) : await CommentRepository.listReported();
       if (!active) return;
       if (result.ok) { setRemoteComments(result.data); setRemoteError(''); } else setRemoteError(result.message);
     }
@@ -64,7 +64,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
 
   const targetComments = useMemo(() => comments.filter((comment) => !targetType || !targetId || (comment.targetType === targetType && comment.targetId === targetId)), [comments, targetId, targetType]);
 
-  const addComment = (content: string, parentId: string | null = null): ActionResult => {
+  const addComment = async (content: string, parentId: string | null = null): Promise<ActionResult> => {
     if (!targetType || !targetId || !user) return { ok: false, message: 'Entre para comentar.' };
     if (!content.trim()) return { ok: false, message: 'Escreva um comentário antes de publicar.' };
     if (getDepth(comments, parentId) > MAX_DEPTH) return { ok: false, message: 'Respostas são permitidas até três níveis.' };
@@ -72,11 +72,10 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (isSubmitting) return { ok: false, message: 'Aguarde o envio do comentário.' };
     if (CommentRepository) {
       setIsSubmitting(true);
-      void CommentRepository.create(targetType === 'problem' ? { authorId: user.id, problemId: targetId, parentId, content } : { authorId: user.id, solutionId: targetId, parentId, content }).then((result) => {
-        if (result.ok) setRemoteComments((current) => [result.data, ...current]); else setRemoteError(result.message);
-        setIsSubmitting(false);
-      });
-      return { ok: true, message: 'Enviando comentário.' };
+      const result = await CommentRepository.create(targetType === 'problem' ? { authorId: user.id, problemId: targetId, parentId, content } : { authorId: user.id, solutionId: targetId, parentId, content });
+      if (result.ok) { setRemoteComments((current) => [result.data, ...current]); setRemoteError(''); } else setRemoteError(result.message);
+      setIsSubmitting(false);
+      return result.ok ? { ok: true } : result;
     }
     const now = new Date().toISOString();
     const comment: Comment = { id: createId('comment'), parentId, targetType, targetId, authorId: user.id, authorName: user.name, content: content.trim(), createdAt: now, updatedAt: now, edited: false, deleted: false, visibility: 'visible', bestAnswer: false, reports: [] };
@@ -84,33 +83,35 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     return { ok: true };
   };
 
-  const editComment = (commentId: string, content: string): ActionResult => {
+  const editComment = async (commentId: string, content: string): Promise<ActionResult> => {
     if (!user) return { ok: false, message: 'Entre para editar.' };
     if (!content.trim()) return { ok: false, message: 'O comentário não pode ficar vazio.' };
     const comment = comments.find((item) => item.id === commentId);
     if (!comment || comment.authorId !== user.id || comment.deleted) return { ok: false, message: 'Você só pode editar seus comentários ativos.' };
     if (content.trim().length > 2000) return { ok: false, message: 'O comentário deve ter no máximo 2000 caracteres.' };
     if (CommentRepository) {
-      void CommentRepository.update(commentId, { content }).then((result) => { if (result.ok) setRemoteComments((current) => current.map((item) => item.id === commentId ? result.data : item)); else setRemoteError(result.message); });
-      return { ok: true };
+      const result = await CommentRepository.update(commentId, { content });
+      if (result.ok) { setRemoteComments((current) => current.map((item) => item.id === commentId ? result.data : item)); setRemoteError(''); } else setRemoteError(result.message);
+      return result.ok ? { ok: true } : result;
     }
     setLocalComments((current) => current.map((item) => item.id === commentId ? { ...item, content: content.trim(), edited: true, updatedAt: new Date().toISOString() } : item));
     return { ok: true };
   };
 
-  const deleteComment = (commentId: string): ActionResult => {
+  const deleteComment = async (commentId: string): Promise<ActionResult> => {
     if (!user) return { ok: false, message: 'Entre para excluir.' };
     const comment = comments.find((item) => item.id === commentId);
     if (!comment || comment.authorId !== user.id || comment.deleted) return { ok: false, message: 'Você só pode excluir seus comentários ativos.' };
     if (CommentRepository) {
-      void CommentRepository.delete(commentId).then((result) => { if (result.ok) setRemoteComments((current) => current.filter((item) => item.id !== commentId)); else setRemoteError(result.message); });
-      return { ok: true };
+      const result = await CommentRepository.delete(commentId);
+      if (result.ok) { setRemoteComments((current) => current.filter((item) => item.id !== commentId)); setRemoteError(''); } else setRemoteError(result.message);
+      return result.ok ? { ok: true } : result;
     }
     setLocalComments((current) => current.map((item) => item.id === commentId ? { ...item, deleted: true, visibility: 'removed', bestAnswer: false, updatedAt: new Date().toISOString() } : item));
     return { ok: true };
   };
 
-  const reportComment = (commentId: string, reason: string): ActionResult => {
+  const reportComment = async (commentId: string, reason: string): Promise<ActionResult> => {
     if (!user) return { ok: false, message: 'Entre para reportar.' };
     if (!reason.trim()) return { ok: false, message: 'Informe o motivo do reporte.' };
     const comment = comments.find((item) => item.id === commentId);
@@ -118,7 +119,8 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     const report: CommentReport = { userId: user.id, reason: reason.trim(), createdAt: new Date().toISOString() };
     const nextReports = [...comment.reports, report];
     if (CommentRepository) {
-      void CommentRepository.report(commentId, reason).then((result) => { if (result.ok) setRemoteComments((current) => current.map((item) => item.id === commentId ? result.data : item)); else setRemoteError(result.message); });
+      const result = await CommentRepository.report(commentId, reason);
+      if (result.ok) { setRemoteComments((current) => current.map((item) => item.id === commentId ? { ...item, reports: nextReports } : item)); setRemoteError(''); } else { setRemoteError(result.message); return result; }
     } else {
       setLocalComments((current) => current.map((item) => item.id === commentId ? { ...item, reports: nextReports } : item));
     }
@@ -134,14 +136,15 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     });
   };
 
-  const markBestAnswer = (commentId: string): ActionResult => {
+  const markBestAnswer = async (commentId: string): Promise<ActionResult> => {
     if (!targetType || !targetId) return { ok: false, message: 'Discussão não encontrada.' };
     if (!canMarkBestAnswer) return { ok: false, message: 'Apenas o autor pode marcar a melhor resposta.' };
     const comment = comments.find((item) => item.id === commentId && item.targetType === targetType && item.targetId === targetId && !item.deleted);
     if (!comment) return { ok: false, message: 'Comentário não encontrado.' };
     if (CommentRepository) {
-      void CommentRepository.setBestAnswer(targetType, targetId, commentId).then((result) => { if (result.ok) setRemoteComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item)); else setRemoteError(result.message); });
-      return { ok: true };
+      const result = await CommentRepository.setBestAnswer(targetType, targetId, commentId);
+      if (result.ok) { setRemoteComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item)); setRemoteError(''); } else setRemoteError(result.message);
+      return result.ok ? { ok: true } : result;
     }
     setLocalComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item));
     return { ok: true };
