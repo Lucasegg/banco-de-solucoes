@@ -13,6 +13,7 @@ import { useAuth } from './hooks/useAuth';
 import { usePermissions } from './hooks/usePermissions';
 import { AdminPanel } from './pages/Admin';
 import { SupabaseStatus } from './integrations/supabase/SupabaseStatus';
+import { Account } from './pages/Account';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -26,6 +27,7 @@ const pageToHashPath: Record<string, string> = {
   profile: '/profile',
   contributions: '/contributions',
   diagnostics: '/diagnostics',
+  account: '/account',
   admin: '/admin',
 };
 
@@ -46,6 +48,7 @@ function pageFromHash(hash: string) {
   if (path === '/login') return 'login';
   if (path === '/register') return 'register';
   if (path === '/profile') return 'profile';
+  if (path === '/account') return 'account';
   if (path === '/admin') return 'admin';
   if (path === '/contributions') return 'contributions';
   if (path === '/diagnostics') return 'diagnostics';
@@ -83,7 +86,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && (page === 'profile' || page === 'contributions' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
+    if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
       setPage('login');
     }
     if (!isLoading && page === 'admin' && isAuthenticated && !permissions.canAccessAdmin) {
@@ -104,6 +107,7 @@ export function App() {
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
       {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
+      {page === 'account' && isAuthenticated && <Account onNavigate={setPage} />}
       {page === 'admin' && isAuthenticated && permissions.canAccessAdmin && <AdminPanel />}
       {page === 'contributions' && isAuthenticated && <ContributionsList onNavigate={setPage} />}
       {page === 'diagnostics' && <SupabaseStatus />}

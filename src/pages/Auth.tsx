@@ -17,18 +17,22 @@ export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
       setError(result.message ?? 'Não foi possível entrar.');
       return;
     }
+    if (result.message) {
+      setError(result.message);
+      return;
+    }
     onNavigate('profile');
   };
 
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
       <div className="rounded-[2rem] border border-line bg-white p-8 shadow-sm">
-        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700"><LockKeyhole size={16} /> Acesso mockado</span>
+        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700"><LockKeyhole size={16} /> Supabase Auth</span>
         <h1 className="mt-6 text-4xl font-semibold tracking-tight">Entre para acompanhar suas contribuições.</h1>
-        <p className="mt-4 leading-7 text-muted">A autenticação usa dados locais e localStorage, mantendo uma arquitetura simples para futura troca por um provedor real.</p>
+        <p className="mt-4 leading-7 text-muted">Quando configurado, o acesso usa Supabase Auth. Sem credenciais públicas, a aplicação compila e informa que o provedor não está configurado.</p>
         <div className="mt-8 rounded-3xl bg-slate-50 p-5 text-sm text-muted">
-          <strong className="text-slate-900">Conta de demonstração:</strong>
-          <p className="mt-2">marina@bancodesolucoes.dev · senha: solucoes123</p>
+          <strong className="text-slate-900">Credenciais reais:</strong>
+          <p className="mt-2">Use uma conta criada no projeto Supabase configurado. Tokens nunca são exibidos.</p>
         </div>
       </div>
       <form onSubmit={submit} className="rounded-[2rem] border border-line bg-white p-8 shadow-soft">
@@ -77,17 +81,21 @@ export function Register({ onNavigate }: { onNavigate: (page: string) => void })
       setError(result.message ?? 'Não foi possível criar a conta.');
       return;
     }
+    if (result.message) {
+      setError(result.message);
+      return;
+    }
     onNavigate('profile');
   };
 
   return (
     <section className="mx-auto max-w-3xl rounded-[2rem] border border-line bg-white p-8 shadow-soft">
-      <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800"><UserPlus size={16} /> Cadastro local</span>
+      <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800"><UserPlus size={16} /> Cadastro Supabase</span>
       <h1 className="mt-5 text-4xl font-semibold tracking-tight">Crie seu perfil de colaborador.</h1>
-      <p className="mt-3 text-muted">Os dados serão salvos apenas no navegador para validar a experiência sem backend.</p>
+      <p className="mt-3 text-muted">O cadastro cria o usuário pelo Supabase Auth. O perfil público é criado automaticamente pela trigger no banco.</p>
       <div className="mt-6 grid gap-3 md:grid-cols-2">
-        <button className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold text-slate-700" type="button"><DatabaseZap size={16} /> Continuar com Google</button>
-        <button className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold text-slate-700" type="button"><GitBranch size={16} /> Continuar com GitHub</button>
+        <button className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold text-slate-700" type="button" disabled aria-disabled="true" title="Login social em breve"><DatabaseZap size={16} /> Google · Em breve</button>
+        <button className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold text-slate-700" type="button" disabled aria-disabled="true" title="Login social em breve"><GitBranch size={16} /> GitHub · Em breve</button>
       </div>
       <form onSubmit={submit} className="mt-8 grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">Nome completo<input className={inputClass} value={form.name} onChange={(event: ChangeEvent<HTMLInputElement>) => update('name', event.target.value)} required /></label>
@@ -101,7 +109,7 @@ export function Register({ onNavigate }: { onNavigate: (page: string) => void })
         <label className="grid gap-2 text-sm font-medium">País<input className={inputClass} value={form.country} onChange={(event: ChangeEvent<HTMLInputElement>) => update('country', event.target.value)} required /></label>
         <label className="grid gap-2 text-sm font-medium">Foto do perfil (URL)<input className={inputClass} type="url" value={form.avatarUrl} onChange={(event: ChangeEvent<HTMLInputElement>) => update('avatarUrl', event.target.value)} placeholder="https://..." /></label>
         <label className="grid gap-2 text-sm font-medium md:col-span-2">Biografia<textarea className={inputClass} value={form.bio} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => update('bio', event.target.value)} rows={4} maxLength={280} placeholder="Conte como você quer contribuir." required /></label>
-        <label className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-muted md:col-span-2"><input type="checkbox" checked={form.acceptedTerms} onChange={(event: ChangeEvent<HTMLInputElement>) => update('acceptedTerms', event.target.checked)} className="mt-1 h-4 w-4 accent-slate-950" required /><span>Aceito os termos de uso e entendo que esta conta usa dados mockados salvos no meu navegador.</span></label>
+        <label className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-muted md:col-span-2"><input type="checkbox" checked={form.acceptedTerms} onChange={(event: ChangeEvent<HTMLInputElement>) => update('acceptedTerms', event.target.checked)} className="mt-1 h-4 w-4 accent-slate-950" required /><span>Aceito os termos de uso e entendo que o perfil será criado no banco após o cadastro, sem envio de role pelo formulário.</span></label>
         {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 md:col-span-2">{error}</p>}
         <div className="flex flex-wrap gap-3 md:col-span-2"><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" type="submit">Cadastrar</button><button className="rounded-full border border-line px-5 py-3 text-sm font-semibold" type="button" onClick={() => onNavigate('login')}>Já tenho conta</button></div>
       </form>

@@ -57,6 +57,12 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
               </button>
               {permissions.canAccessAdmin && <button onClick={() => onNavigate('admin')} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'admin' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>Admin</button>}
               <button
+                onClick={() => onNavigate('account')}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'account' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
+              >
+                Conta
+              </button>
+              <button
                 onClick={() => onNavigate('profile')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'profile' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
               >

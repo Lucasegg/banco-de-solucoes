@@ -23,9 +23,9 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
   const reviewedCases = moderation.cases.filter((item) => item.assignedToId === user.id);
   const resolvedCases = reviewedCases.filter((item) => item.status === 'resolved');
 
-  const signOut = () => {
-    logout();
-    onNavigate('login');
+  const signOut = async () => {
+    const result = await logout();
+    if (result.ok) onNavigate('login');
   };
 
   return (
