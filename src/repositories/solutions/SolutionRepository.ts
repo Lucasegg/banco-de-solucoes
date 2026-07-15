@@ -75,11 +75,62 @@ function mapRows(data: unknown[] | null): RepositoryResult<Solution[]> {
 export class SupabaseSolutionRepository {
   constructor(private readonly client: SupabaseClient) {}
   async list(): Promise<RepositoryResult<Solution[]>> { const { data, error } = await this.client.from('solutions').select(selectColumns).order('created_at', { ascending: false }); if (error) return { ok: false, message: errorMessage(error, 'Não foi possível listar soluções.') }; return mapRows(data as unknown[] | null); }
-  async listByProblemId(problemId: string): Promise<RepositoryResult<Solution[]>> { const { data, error } = await this.client.from('solutions').select(selectColumnsWithProblemFilter).eq('solution_problems.problem_id', problemId).not('solution_problems', 'is', null).order('created_at', { ascending: false }); if (error) return { ok: false, message: errorMessage(error, 'Não foi possível listar soluções do problema.') }; return mapRows(data as unknown[] | null); }
+  async listByProblemId(problemId: string): Promise<RepositoryResult<Solution[]>> { const { data, error } = await this.client.from('solutions').select(selectColumnsWithProblemFilter).eq('solution_problems.problem_id', problemId).order('created_at', { ascending: false }); if (error) return { ok: false, message: errorMessage(error, 'Não foi possível listar soluções do problema.') }; return mapRows(data as unknown[] | null); }
   async findById(id: string): Promise<RepositoryResult<Solution | null>> { const { data, error } = await this.client.from('solutions').select(selectColumns).eq('id', id).maybeSingle(); if (error) return { ok: false, message: errorMessage(error, 'Não foi possível carregar a solução.') }; if (!data) return { ok: true, data: null }; const row = parseSolutionRow(data); return row ? { ok: true, data: mapSolutionRowToDomain(row) } : { ok: false, message: 'Supabase retornou solução em formato inválido.' }; }
-  async create(input: SolutionInput): Promise<RepositoryResult<Solution>> { const { data, error } = await this.client.from('solutions').insert({ title: input.title.trim(), summary: input.summary.trim(), description: input.description.trim(), category: input.category, image_url: input.image?.trim() || null, organization: input.organization.trim(), author_id: input.authorId, author_name: input.author?.trim() || null, status: input.status, maturity_level: input.maturityLevel, implementation_difficulty: input.implementationDifficulty, estimated_cost: input.estimatedCost.trim() || null, implementation_time: input.implementationTime.trim() || null, location: input.location.trim(), country: input.country.trim(), impact_metric: input.impactMetric.trim(), tags: input.tags, evidence_links: input.evidenceLinks }).select('id').single(); if (error) return { ok: false, message: errorMessage(error, 'Não foi possível criar a solução.') }; const solutionId = isRecord(data) && isString(data.id) ? data.id : null; if (!solutionId) return { ok: false, message: 'Supabase retornou identificador de solução inválido.' }; const links = input.relatedProblemIds.map((problemId) => ({ solution_id: solutionId, problem_id: problemId })); const linkResult = await this.client.from('solution_problems').insert(links); if (linkResult.error) return { ok: false, message: errorMessage(linkResult.error, 'Não foi possível relacionar a solução aos problemas.') }; return this.findCreated(solutionId); }
+  async create(input: SolutionInput): Promise<RepositoryResult<Solution>> {
+    const { data, error } = await this.client.rpc('create_solution_with_problems', {
+      p_author_id: input.authorId,
+      p_author_name: input.author?.trim() || null,
+      p_title: input.title.trim(),
+      p_summary: input.summary.trim(),
+      p_description: input.description.trim(),
+      p_category: input.category,
+      p_image_url: input.image?.trim() || null,
+      p_organization: input.organization.trim(),
+      p_status: input.status,
+      p_maturity_level: input.maturityLevel,
+      p_implementation_difficulty: input.implementationDifficulty,
+      p_estimated_cost: input.estimatedCost.trim() || null,
+      p_implementation_time: input.implementationTime.trim() || null,
+      p_location: input.location.trim(),
+      p_country: input.country.trim(),
+      p_impact_metric: input.impactMetric.trim(),
+      p_tags: input.tags,
+      p_evidence_links: input.evidenceLinks,
+      p_problem_ids: input.relatedProblemIds,
+    });
+    if (error) return { ok: false, message: errorMessage(error, 'Não foi possível criar a solução.') };
+    const solutionId = typeof data === 'string' ? data : null;
+    if (!solutionId) return { ok: false, message: 'Supabase retornou identificador de solução inválido.' };
+    return this.findCreated(solutionId);
+  }
   private async findCreated(id: string): Promise<RepositoryResult<Solution>> { const result = await this.findById(id); if (!result.ok) return result; if (!result.data) return { ok: false, message: 'Solução criada não foi encontrada.' }; return { ok: true, data: result.data }; }
-  async update(id: string, input: Partial<SolutionInput>): Promise<RepositoryResult<Solution>> { const payload: Record<string, unknown> = {}; if (input.title !== undefined) payload.title = input.title.trim(); if (input.summary !== undefined) payload.summary = input.summary.trim(); if (input.description !== undefined) payload.description = input.description.trim(); if (input.category !== undefined) payload.category = input.category; if (input.image !== undefined) payload.image_url = input.image.trim() || null; if (input.organization !== undefined) payload.organization = input.organization.trim(); if (input.author !== undefined) payload.author_name = input.author.trim() || null; if (input.status !== undefined) payload.status = input.status; if (input.maturityLevel !== undefined) payload.maturity_level = input.maturityLevel; if (input.implementationDifficulty !== undefined) payload.implementation_difficulty = input.implementationDifficulty; if (input.estimatedCost !== undefined) payload.estimated_cost = input.estimatedCost.trim() || null; if (input.implementationTime !== undefined) payload.implementation_time = input.implementationTime.trim() || null; if (input.location !== undefined) payload.location = input.location.trim(); if (input.country !== undefined) payload.country = input.country.trim(); if (input.impactMetric !== undefined) payload.impact_metric = input.impactMetric.trim(); if (input.tags !== undefined) payload.tags = input.tags; if (input.evidenceLinks !== undefined) payload.evidence_links = input.evidenceLinks; if (Object.keys(payload).length) { const { error } = await this.client.from('solutions').update(payload).eq('id', id); if (error) return { ok: false, message: errorMessage(error, 'Não foi possível atualizar a solução.') }; } if (input.relatedProblemIds !== undefined) { const deleted = await this.client.from('solution_problems').delete().eq('solution_id', id); if (deleted.error) return { ok: false, message: errorMessage(deleted.error, 'Não foi possível atualizar relações da solução.') }; const inserted = await this.client.from('solution_problems').insert(input.relatedProblemIds.map((problemId) => ({ solution_id: id, problem_id: problemId }))); if (inserted.error) return { ok: false, message: errorMessage(inserted.error, 'Não foi possível salvar relações da solução.') }; } return this.findCreated(id); }
+  async update(id: string, input: Partial<SolutionInput>): Promise<RepositoryResult<Solution>> {
+    const { data, error } = await this.client.rpc('update_solution_with_problems', {
+      p_solution_id: id,
+      p_title: input.title !== undefined ? input.title.trim() : null,
+      p_summary: input.summary !== undefined ? input.summary.trim() : null,
+      p_description: input.description !== undefined ? input.description.trim() : null,
+      p_category: input.category ?? null,
+      p_image_url: input.image !== undefined ? input.image.trim() || null : null,
+      p_organization: input.organization !== undefined ? input.organization.trim() : null,
+      p_author_name: input.author !== undefined ? input.author.trim() || null : null,
+      p_status: input.status ?? null,
+      p_maturity_level: input.maturityLevel ?? null,
+      p_implementation_difficulty: input.implementationDifficulty ?? null,
+      p_estimated_cost: input.estimatedCost !== undefined ? input.estimatedCost.trim() || null : null,
+      p_implementation_time: input.implementationTime !== undefined ? input.implementationTime.trim() || null : null,
+      p_location: input.location !== undefined ? input.location.trim() : null,
+      p_country: input.country !== undefined ? input.country.trim() : null,
+      p_impact_metric: input.impactMetric !== undefined ? input.impactMetric.trim() : null,
+      p_tags: input.tags ?? null,
+      p_evidence_links: input.evidenceLinks ?? null,
+      p_problem_ids: input.relatedProblemIds ?? null,
+    });
+    if (error) return { ok: false, message: errorMessage(error, 'Não foi possível atualizar a solução.') };
+    const solutionId = typeof data === 'string' ? data : id;
+    return this.findCreated(solutionId);
+  }
   async delete(id: string): Promise<RepositoryResult<null>> { const { error } = await this.client.from('solutions').delete().eq('id', id); if (error) return { ok: false, message: errorMessage(error, 'Não foi possível excluir a solução.') }; return { ok: true, data: null }; }
 }
 export const SolutionRepository = supabaseClient ? new SupabaseSolutionRepository(supabaseClient) : null;
