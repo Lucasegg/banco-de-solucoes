@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { defaultAchievements, defaultStats } from '../../data/mockUsers';
-import type { UserProfile, UserRole } from '../../types/user';
+import type { UserProfile, UserRole, UserStats } from '../../types/user';
 
 export type ProfileRow = {
   id: string;
@@ -40,6 +39,16 @@ function isProfileRow(value: unknown): value is ProfileRow {
 }
 function initials(name: string) { return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'BS'; }
 
+export function createEmptyUserStats(): UserStats {
+  return {
+    problemsSubmitted: 0,
+    solutionsSubmitted: 0,
+    favoritesSaved: 0,
+    contributionsReviewed: 0,
+    impactScore: 0,
+  };
+}
+
 export function mapProfileRowToUserProfile(row: ProfileRow, email = ''): UserProfile | null {
   if (!isProfileRow(row)) return null;
   const name = safeTrim(row.display_name) || safeTrim(row.username) || 'Usuário Banco de Soluções';
@@ -58,8 +67,8 @@ export function mapProfileRowToUserProfile(row: ProfileRow, email = ''): UserPro
     bio: safeTrim(row.bio) || 'Perfil sem biografia pública.',
     avatarUrl: safeTrim(row.avatar_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent(initials(name))}&background=0f172a&color=fff`,
     createdAt: row.created_at || new Date().toISOString(),
-    stats: { ...defaultStats },
-    achievements: defaultAchievements.slice(0, 1),
+    stats: createEmptyUserStats(),
+    achievements: [],
     settings: { emailNotifications: true, publicProfile: true, weeklyDigest: false },
   };
 }
