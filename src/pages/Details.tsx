@@ -3,11 +3,12 @@ import type { CaseStudy, Evidence, Improvement, ProblemStatus, Solution, Solutio
 import { useEffect, useState } from 'react';
 import { Bookmark, Calendar, Eye, ExternalLink, GitBranch, Heart, Lightbulb, MapPin, MessageCircle, Share2, Sparkles, UsersRound } from 'lucide-react';
 import { ContributionForm } from '../components/contributions/ContributionForm';
+import { DiscussionList } from '../components/discussions/DiscussionList';
 import { caseStudies, evidences, improvements, solutionVersions } from '../data/mockData';
 import { ProblemRepository } from '../repositories/problems';
 import { SolutionRepository } from '../repositories/solutions';
-import { CommentRepository } from '../repositories/comments';
-import type { Comment, Problem } from '../types/domain';
+import type { Problem } from '../types/domain';
+import { useDiscussions } from '../hooks/useDiscussions';
 import { useAuth } from '../hooks/useAuth';
 import { useFavorites } from '../hooks/useFavorites';
 import { shareCurrentHashUrl, type ShareStatus } from '../utils/share';
@@ -26,6 +27,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   const favorites = useFavorites('problems');
   const { user } = useAuth();
   const [showContributionForm, setShowContributionForm] = useState(false);
+  const discussion = useDiscussions('problem', problem?.id ?? id, problem ? [problem.author] : []);
   const [feedback, setFeedback] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -127,7 +129,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
-      <div className="lg:col-span-2"><CommentSection targetType="problem" targetId={problem.id} currentUserId={user?.id ?? null} onCountChange={(count) => setProblem((current) => current ? { ...current, comments: count } : current)} /></div>
+      <div className="lg:col-span-2"><DiscussionList title="Discussão do problema" targetType="problem" comments={discussion.comments} reactions={discussion.reactions} currentUserId={discussion.currentUserId} canMarkBestAnswer={discussion.canMarkBestAnswer} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onReply={(content, parentId) => discussion.addComment(content, parentId)} onReact={discussion.toggleReaction} onMarkBestAnswer={discussion.markBestAnswer} onEdit={discussion.editComment} onDelete={discussion.deleteComment} onReport={discussion.reportComment} /></div>
     </section>
   );
 }
@@ -139,6 +141,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const favorites = useFavorites('solutions');
   const { user } = useAuth();
   const [showContributionForm, setShowContributionForm] = useState(false);
+  const discussion = useDiscussions('solution', solution?.id ?? id, solution ? [solution.author, solution.organization] : []);
   const [feedback, setFeedback] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -247,63 +250,9 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Problemas relacionados</h2>{related.map((problem) => <button key={problem.id} onClick={() => onNavigate(`problema:${problem.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{problem.title}</strong><p className="mt-2 text-sm text-muted">{problem.category} · {problem.city}, {problem.state} · {problem.status}</p></button>)}</aside>
-      <div className="lg:col-span-2"><CommentSection targetType="solution" targetId={solution.id} currentUserId={user?.id ?? null} onCountChange={(count) => setSolution((current) => current ? { ...current, comments: count } : current)} /></div>
+      <div className="lg:col-span-2"><DiscussionList title="Discussão da solução" targetType="solution" comments={discussion.comments} reactions={discussion.reactions} currentUserId={discussion.currentUserId} canMarkBestAnswer={discussion.canMarkBestAnswer} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onReply={(content, parentId) => discussion.addComment(content, parentId)} onReact={discussion.toggleReaction} onMarkBestAnswer={discussion.markBestAnswer} onEdit={discussion.editComment} onDelete={discussion.deleteComment} onReport={discussion.reportComment} /></div>
     </section>
   );
-}
-
-
-type CommentTargetType = 'problem' | 'solution';
-function CommentSection({ targetType, targetId, currentUserId, onCountChange }: { targetType: CommentTargetType; targetId: string; currentUserId: string | null; onCountChange: (count: number) => void }) {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [content, setContent] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    async function loadComments() {
-      if (!CommentRepository) { setError('Supabase não configurado.'); setLoading(false); return; }
-      setLoading(true);
-      const result = targetType === 'problem' ? await CommentRepository.listByProblem(targetId) : await CommentRepository.listBySolution(targetId);
-      if (!active) return;
-      if (result.ok) { setComments(result.data); onCountChange(result.data.length); setError(''); } else setError(result.message);
-      setLoading(false);
-    }
-    void loadComments();
-    return () => { active = false; };
-  }, [targetId, targetType]);
-
-  const validate = (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return 'Escreva um comentário antes de publicar.';
-    if (trimmed.length > 2000) return 'O comentário deve ter no máximo 2000 caracteres.';
-    return '';
-  };
-  const publish = async () => {
-    if (!CommentRepository || !currentUserId) return;
-    const validation = validate(content);
-    if (validation) { setMessage(validation); return; }
-    const result = await CommentRepository.create(targetType === 'problem' ? { authorId: currentUserId, problemId: targetId, content } : { authorId: currentUserId, solutionId: targetId, content });
-    if (result.ok) { const next = [...comments, result.data]; setComments(next); onCountChange(next.length); setContent(''); setMessage('Comentário publicado.'); } else setMessage(result.message);
-  };
-  const saveEdit = async (commentId: string) => {
-    if (!CommentRepository) return;
-    const validation = validate(editingContent);
-    if (validation) { setMessage(validation); return; }
-    const result = await CommentRepository.update(commentId, { content: editingContent });
-    if (result.ok) { setComments((current) => current.map((comment) => comment.id === commentId ? result.data : comment)); setEditingId(null); setMessage('Comentário atualizado.'); } else setMessage(result.message);
-  };
-  const remove = async (commentId: string) => {
-    if (!CommentRepository || !window.confirm('Excluir este comentário?')) return;
-    const result = await CommentRepository.delete(commentId);
-    if (result.ok) { const next = comments.filter((comment) => comment.id !== commentId); setComments(next); onCountChange(next.length); setMessage('Comentário excluído.'); } else setMessage(result.message);
-  };
-
-  return <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm"><h2 className="text-2xl font-semibold">Comentários</h2>{loading && <p className="mt-4 text-sm text-muted">Carregando comentários.</p>}{error && <p className="mt-4 text-sm font-semibold text-rose-700">{error}</p>}{!loading && !error && comments.length === 0 && <p className="mt-4 text-sm text-muted">Ainda não há comentários.</p>}<div className="mt-5 space-y-4">{comments.map((comment) => { const canEdit = currentUserId === comment.authorId; const initial = comment.authorName.slice(0, 1).toUpperCase(); return <article key={comment.id} className="rounded-3xl border border-line p-4"><div className="flex items-start gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-sm font-bold text-slate-700">{comment.authorAvatarUrl ? <img src={comment.authorAvatarUrl} alt={`Avatar de ${comment.authorName}`} className="h-full w-full object-cover" /> : initial}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong>{comment.authorName}</strong><span className="text-xs text-muted">{formatDate(comment.createdAt)}</span></div>{editingId === comment.id ? <div className="mt-3 grid gap-2"><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" maxLength={2000} value={editingContent} onChange={(event: { target: { value: string } }) => setEditingContent(event.target.value)} /><div className="flex gap-2"><button className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white" onClick={() => saveEdit(comment.id)}>Salvar</button><button className="rounded-full border border-line px-4 py-2 text-sm font-semibold" onClick={() => setEditingId(null)}>Cancelar</button></div></div> : <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{comment.content}</p>}{canEdit && editingId !== comment.id && <div className="mt-3 flex gap-2"><button className="text-sm font-semibold text-teal-700" onClick={() => { setEditingId(comment.id); setEditingContent(comment.content); }}>Editar</button><button className="text-sm font-semibold text-rose-700" onClick={() => remove(comment.id)}>Excluir</button></div>}</div></div></article>; })}</div>{currentUserId ? <div className="mt-5 grid gap-3"><textarea className="min-h-28 rounded-3xl border border-line px-4 py-3 text-sm" maxLength={2000} placeholder="Escreva seu comentário" value={content} onChange={(event: { target: { value: string } }) => setContent(event.target.value)} /><div className="flex items-center justify-between gap-3"><span className="text-xs text-muted">{content.trim().length}/2000 caracteres</span><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={publish}>Publicar comentário</button></div></div> : <p className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-700">Faça login para comentar.</p>}<Feedback message={message} /></section>;
 }
 
 type KnowledgeTab = 'Resumo' | 'Versões' | 'Casos reais' | 'Referências';

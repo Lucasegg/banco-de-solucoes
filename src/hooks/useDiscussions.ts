@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Badge, Comment, CommentReport, DiscussionTargetType, Reaction, ReactionType, UserReputation } from '../types/discussion';
 import type { UserProfile } from '../types/user';
 import { useAuth } from './useAuth';
 import { useLocalStorageState } from './useLocalStorageState';
-import { COMMENTS_KEY, REACTIONS_KEY, isCommentArray, isReactionArray, normalizeCommentArray } from '../repositories/comments';
+import { CommentRepository, COMMENTS_KEY, REACTIONS_KEY, isCommentArray, isReactionArray, normalizeCommentArray } from '../repositories/comments';
 
 const MAX_DEPTH = 3;
 
@@ -42,9 +42,25 @@ function canManageTarget(user: UserProfile | null, targetOwnerNames: string[]) {
 
 export function useDiscussions(targetType?: DiscussionTargetType, targetId?: string, targetOwnerNames: string[] = []) {
   const { user } = useAuth();
-  const [comments, setComments, commentsStorageError] = useLocalStorageState<Comment[]>(COMMENTS_KEY, [], isCommentArray, normalizeCommentArray);
+  const [localComments, setLocalComments, commentsStorageError] = useLocalStorageState<Comment[]>(COMMENTS_KEY, [], isCommentArray, normalizeCommentArray);
+  const [remoteComments, setRemoteComments] = useState<Comment[]>([]);
+  const [remoteError, setRemoteError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [reactions, setReactions, reactionsStorageError] = useLocalStorageState<Reaction[]>(REACTIONS_KEY, [], isReactionArray);
   const canMarkBestAnswer = canManageTarget(user, targetOwnerNames);
+
+  const comments = CommentRepository ? remoteComments : localComments;
+  useEffect(() => {
+    let active = true;
+    async function loadRemoteComments() {
+      if (!CommentRepository || !targetType || !targetId) return;
+      const result = targetType === 'problem' ? await CommentRepository.listByProblem(targetId) : await CommentRepository.listBySolution(targetId);
+      if (!active) return;
+      if (result.ok) { setRemoteComments(result.data); setRemoteError(''); } else setRemoteError(result.message);
+    }
+    void loadRemoteComments();
+    return () => { active = false; };
+  }, [targetId, targetType]);
 
   const targetComments = useMemo(() => comments.filter((comment) => !targetType || !targetId || (comment.targetType === targetType && comment.targetId === targetId)), [comments, targetId, targetType]);
 
@@ -52,9 +68,19 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (!targetType || !targetId || !user) return { ok: false, message: 'Entre para comentar.' };
     if (!content.trim()) return { ok: false, message: 'Escreva um comentário antes de publicar.' };
     if (getDepth(comments, parentId) > MAX_DEPTH) return { ok: false, message: 'Respostas são permitidas até três níveis.' };
+    if (content.trim().length > 2000) return { ok: false, message: 'O comentário deve ter no máximo 2000 caracteres.' };
+    if (isSubmitting) return { ok: false, message: 'Aguarde o envio do comentário.' };
+    if (CommentRepository) {
+      setIsSubmitting(true);
+      void CommentRepository.create(targetType === 'problem' ? { authorId: user.id, problemId: targetId, parentId, content } : { authorId: user.id, solutionId: targetId, parentId, content }).then((result) => {
+        if (result.ok) setRemoteComments((current) => [result.data, ...current]); else setRemoteError(result.message);
+        setIsSubmitting(false);
+      });
+      return { ok: true, message: 'Enviando comentário.' };
+    }
     const now = new Date().toISOString();
     const comment: Comment = { id: createId('comment'), parentId, targetType, targetId, authorId: user.id, authorName: user.name, content: content.trim(), createdAt: now, updatedAt: now, edited: false, deleted: false, visibility: 'visible', bestAnswer: false, reports: [] };
-    setComments((current) => [comment, ...current]);
+    setLocalComments((current) => [comment, ...current]);
     return { ok: true };
   };
 
@@ -63,7 +89,12 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (!content.trim()) return { ok: false, message: 'O comentário não pode ficar vazio.' };
     const comment = comments.find((item) => item.id === commentId);
     if (!comment || comment.authorId !== user.id || comment.deleted) return { ok: false, message: 'Você só pode editar seus comentários ativos.' };
-    setComments((current) => current.map((item) => item.id === commentId ? { ...item, content: content.trim(), edited: true, updatedAt: new Date().toISOString() } : item));
+    if (content.trim().length > 2000) return { ok: false, message: 'O comentário deve ter no máximo 2000 caracteres.' };
+    if (CommentRepository) {
+      void CommentRepository.update(commentId, { content }).then((result) => { if (result.ok) setRemoteComments((current) => current.map((item) => item.id === commentId ? result.data : item)); else setRemoteError(result.message); });
+      return { ok: true };
+    }
+    setLocalComments((current) => current.map((item) => item.id === commentId ? { ...item, content: content.trim(), edited: true, updatedAt: new Date().toISOString() } : item));
     return { ok: true };
   };
 
@@ -71,7 +102,11 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (!user) return { ok: false, message: 'Entre para excluir.' };
     const comment = comments.find((item) => item.id === commentId);
     if (!comment || comment.authorId !== user.id || comment.deleted) return { ok: false, message: 'Você só pode excluir seus comentários ativos.' };
-    setComments((current) => current.map((item) => item.id === commentId ? { ...item, deleted: true, visibility: 'removed', bestAnswer: false, updatedAt: new Date().toISOString() } : item));
+    if (CommentRepository) {
+      void CommentRepository.delete(commentId).then((result) => { if (result.ok) setRemoteComments((current) => current.filter((item) => item.id !== commentId)); else setRemoteError(result.message); });
+      return { ok: true };
+    }
+    setLocalComments((current) => current.map((item) => item.id === commentId ? { ...item, deleted: true, visibility: 'removed', bestAnswer: false, updatedAt: new Date().toISOString() } : item));
     return { ok: true };
   };
 
@@ -81,7 +116,12 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     const comment = comments.find((item) => item.id === commentId);
     if (!comment || comment.authorId === user.id || comment.reports.some((report) => report.userId === user.id)) return { ok: false, message: 'Não foi possível registrar este reporte.' };
     const report: CommentReport = { userId: user.id, reason: reason.trim(), createdAt: new Date().toISOString() };
-    setComments((current) => current.map((item) => item.id === commentId ? { ...item, reports: [...item.reports, report] } : item));
+    const nextReports = [...comment.reports, report];
+    if (CommentRepository) {
+      void CommentRepository.report(commentId, reason).then((result) => { if (result.ok) setRemoteComments((current) => current.map((item) => item.id === commentId ? result.data : item)); else setRemoteError(result.message); });
+    } else {
+      setLocalComments((current) => current.map((item) => item.id === commentId ? { ...item, reports: nextReports } : item));
+    }
     return { ok: true, message: 'Comentário reportado para moderação.' };
   };
 
@@ -99,7 +139,11 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (!canMarkBestAnswer) return { ok: false, message: 'Apenas o autor pode marcar a melhor resposta.' };
     const comment = comments.find((item) => item.id === commentId && item.targetType === targetType && item.targetId === targetId && !item.deleted);
     if (!comment) return { ok: false, message: 'Comentário não encontrado.' };
-    setComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item));
+    if (CommentRepository) {
+      void CommentRepository.setBestAnswer(targetType, targetId, commentId).then((result) => { if (result.ok) setRemoteComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item)); else setRemoteError(result.message); });
+      return { ok: true };
+    }
+    setLocalComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item));
     return { ok: true };
   };
 
@@ -116,5 +160,5 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     });
   }, [comments, reactions]);
 
-  return { comments: targetComments, allComments: comments, reactions, reputations, addComment, editComment, deleteComment, reportComment, toggleReaction, markBestAnswer, canMarkBestAnswer, currentUserId: user?.id ?? null, storageError: commentsStorageError ?? reactionsStorageError };
+  return { comments: targetComments, allComments: comments, reactions, reputations, addComment, editComment, deleteComment, reportComment, toggleReaction, markBestAnswer, canMarkBestAnswer, currentUserId: user?.id ?? null, storageError: remoteError || commentsStorageError || reactionsStorageError || (isSubmitting ? 'Enviando comentário...' : '') };
 }

@@ -1,21 +1,52 @@
 create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   author_id uuid not null references public.profiles(id) on delete cascade,
+  parent_id uuid references public.comments(id) on delete cascade,
   problem_id uuid references public.problems(id) on delete cascade,
   solution_id uuid references public.solutions(id) on delete cascade,
   content text not null,
+  edited boolean not null default false,
+  deleted boolean not null default false,
+  visibility text not null default 'visible',
+  best_answer boolean not null default false,
+  reports jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint comments_single_target_check check (
     (problem_id is not null and solution_id is null)
     or (problem_id is null and solution_id is not null)
   ),
-  constraint comments_content_length_check check (char_length(btrim(content)) between 1 and 2000)
+  constraint comments_content_length_check check (char_length(btrim(content)) between 1 and 2000),
+  constraint comments_visibility_check check (visibility in ('visible', 'hidden', 'removed')),
+  constraint comments_reports_array_check check (jsonb_typeof(reports) = 'array')
 );
 
+create index if not exists comments_parent_id_idx on public.comments(parent_id);
 create index if not exists comments_author_id_idx on public.comments(author_id);
 create index if not exists comments_problem_id_created_at_idx on public.comments(problem_id, created_at desc) where problem_id is not null;
 create index if not exists comments_solution_id_created_at_idx on public.comments(solution_id, created_at desc) where solution_id is not null;
+
+
+create or replace function public.prevent_comment_immutable_update()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.author_id is distinct from old.author_id
+    or new.problem_id is distinct from old.problem_id
+    or new.solution_id is distinct from old.solution_id
+    or new.parent_id is distinct from old.parent_id
+    or new.created_at is distinct from old.created_at then
+    raise exception 'Comment ownership and target fields cannot be changed' using errcode = '42501';
+  end if;
+  new.edited := true;
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_comment_immutable_update_before_update on public.comments;
+create trigger prevent_comment_immutable_update_before_update before update on public.comments for each row execute function public.prevent_comment_immutable_update();
 
 drop trigger if exists set_comments_updated_at_before_update on public.comments;
 create trigger set_comments_updated_at_before_update before update on public.comments for each row execute function public.set_domain_updated_at();
@@ -23,6 +54,7 @@ create trigger set_comments_updated_at_before_update before update on public.com
 create or replace function public.refresh_target_comment_count(p_problem_id uuid, p_solution_id uuid)
 returns void
 language plpgsql
+security definer
 set search_path = public
 as $$
 begin
@@ -72,3 +104,67 @@ drop policy if exists "Authors can update own comments" on public.comments;
 create policy "Authors can update own comments" on public.comments for update to authenticated using (auth.uid() = author_id) with check (auth.uid() = author_id);
 drop policy if exists "Authors can delete own comments" on public.comments;
 create policy "Authors can delete own comments" on public.comments for delete to authenticated using (auth.uid() = author_id);
+
+create or replace function public.report_comment(p_comment_id uuid, p_reason text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  reporter_id uuid := auth.uid();
+begin
+  if reporter_id is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  update public.comments
+  set reports = reports || jsonb_build_array(jsonb_build_object('userId', reporter_id::text, 'reason', btrim(p_reason), 'createdAt', timezone('utc', now())::text))
+  where id = p_comment_id
+    and author_id <> reporter_id
+    and btrim(p_reason) <> ''
+    and not exists (select 1 from jsonb_array_elements(reports) report where report ->> 'userId' = reporter_id::text);
+
+  if not found then
+    raise exception 'Comment report was not accepted' using errcode = '42501';
+  end if;
+
+  return p_comment_id;
+end;
+$$;
+
+create or replace function public.mark_comment_best_answer(p_comment_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  comment_record public.comments%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  select * into comment_record from public.comments where id = p_comment_id;
+  if not found then
+    raise exception 'Comment not found' using errcode = 'P0002';
+  end if;
+
+  if comment_record.problem_id is not null and not exists (select 1 from public.problems where id = comment_record.problem_id and author_id = auth.uid()) then
+    raise exception 'Only the problem author can mark the best answer' using errcode = '42501';
+  end if;
+
+  if comment_record.solution_id is not null and not exists (select 1 from public.solutions where id = comment_record.solution_id and author_id = auth.uid()) then
+    raise exception 'Only the solution author can mark the best answer' using errcode = '42501';
+  end if;
+
+  update public.comments
+  set best_answer = false
+  where (comment_record.problem_id is not null and problem_id = comment_record.problem_id)
+     or (comment_record.solution_id is not null and solution_id = comment_record.solution_id);
+
+  update public.comments set best_answer = true where id = p_comment_id;
+  return p_comment_id;
+end;
+$$;
