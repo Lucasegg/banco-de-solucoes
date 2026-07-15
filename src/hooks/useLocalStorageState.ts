@@ -1,18 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { StorageStateRepository } from '../repositories/storageState';
 
 type Validator<T> = (value: unknown) => value is T;
 type Normalizer<T> = (value: unknown) => T;
-
-type StoredValue<T> = {
-  value: T;
-  serialized: string | null;
-};
-
-const LOCAL_STORAGE_EVENT = 'banco-de-solucoes.local-storage';
-
-function notifyStorageKey(key: string, sourceId: string) {
-  window.dispatchEvent(new CustomEvent(LOCAL_STORAGE_EVENT, { detail: { key, sourceId } }));
-}
 
 function isStorageNotification(value: Event): value is CustomEvent<{ key: string; sourceId?: string }> {
   return value instanceof CustomEvent && typeof value.detail?.key === 'string';
@@ -23,13 +13,9 @@ export function useLocalStorageState<T>(key: string, initialValue: T, validator?
   const sourceId = useRef(`local-storage-${key}-${Math.random().toString(16).slice(2)}`);
   const lastSerializedValue = useRef<string | null>(null);
 
-  const readStoredValue = useCallback((): StoredValue<T> => {
+  const readStoredValue = useCallback(() => {
     try {
-      const stored = window.localStorage.getItem(key);
-      if (!stored) return { value: initialValue, serialized: null };
-      const parsed: unknown = JSON.parse(stored);
-      const value = normalizer ? normalizer(parsed) : validator && !validator(parsed) ? initialValue : parsed as T;
-      return { value, serialized: JSON.stringify(value) };
+      return StorageStateRepository.read(key, initialValue, validator, normalizer);
     } catch {
       return { value: initialValue, serialized: null };
     }
@@ -48,9 +34,8 @@ export function useLocalStorageState<T>(key: string, initialValue: T, validator?
         setStorageError(null);
         return;
       }
-      window.localStorage.setItem(key, serialized);
+      if (!StorageStateRepository.save(key, value)) throw new Error('Não foi possível persistir os dados locais.');
       lastSerializedValue.current = serialized;
-      notifyStorageKey(key, sourceId.current);
       setStorageError(null);
     } catch (error) {
       setStorageError(error instanceof Error ? error.message : 'Não foi possível persistir os dados locais.');
@@ -67,10 +52,10 @@ export function useLocalStorageState<T>(key: string, initialValue: T, validator?
       setValue(stored.value);
     };
     window.addEventListener('storage', sync);
-    window.addEventListener(LOCAL_STORAGE_EVENT, sync);
+    window.addEventListener(StorageStateRepository.eventName, sync);
     return () => {
       window.removeEventListener('storage', sync);
-      window.removeEventListener(LOCAL_STORAGE_EVENT, sync);
+      window.removeEventListener(StorageStateRepository.eventName, sync);
     };
   }, [key, readStoredValue]);
 

@@ -1,82 +1,28 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { Contribution, ContributionChange, ContributionReview, ContributionStats, ContributionStatus, ContributionTargetType, ContributionType, SerializableValue } from '../types/contribution';
-import { problems, solutions } from '../data/mockData';
+import type { Contribution, ContributionReview, ContributionStats, ContributionTargetType } from '../types/contribution';
+import { ContributionRepository, isContribution } from '../repositories/contributions';
+import { ProblemRepository } from '../repositories/problems';
+import { SolutionRepository } from '../repositories/solutions';
 import type { UserProfile } from '../types/user';
-import { addModerationAction } from './useModeration';
 import { getPermissions } from './usePermissions';
-
-const STORAGE_KEY = 'banco-de-solucoes.contributions';
-const LOCAL_STORAGE_EVENT = 'banco-de-solucoes.local-storage';
-const contributionTypes: ContributionType[] = ['Correção', 'Atualização', 'Nova evidência', 'Novo caso real', 'Nova versão', 'Nova relação', 'Melhoria geral'];
-const statuses: ContributionStatus[] = ['Pendente', 'Em revisão', 'Aprovada', 'Rejeitada', 'Cancelada'];
-const targetTypes: ContributionTargetType[] = ['problem', 'solution'];
 
 type Result = { ok: true; contribution?: Contribution } | { ok: false; message: string };
 export type CreateContributionInput = Pick<Contribution, 'targetType' | 'targetId' | 'type' | 'title' | 'description' | 'justification' | 'changes'>;
 
-function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
-function isSerializable(value: unknown): value is SerializableValue {
-  if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) return true;
-  if (Array.isArray(value)) return value.every(isSerializable);
-  if (isRecord(value)) return Object.values(value).every(isSerializable);
-  return false;
-}
-function isChange(value: unknown): value is ContributionChange {
-  return isRecord(value) && typeof value.id === 'string' && typeof value.field === 'string' && typeof value.label === 'string' && isSerializable(value.previousValue) && isSerializable(value.proposedValue);
-}
-function isReview(value: unknown): value is ContributionReview {
-  return isRecord(value) && typeof value.id === 'string' && statuses.includes(value.status as ContributionStatus) && typeof value.reviewerId === 'string' && typeof value.reviewerName === 'string' && typeof value.message === 'string' && typeof value.createdAt === 'string';
-}
-function isContribution(value: unknown): value is Contribution {
-  return isRecord(value)
-    && typeof value.id === 'string'
-    && targetTypes.includes(value.targetType as ContributionTargetType)
-    && typeof value.targetId === 'string'
-    && typeof value.targetTitle === 'string'
-    && typeof value.targetOwnerName === 'string'
-    && contributionTypes.includes(value.type as ContributionType)
-    && statuses.includes(value.status as ContributionStatus)
-    && typeof value.title === 'string'
-    && typeof value.description === 'string'
-    && typeof value.justification === 'string'
-    && Array.isArray(value.changes) && value.changes.length > 0 && value.changes.every(isChange)
-    && typeof value.authorId === 'string'
-    && typeof value.authorName === 'string'
-    && typeof value.createdAt === 'string'
-    && typeof value.updatedAt === 'string'
-    && Array.isArray(value.reviews) && value.reviews.every(isReview);
-}
-function normalizeContribution(value: unknown): Contribution | null {
-  if (!isContribution(value)) return null;
-  return { ...value, reviewerId: typeof value.reviewerId === 'string' ? value.reviewerId : null, reviewerName: typeof value.reviewerName === 'string' ? value.reviewerName : null };
-}
-function readContributions(): Contribution[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map(normalizeContribution).filter((item): item is Contribution => item !== null) : [];
-  } catch { return []; }
-}
-function notifyStorageKey(key: string) { window.dispatchEvent(new CustomEvent(LOCAL_STORAGE_EVENT, { detail: { key } })); }
-function persist(contributions: Contribution[]) {
-  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(contributions)); notifyStorageKey(STORAGE_KEY); return true; } catch { return false; }
-}
-function saveWithModerationAction(previous: Contribution[], next: Contribution[], action: Parameters<typeof addModerationAction>[0]) {
-  if (!persist(next)) return false;
-  if (addModerationAction(action)) return true;
-  persist(previous);
-  return false;
+function readContributions(): Contribution[] { return ContributionRepository.list(); }
+function persist(contributions: Contribution[]) { return ContributionRepository.save(contributions); }
+function saveWithModerationAction(next: Contribution[], action: Parameters<typeof ContributionRepository.saveWithModerationAction>[1]) {
+  return ContributionRepository.saveWithModerationAction(next, action);
 }
 function id(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 function normalizeOwner(value: string) { return value.trim().toLowerCase(); }
 function resolveTarget(targetType: ContributionTargetType, targetId: string) {
   if (targetType === 'problem') {
-    const problem = problems.find((item) => item.id === targetId);
+    const problem = ProblemRepository.findById(targetId);
     return problem ? { title: problem.title, owners: [problem.author] } : null;
   }
 
-  const solution = solutions.find((item) => item.id === targetId);
+  const solution = SolutionRepository.findById(targetId);
   return solution ? { title: solution.title, owners: [solution.author, solution.organization] } : null;
 }
 function isTargetOwner(contribution: Contribution, user: UserProfile) {
@@ -134,7 +80,7 @@ export function useContributions(currentUser?: UserProfile | null) {
     const now = new Date().toISOString();
     const next = { ...item, status: 'Em revisão' as const, reviewerId: currentUser.id, reviewerName: currentUser.name, updatedAt: now };
     const nextContributions = contributions.map((entry) => entry.id === contributionId ? next : entry);
-    const ok = saveWithModerationAction(contributions, nextContributions, { caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: 'contribution_assigned', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: 'Revisão de contribuição assumida.' });
+    const ok = saveWithModerationAction(nextContributions, { caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: 'contribution_assigned', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: 'Revisão de contribuição assumida.' });
     if (!ok) { setStorageError('Falha ao assumir revisão e registrar histórico. Nenhuma alteração foi mantida.'); return { ok: false, message: 'Falha ao assumir revisão e registrar histórico.' }; }
     setStorageError(''); setContributions(nextContributions); return { ok: true, contribution: next };
   }, [contributions, currentUser, save]);
@@ -146,7 +92,7 @@ export function useContributions(currentUser?: UserProfile | null) {
     if (status === 'Rejeitada' && !message.trim()) return { ok: false, message: 'Informe uma justificativa para rejeitar.' };
     const review: ContributionReview = { id: id('review'), status, reviewerId: currentUser.id, reviewerName: currentUser.name, message: message.trim() || 'Contribuição aprovada.', createdAt: new Date().toISOString() };
     const nextContributions = contributions.map((entry) => entry.id === contributionId ? { ...entry, status, reviewerId: item.reviewerId ?? currentUser.id, reviewerName: item.reviewerName ?? currentUser.name, updatedAt: review.createdAt, reviews: [...entry.reviews, review] } : entry);
-    const ok = saveWithModerationAction(contributions, nextContributions, { caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: status === 'Aprovada' ? 'contribution_approved' : 'contribution_rejected', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: review.message });
+    const ok = saveWithModerationAction(nextContributions, { caseId: contributionId, targetType: 'contribution', targetId: contributionId, action: status === 'Aprovada' ? 'contribution_approved' : 'contribution_rejected', moderatorId: currentUser.id, moderatorName: currentUser.name, reason: review.message });
     if (!ok) { setStorageError('Falha ao revisar e registrar histórico. Nenhuma alteração foi mantida.'); return { ok: false, message: 'Falha ao revisar e registrar histórico.' }; }
     setStorageError(''); setContributions(nextContributions); return { ok: true };
   }, [contributions, currentUser, save]);

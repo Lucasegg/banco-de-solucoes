@@ -1,30 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
+import { FavoriteRepository, type FavoriteKind } from '../repositories/favorites';
 
-export type FavoriteKind = 'problems' | 'solutions';
-
-const storageKeys: Record<FavoriteKind, string> = {
-  problems: 'banco-de-solucoes.favoriteProblems',
-  solutions: 'banco-de-solucoes.favoriteSolutions',
-};
+export type { FavoriteKind };
 
 function readFavoriteIds(kind: FavoriteKind) {
-  try {
-    const rawValue = window.localStorage.getItem(storageKeys[kind]);
-    if (!rawValue) return [];
-    const parsed: unknown = JSON.parse(rawValue);
-    if (!Array.isArray(parsed)) return [];
-    return Array.from(new Set(parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)));
-  } catch {
-    return [];
-  }
+  return FavoriteRepository.listIds(kind);
 }
 
 function writeFavoriteIds(kind: FavoriteKind, ids: string[]) {
-  try {
-    window.localStorage.setItem(storageKeys[kind], JSON.stringify(ids));
-  } catch {
-    // Favoritos são um aprimoramento local; a UI não deve quebrar se o armazenamento estiver indisponível.
-  }
+  FavoriteRepository.saveIds(kind, ids);
 }
 
 export function useFavorites(kind: FavoriteKind) {
