@@ -112,13 +112,13 @@ as $$
 begin
   if p_problem_id is not null then
     update public.problems
-    set comments = (select count(*)::integer from public.comments where problem_id = p_problem_id)
+    set comments = (select count(*)::integer from public.comments where problem_id = p_problem_id and deleted = false and visibility <> 'removed')
     where id = p_problem_id;
   end if;
 
   if p_solution_id is not null then
     update public.solutions
-    set comments = (select count(*)::integer from public.comments where solution_id = p_solution_id)
+    set comments = (select count(*)::integer from public.comments where solution_id = p_solution_id and deleted = false and visibility <> 'removed')
     where id = p_solution_id;
   end if;
 end;
@@ -133,6 +133,12 @@ begin
   if tg_op = 'INSERT' then
     perform public.refresh_target_comment_count(new.problem_id, new.solution_id);
     return new;
+  elsif tg_op = 'UPDATE' then
+    if new.deleted is distinct from old.deleted or new.visibility is distinct from old.visibility or new.problem_id is distinct from old.problem_id or new.solution_id is distinct from old.solution_id then
+      perform public.refresh_target_comment_count(old.problem_id, old.solution_id);
+      perform public.refresh_target_comment_count(new.problem_id, new.solution_id);
+    end if;
+    return new;
   elsif tg_op = 'DELETE' then
     perform public.refresh_target_comment_count(old.problem_id, old.solution_id);
     return old;
@@ -143,6 +149,8 @@ $$;
 
 drop trigger if exists sync_comment_count_after_insert on public.comments;
 create trigger sync_comment_count_after_insert after insert on public.comments for each row execute function public.sync_comment_count();
+drop trigger if exists sync_comment_count_after_update on public.comments;
+create trigger sync_comment_count_after_update after update on public.comments for each row execute function public.sync_comment_count();
 drop trigger if exists sync_comment_count_after_delete on public.comments;
 create trigger sync_comment_count_after_delete after delete on public.comments for each row execute function public.sync_comment_count();
 
@@ -217,6 +225,42 @@ begin
      or (comment_record.solution_id is not null and solution_id = comment_record.solution_id);
 
   update public.comments set best_answer = true where id = p_comment_id;
+  return p_comment_id;
+end;
+$$;
+
+
+create or replace function public.moderate_comment_visibility(p_comment_id uuid, p_visibility text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  moderator_role text;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  select role into moderator_role from public.profiles where id = auth.uid();
+  if moderator_role not in ('moderator', 'admin') then
+    raise exception 'Only moderators can moderate comments' using errcode = '42501';
+  end if;
+
+  if p_visibility not in ('visible', 'hidden', 'removed') then
+    raise exception 'Invalid visibility' using errcode = '23514';
+  end if;
+
+  update public.comments
+  set visibility = p_visibility,
+      deleted = p_visibility = 'removed'
+  where id = p_comment_id;
+
+  if not found then
+    raise exception 'Comment not found' using errcode = 'P0002';
+  end if;
+
   return p_comment_id;
 end;
 $$;

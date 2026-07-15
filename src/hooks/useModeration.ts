@@ -57,6 +57,7 @@ export function useModeration(user: UserProfile | null | undefined) {
         const nextRemote = [...remoteGenerated, ...persisted.filter((item) => !remoteTargetIds.has(item.targetId) && item.status !== 'open')];
         if (ModerationRepository.saveCases(nextRemote)) { setCases(nextRemote); setStorageError(''); } else setStorageError('Não foi possível persistir casos de moderação.');
       });
+      return persisted;
     }
     const generated = comments.filter((comment) => comment.reports.length > 0).map((comment) => {
       const existing = byTarget.get(comment.id);
@@ -69,7 +70,7 @@ export function useModeration(user: UserProfile | null | undefined) {
     return next;
   }, []);
 
-  const mutateCase = useCallback((caseId: string, action: ModerationActionType, reason: string, updater: (item: ModerationCase) => ModerationCase, visibility?: ContentVisibility, requiresReason = false): Result => {
+  const mutateCase = useCallback(async (caseId: string, action: ModerationActionType, reason: string, updater: (item: ModerationCase) => ModerationCase, visibility?: ContentVisibility, requiresReason = false): Promise<Result> => {
     if (!user || !permissions.canModerateComments) return { ok: false, message: 'Você não tem permissão para moderar comentários.' };
     const currentCases = readCases();
     const currentActions = readActions();
@@ -84,6 +85,10 @@ export function useModeration(user: UserProfile | null | undefined) {
     const updated = updater({ ...item, updatedAt: now });
     const nextCases = currentCases.map((entry) => entry.id === caseId ? updated : entry).filter(isCase);
     const nextActions = [createAction({ caseId: updated.id, targetType: updated.targetType, targetId: updated.targetId, action, moderatorId: user.id, moderatorName: user.name, reason: reason.trim() || action }), ...currentActions].filter(isAction);
+    if (visibility && CommentRepository) {
+      const moderated = await CommentRepository.moderateVisibility(updated.targetId, visibility);
+      if (!moderated.ok) return fail(moderated.message);
+    }
     const nextComments = visibility ? currentComments.map((entry) => entry.id === updated.targetId ? { ...entry, visibility, deleted: visibility === 'removed' ? true : entry.deleted, updatedAt: now } : entry) : undefined;
     const ok = ModerationRepository.persistTransaction({ cases: nextCases, actions: nextActions, comments: nextComments });
     if (!ok) return fail('Não foi possível salvar a ação de moderação. Nenhuma alteração foi mantida.');
