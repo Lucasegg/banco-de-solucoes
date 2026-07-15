@@ -29,16 +29,19 @@ export function AdminPanel() {
   const [remoteReportedComments, setRemoteReportedComments] = useState<Comment[]>([]);
 
   useEffect(() => { moderation.hydrateCases(); }, []);
+  async function loadRemoteReportedComments() {
+    if (!CommentRepository) return;
+    const result = await CommentRepository.listReported();
+    if (result.ok) setRemoteReportedComments(result.data);
+    else setFeedback(result.message);
+  }
   useEffect(() => {
     let active = true;
-    async function loadRemoteReportedComments() {
-      if (!CommentRepository) return;
-      const result = await CommentRepository.listReported();
+    async function load() {
       if (!active) return;
-      if (result.ok) setRemoteReportedComments(result.data);
-      else setFeedback(result.message);
+      await loadRemoteReportedComments();
     }
-    void loadRemoteReportedComments();
+    void load();
     return () => { active = false; };
   }, []);
   if (!user || !permissions.canAccessAdmin) return <p className="rounded-3xl border border-amber-200 bg-amber-50 p-6 font-semibold text-amber-900">Você não tem permissão para acessar o painel administrativo.</p>;
@@ -49,7 +52,7 @@ export function AdminPanel() {
   const reportedComments = moderation.cases.map((caseItem) => ({ caseItem, comment: commentLookup.get(caseItem.targetId) })).filter((item) => item.comment);
   const history = moderation.actions.filter((item) => targetFilter === 'all' || item.targetType === targetFilter).filter((item) => actionFilter === 'all' || item.action === actionFilter).filter((item) => !moderatorFilter || item.moderatorName.toLowerCase().includes(moderatorFilter.toLowerCase())).sort((a, b) => order === 'newest' ? b.createdAt.localeCompare(a.createdAt) : a.createdAt.localeCompare(b.createdAt));
   const actionTypes = Array.from(new Set(moderation.actions.map((item) => item.action)));
-  const act = async (result: { ok: boolean; message?: string } | Promise<{ ok: boolean; message?: string }>) => { const resolved = await result; setFeedback(resolved.ok ? 'Ação registrada com sucesso.' : resolved.message ?? 'Ação não concluída.'); };
+  const act = async (result: { ok: boolean; message?: string } | Promise<{ ok: boolean; message?: string }>) => { const resolved = await result; if (resolved.ok) await loadRemoteReportedComments(); setFeedback(resolved.ok ? 'Ação registrada com sucesso.' : resolved.message ?? 'Ação não concluída.'); };
 
   return <section className="space-y-6"><div><p className="text-sm font-semibold uppercase tracking-wide text-teal-700">Administração local</p><h1 className="text-4xl font-semibold">Painel administrativo</h1><p className="mt-2 text-muted">Centraliza contribuições e comentários reportados. Limitação temporária: responsáveis, notas internas e histórico de decisões de moderação ainda ficam no armazenamento local do navegador.</p></div><div role="tablist" aria-label="Seções administrativas" className="flex flex-wrap gap-2 rounded-3xl border border-line bg-white p-2">{tabs.map((item) => <button key={item} id={`tab-${item}`} role="tab" aria-selected={tab === item} aria-controls={`panel-${item}`} onClick={() => setTab(item)} className={`rounded-2xl px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-400 ${tab === item ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{item === 'overview' ? 'Visão geral' : item === 'contributions' ? 'Contribuições' : item === 'comments' ? 'Comentários reportados' : 'Histórico'}</button>)}</div><p aria-live="polite" className="text-sm font-semibold text-slate-700">{feedback || moderation.storageError}</p>
     {tab === 'overview' && <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" className="grid gap-4 md:grid-cols-3"><Card label="Contribuições pendentes" value={pending.length} /><Card label="Contribuições em revisão" value={reviewing.length} /><Card label="Comentários reportados" value={reportedComments.length} /><Card label="Casos abertos" value={moderation.stats.openCases} /><Card label="Casos resolvidos" value={moderation.stats.resolvedCases} /><Card label="Conteúdo ocultado" value={moderation.stats.hiddenContent} /><div className="rounded-3xl border border-line bg-white p-5 md:col-span-3"><h2 className="font-semibold">Ações recentes</h2>{moderation.stats.recentActions.length ? moderation.stats.recentActions.map((item) => <p key={item.id} className="mt-2 text-sm text-muted">{item.action} · {item.moderatorName} · {new Date(item.createdAt).toLocaleString('pt-BR')}</p>) : <p className="mt-2 text-sm text-muted">Nenhuma ação registrada.</p>}</div></div>}

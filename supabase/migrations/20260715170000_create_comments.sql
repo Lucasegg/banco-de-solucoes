@@ -168,7 +168,7 @@ create trigger sync_comment_count_after_delete after delete on public.comments f
 alter table public.comments enable row level security;
 
 drop policy if exists "Public can read comments" on public.comments;
-create policy "Public can read comments" on public.comments for select to anon, authenticated using (true);
+create policy "Public can read comments" on public.comments for select to anon, authenticated using (deleted = false and visibility = 'visible');
 drop policy if exists "Authenticated users can create comments" on public.comments;
 create policy "Authenticated users can create comments" on public.comments for insert to authenticated with check (auth.uid() = author_id);
 drop policy if exists "Authors can update own comments" on public.comments;
@@ -243,7 +243,6 @@ alter table public.comment_reports enable row level security;
 drop policy if exists "Moderators can read comment reports" on public.comment_reports;
 create policy "Moderators can read comment reports" on public.comment_reports for select to authenticated using (exists (select 1 from public.profiles where id = auth.uid() and role in ('moderator', 'admin')));
 drop policy if exists "Authenticated users can create comment reports" on public.comment_reports;
-create policy "Authenticated users can create comment reports" on public.comment_reports for insert to authenticated with check (auth.uid() = reporter_id);
 
 create or replace function public.list_reported_comments()
 returns table (
