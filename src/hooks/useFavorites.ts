@@ -6,6 +6,7 @@ export type { Favorite, FavoriteKind };
 
 type FavoriteState = Record<FavoriteKind, Favorite[]>;
 const emptyFavorites: FavoriteState = { problems: [], solutions: [] };
+const matchesFavoriteTarget = (favorite: Favorite, targetKind: FavoriteKind, id: string) => (targetKind === 'problems' ? favorite.problemId : favorite.solutionId) === id;
 
 export function useFavorites(kind?: FavoriteKind) {
   const { user, isAuthenticated } = useAuth();
@@ -39,11 +40,11 @@ export function useFavorites(kind?: FavoriteKind) {
 
   const setOptimistic = useCallback((targetKind: FavoriteKind, id: string, favorite: boolean) => {
     setFavorites((current) => {
-      const exists = current[targetKind].some((item) => (targetKind === 'problems' ? item.problemId : item.solutionId) === id);
+      const exists = current[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id));
       if (favorite && exists) return current;
       if (!favorite && !exists) return current;
       const optimistic: Favorite = { id: `optimistic-${targetKind}-${id}`, userId: user?.id ?? '', problemId: targetKind === 'problems' ? id : null, solutionId: targetKind === 'solutions' ? id : null, createdAt: new Date().toISOString() };
-      return { ...current, [targetKind]: favorite ? [optimistic, ...current[targetKind]] : current[targetKind].filter((item) => (targetKind === 'problems' ? item.problemId : item.solutionId) !== id) };
+      return { ...current, [targetKind]: favorite ? [optimistic, ...current[targetKind]] : current[targetKind].filter((item) => !matchesFavoriteTarget(item, targetKind, id)) };
     });
   }, [user?.id]);
 
@@ -62,16 +63,25 @@ export function useFavorites(kind?: FavoriteKind) {
     if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
     if (!user || !isAuthenticated) return { ok: false, message: 'Entre na sua conta para alterar favoritos.' };
     if (!FavoriteRepository) return { ok: false, message: 'Supabase não configurado para favoritos.' };
+    const removedFavorite = favorites[targetKind].find((item) => matchesFavoriteTarget(item, targetKind, id));
     setOptimistic(targetKind, id, false);
     const result = await FavoriteRepository.remove(user.id, { kind: targetKind, id });
-    if (!result.ok) { setOptimistic(targetKind, id, true); setError(result.message); return result; }
+    if (!result.ok) {
+      if (removedFavorite) {
+        setFavorites((current) => current[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id)) ? current : { ...current, [targetKind]: [removedFavorite, ...current[targetKind]] });
+      } else {
+        await reload();
+      }
+      setError(result.message);
+      return result;
+    }
     await reload();
     return result;
-  }, [isAuthenticated, kind, reload, setOptimistic, user]);
+  }, [favorites, isAuthenticated, kind, reload, setOptimistic, user]);
 
   const toggleFavorite = useCallback(async (id: string, targetKind: FavoriteKind | undefined = kind) => {
     if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
-    return favorites[targetKind].some((item) => (targetKind === 'problems' ? item.problemId : item.solutionId) === id)
+    return favorites[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id))
       ? removeFavorite(id, targetKind)
       : addFavorite(id, targetKind);
   }, [addFavorite, favorites, kind, removeFavorite]);
