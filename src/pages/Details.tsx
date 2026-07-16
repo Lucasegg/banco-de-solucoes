@@ -41,6 +41,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   const [editImageRemoved, setEditImageRemoved] = useState(false);
   const [editImageProgress, setEditImageProgress] = useState<UploadProgress | null>(null);
   const [editImageError, setEditImageError] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const isFavorite = problem ? favorites.isFavorite(problem.id) : false;
   const canManage = Boolean(user && (problem?.authorId === user.id || permissions.canAccessAdmin));
 
@@ -87,35 +88,40 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   };
 
   const saveProblemEdit = async () => {
-    if (!problem || !ProblemRepository || !canManage) return;
-    setEditImageError('');
-    let nextImage = problem.image;
-    if (editImageFile) {
-      if (!ImageUploadRepository || !user) { setEditImageError('Supabase Storage não configurado.'); return; }
-      const upload = await ImageUploadRepository.uploadImage('problem-images', user.id, editImageFile, setEditImageProgress);
-      if (!upload.ok) { setEditImageError(upload.message); setEditImageProgress(null); return; }
-      nextImage = upload.url;
-    } else if (editImageRemoved) {
-      nextImage = '';
-    }
-    const result = await ProblemRepository.update(problem.id, { title: editTitle, summary: editSummary, status: editStatus, image: nextImage });
-    if (!result.ok) {
-      if (editImageFile && nextImage) await ImageUploadRepository?.removeImage('problem-images', user!.id, nextImage);
+    if (!problem || !ProblemRepository || !canManage || isSavingEdit) return;
+    setIsSavingEdit(true);
+    try {
+      setEditImageError('');
+      let nextImage = problem.image;
+      if (editImageFile) {
+        if (!ImageUploadRepository || !user) { setEditImageError('Supabase Storage não configurado.'); return; }
+        const upload = await ImageUploadRepository.uploadImage('problem-images', user.id, editImageFile, setEditImageProgress);
+        if (!upload.ok) { setEditImageError(upload.message); setEditImageProgress(null); return; }
+        nextImage = upload.url;
+      } else if (editImageRemoved) {
+        nextImage = '';
+      }
+      const result = await ProblemRepository.update(problem.id, { title: editTitle, summary: editSummary, status: editStatus, image: nextImage });
+      if (!result.ok) {
+        if (editImageFile && nextImage) await ImageUploadRepository?.removeImage('problem-images', user!.id, nextImage);
+        setEditImageProgress(null);
+        setFeedback(result.message);
+        return;
+      }
+      let cleanupWarning = '';
+      if ((editImageFile || editImageRemoved) && user) {
+        const removed = await ImageUploadRepository?.removeImage('problem-images', user.id, problem.image);
+        if (removed && !removed.ok) cleanupWarning = ` ${removed.message}`;
+      }
+      setProblem(result.data);
+      setEditImageFile(null);
+      setEditImageRemoved(false);
       setEditImageProgress(null);
-      setFeedback(result.message);
-      return;
+      setIsEditing(false);
+      setFeedback(`Problema atualizado.${cleanupWarning}`);
+    } finally {
+      setIsSavingEdit(false);
     }
-    let cleanupWarning = '';
-    if ((editImageFile || editImageRemoved) && user) {
-      const removed = await ImageUploadRepository?.removeImage('problem-images', user.id, problem.image);
-      if (removed && !removed.ok) cleanupWarning = ` ${removed.message}`;
-    }
-    setProblem(result.data);
-    setEditImageFile(null);
-    setEditImageRemoved(false);
-    setEditImageProgress(null);
-    setIsEditing(false);
-    setFeedback(`Problema atualizado.${cleanupWarning}`);
   };
 
   const deleteProblem = async () => {
@@ -157,7 +163,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
             {canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}
             {canManage && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteProblem} />}
           </div>
-          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><ImageUploadField label="Imagem do problema" currentUrl={problem.image} value={editImageFile} removed={editImageRemoved} uploading={Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem do problema ${problem.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}><option>Aberto</option><option>Em andamento</option><option>Resolvido</option></select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit}>Salvar edição</button></div>}
+          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><ImageUploadField label="Imagem do problema" currentUrl={problem.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem do problema ${problem.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}><option>Aberto</option><option>Em andamento</option><option>Resolvido</option></select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
           <Feedback message={feedback} />
           {showContributionForm && <ContributionForm targetType="problem" targetId={problem.id} fields={problemFields} onClose={() => setShowContributionForm(false)} />}
         </div>
@@ -186,6 +192,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const [editImageRemoved, setEditImageRemoved] = useState(false);
   const [editImageProgress, setEditImageProgress] = useState<UploadProgress | null>(null);
   const [editImageError, setEditImageError] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const isFavorite = solution ? favorites.isFavorite(solution.id) : false;
   const canManage = Boolean(user && (solution?.authorId === user.id || permissions.canAccessAdmin));
 
@@ -232,35 +239,40 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   };
 
   const saveSolutionEdit = async () => {
-    if (!solution || !SolutionRepository || !canManage) return;
-    setEditImageError('');
-    let nextImage = solution.image;
-    if (editImageFile) {
-      if (!ImageUploadRepository || !user) { setEditImageError('Supabase Storage não configurado.'); return; }
-      const upload = await ImageUploadRepository.uploadImage('solution-images', user.id, editImageFile, setEditImageProgress);
-      if (!upload.ok) { setEditImageError(upload.message); setEditImageProgress(null); return; }
-      nextImage = upload.url;
-    } else if (editImageRemoved) {
-      nextImage = '';
-    }
-    const result = await SolutionRepository.update(solution.id, { title: editTitle, summary: editSummary, status: editStatus, image: nextImage });
-    if (!result.ok) {
-      if (editImageFile && nextImage) await ImageUploadRepository?.removeImage('solution-images', user!.id, nextImage);
+    if (!solution || !SolutionRepository || !canManage || isSavingEdit) return;
+    setIsSavingEdit(true);
+    try {
+      setEditImageError('');
+      let nextImage = solution.image;
+      if (editImageFile) {
+        if (!ImageUploadRepository || !user) { setEditImageError('Supabase Storage não configurado.'); return; }
+        const upload = await ImageUploadRepository.uploadImage('solution-images', user.id, editImageFile, setEditImageProgress);
+        if (!upload.ok) { setEditImageError(upload.message); setEditImageProgress(null); return; }
+        nextImage = upload.url;
+      } else if (editImageRemoved) {
+        nextImage = '';
+      }
+      const result = await SolutionRepository.update(solution.id, { title: editTitle, summary: editSummary, status: editStatus, image: nextImage });
+      if (!result.ok) {
+        if (editImageFile && nextImage) await ImageUploadRepository?.removeImage('solution-images', user!.id, nextImage);
+        setEditImageProgress(null);
+        setFeedback(result.message);
+        return;
+      }
+      let cleanupWarning = '';
+      if ((editImageFile || editImageRemoved) && user) {
+        const removed = await ImageUploadRepository?.removeImage('solution-images', user.id, solution.image);
+        if (removed && !removed.ok) cleanupWarning = ` ${removed.message}`;
+      }
+      setSolution(result.data);
+      setEditImageFile(null);
+      setEditImageRemoved(false);
       setEditImageProgress(null);
-      setFeedback(result.message);
-      return;
+      setIsEditing(false);
+      setFeedback(`Solução atualizada.${cleanupWarning}`);
+    } finally {
+      setIsSavingEdit(false);
     }
-    let cleanupWarning = '';
-    if ((editImageFile || editImageRemoved) && user) {
-      const removed = await ImageUploadRepository?.removeImage('solution-images', user.id, solution.image);
-      if (removed && !removed.ok) cleanupWarning = ` ${removed.message}`;
-    }
-    setSolution(result.data);
-    setEditImageFile(null);
-    setEditImageRemoved(false);
-    setEditImageProgress(null);
-    setIsEditing(false);
-    setFeedback(`Solução atualizada.${cleanupWarning}`);
   };
 
   const deleteSolution = async () => {
@@ -308,7 +320,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
           <div className="mt-8 flex flex-wrap gap-2">{solution.tags.map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
           <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
           <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Propor alteração" onClick={proposeContribution} ariaLabel={`Propor alteração para a solução ${solution.title}`} />{canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}{canManage && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteSolution} />}<button onClick={() => onNavigate(related[0] ? `problema:${related[0].id}` : 'problemas')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
-          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-teal-50 p-4"><ImageUploadField label="Imagem da solução" currentUrl={solution.image} value={editImageFile} removed={editImageRemoved} uploading={Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem da solução ${solution.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as SolutionStatus)}><option>Proposta</option><option>Em teste</option><option>Implementada</option><option>Validada</option><option>Arquivada</option></select><button className="rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white" onClick={saveSolutionEdit}>Salvar edição</button></div>}
+          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-teal-50 p-4"><ImageUploadField label="Imagem da solução" currentUrl={solution.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem da solução ${solution.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as SolutionStatus)}><option>Proposta</option><option>Em teste</option><option>Implementada</option><option>Validada</option><option>Arquivada</option></select><button className="rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white" onClick={saveSolutionEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
           <Feedback message={feedback} />
           {showContributionForm && <ContributionForm targetType="solution" targetId={solution.id} fields={solutionFields} onClose={() => setShowContributionForm(false)} />}
           <SolutionKnowledgeTabs solution={solution} versions={versions} cases={realCases} references={references} improvements={solutionImprovements} />
