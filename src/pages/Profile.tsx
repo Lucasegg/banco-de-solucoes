@@ -6,6 +6,8 @@ import { useContributions } from '../hooks/useContributions';
 import { useDiscussions } from '../hooks/useDiscussions';
 import { useModeration } from '../hooks/useModeration';
 import { usePermissions } from '../hooks/usePermissions';
+import { ImageUploadField } from '../components/forms/ImageUploadField';
+import { ImageUploadRepository, type UploadProgress } from '../repositories/images';
 
 export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { user, logout, updateSettings } = useAuth();
@@ -16,6 +18,10 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
   const [editForm, setEditForm] = useState({ name: '', username: '', organization: '', city: '', state: '', country: '', bio: '', website: '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarRemoved, setAvatarRemoved] = useState(false);
+  const [avatarProgress, setAvatarProgress] = useState<UploadProgress | null>(null);
+  const [avatarError, setAvatarError] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -47,7 +53,23 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
       return;
     }
     setSavingProfile(true);
-    const result = await updateSettings({ ...editForm, username: normalizedUsername });
+    let avatarUrl = user.avatarUrl;
+    setAvatarError('');
+    if (avatarFile) {
+      if (!ImageUploadRepository) { setProfileMessage({ type: 'error', text: 'Supabase Storage não configurado.' }); setSavingProfile(false); return; }
+      const upload = await ImageUploadRepository.replaceImage('avatars', user.id, avatarFile, user.avatarUrl, setAvatarProgress);
+      if (!upload.ok) { setAvatarError(upload.message); setSavingProfile(false); return; }
+      avatarUrl = upload.url;
+    } else if (avatarRemoved) {
+      avatarUrl = '';
+    }
+    const result = await updateSettings({ ...editForm, username: normalizedUsername, avatarUrl });
+    if (!result.ok && avatarFile && avatarUrl) await ImageUploadRepository?.removeImage('avatars', user.id, avatarUrl);
+    if (result.ok) {
+      if (avatarFile) await ImageUploadRepository?.removeImage('avatars', user.id, user.avatarUrl);
+      if (avatarRemoved) await ImageUploadRepository?.removeImage('avatars', user.id, user.avatarUrl);
+      setAvatarFile(null); setAvatarRemoved(false); setAvatarProgress(null);
+    }
     setSavingProfile(false);
     if (!result.ok) {
       setProfileMessage({ type: 'error', text: result.message ?? 'Não foi possível salvar o perfil.' });
@@ -81,6 +103,7 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
           <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck size={22} /> Editar perfil</h2>
             <form onSubmit={saveProfile} className="mt-5 grid gap-4 md:grid-cols-2" aria-busy={savingProfile}>
+              <ImageUploadField label="Avatar do perfil" currentUrl={user.avatarUrl} value={avatarFile} removed={avatarRemoved} uploading={savingProfile && Boolean(avatarProgress)} progress={avatarProgress?.progress} error={avatarError} alt={`Pré-visualização do avatar de ${user.name}`} onChange={(file) => { setAvatarFile(file); setAvatarRemoved(false); }} onRemove={() => { setAvatarFile(null); setAvatarRemoved(true); }} />
               <ProfileInput label="Nome de exibição" value={editForm.name} maxLength={100} required onChange={(value) => updateProfileField('name', value)} />
               <ProfileInput label="Username" value={editForm.username} maxLength={30} required help="3 a 30 caracteres: a-z, 0-9, ponto, hífen e underline." onChange={(value) => updateProfileField('username', value.toLowerCase())} />
               <ProfileInput label="Organização" value={editForm.organization} maxLength={120} required onChange={(value) => updateProfileField('organization', value)} />

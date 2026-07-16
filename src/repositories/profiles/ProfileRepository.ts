@@ -17,7 +17,7 @@ export type ProfileRow = {
   updated_at: string | null;
 };
 
-export type EditableProfileFields = Pick<UserProfile, 'username' | 'name' | 'organization' | 'city' | 'state' | 'country' | 'bio' | 'website'>;
+export type EditableProfileFields = Pick<UserProfile, 'username' | 'name' | 'organization' | 'city' | 'state' | 'country' | 'bio' | 'website' | 'avatarUrl'>;
 export type ProfileLoadResult = { ok: true; profile: UserProfile } | { ok: false; reason: 'missing' | 'invalid' | 'forbidden' | 'network'; message: string };
 
 const profileSelect = 'id, username, display_name, organization, city, state, country, bio, avatar_url, website, role, created_at, updated_at';
@@ -132,6 +132,7 @@ export class ProfileRepository {
       country: typeof fields.country === 'string' ? nullableTrim(fields.country) : undefined,
       bio: typeof fields.bio === 'string' ? nullableTrim(fields.bio) : undefined,
       website: typeof fields.website === 'string' ? website.value : undefined,
+      avatar_url: typeof fields.avatarUrl === 'string' ? nullableTrim(fields.avatarUrl) : undefined,
     };
     const { data, error } = await this.client.from('profiles').update(payload).eq('id', userId).select(profileSelect).single();
     if (error) {
