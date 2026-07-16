@@ -132,7 +132,7 @@ export function ExploreProblems({ onOpen, onNavigate }: { onOpen: (id: string) =
       {error && <div className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
       {loading ? <EmptyState title="Carregando problemas" message="Buscando dados reais no Supabase." /> : filteredProblems.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite problemas para encontrá-los rapidamente neste filtro.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outros problemas.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {paginatedProblems.map((problem) => <ProblemCard key={problem.id} problem={problem} onOpen={onOpen} isFavorite={favorites.isFavorite(problem.id)} onToggleFavorite={favorites.toggleFavorite} />)}
+          {paginatedProblems.map((problem) => <ProblemCard key={problem.id} problem={problem} onOpen={onOpen} isFavorite={favorites.isFavorite(problem.id)} onToggleFavorite={(id) => { void favorites.toggleFavorite(id); }} />)}
         </div>
         <Pagination currentPage={page} totalItems={filteredProblems.length} itemsPerPage={itemsPerPage} onPageChange={setPage} />
       </>}

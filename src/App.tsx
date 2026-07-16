@@ -6,6 +6,7 @@ import { ExploreProblems } from './pages/ExploreProblems';
 import { ExploreSolutions } from './pages/ExploreSolutions';
 import { ProblemForm, SolutionForm } from './pages/Forms';
 import { Home } from './pages/Home';
+import { Favorites } from './pages/Favorites';
 import { Login, Register } from './pages/Auth';
 import { Profile } from './pages/Profile';
 import { ContributionDetails, ContributionsList } from './pages/Contributions';
@@ -26,6 +27,7 @@ const pageToHashPath: Record<string, string> = {
   register: '/register',
   profile: '/profile',
   contributions: '/contributions',
+  favorites: '/favorites',
   diagnostics: '/diagnostics',
   account: '/account',
   admin: '/admin',
@@ -51,6 +53,7 @@ function pageFromHash(hash: string) {
   if (path === '/account') return 'account';
   if (path === '/admin') return 'admin';
   if (path === '/contributions') return 'contributions';
+  if (path === '/favorites') return 'favorites';
   if (path === '/diagnostics') return 'diagnostics';
   if (path.startsWith('/contributions/')) return `contribution:${path.replace('/contributions/', '')}`;
   return 'home';
@@ -86,7 +89,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
+    if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
       setPage('login');
     }
     if (!isLoading && page === 'admin' && isAuthenticated && !permissions.canAccessAdmin) {
@@ -110,6 +113,7 @@ export function App() {
       {page === 'account' && isAuthenticated && <Account onNavigate={setPage} />}
       {page === 'admin' && isAuthenticated && permissions.canAccessAdmin && <AdminPanel />}
       {page === 'contributions' && isAuthenticated && <ContributionsList onNavigate={setPage} />}
+      {page === 'favorites' && isAuthenticated && <Favorites onNavigate={setPage} />}
       {page === 'diagnostics' && <SupabaseStatus />}
       {kind === 'contribution' && isAuthenticated && <ContributionDetails id={id} />}
     </Layout>
