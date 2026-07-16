@@ -123,7 +123,7 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
       {error && <div className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
       {loading ? <EmptyState title="Carregando soluções" message="Buscando dados reais no Supabase." /> : filteredSolutions.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite soluções para encontrá-las rapidamente neste filtro.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outras soluções.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {paginatedSolutions.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={onOpen} isFavorite={favorites.isFavorite(solution.id)} onToggleFavorite={favorites.toggleFavorite} />)}
+          {paginatedSolutions.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={onOpen} isFavorite={favorites.isFavorite(solution.id)} onToggleFavorite={(id) => { void favorites.toggleFavorite(id); }} />)}
         </div>
         <Pagination currentPage={page} totalItems={filteredSolutions.length} itemsPerPage={itemsPerPage} onPageChange={setPage} />
       </>}

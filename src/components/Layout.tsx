@@ -50,6 +50,12 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
             {isAuthenticated && user ? (
               <>
               <button
+                onClick={() => onNavigate('favorites')}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'favorites' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
+              >
+                Meus favoritos
+              </button>
+              <button
                 onClick={() => onNavigate('contributions')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'contributions' || currentPage === 'contribution' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
               >

@@ -1,33 +1,90 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FavoriteRepository, type FavoriteKind } from '../repositories/favorites';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FavoriteRepository, type Favorite, type FavoriteKind } from '../repositories/favorites';
+import { useAuth } from './useAuth';
 
-export type { FavoriteKind };
+export type { Favorite, FavoriteKind };
 
-function readFavoriteIds(kind: FavoriteKind) {
-  return FavoriteRepository.listIds(kind);
-}
+type FavoriteState = Record<FavoriteKind, Favorite[]>;
+const emptyFavorites: FavoriteState = { problems: [], solutions: [] };
+const matchesFavoriteTarget = (favorite: Favorite, targetKind: FavoriteKind, id: string) => (targetKind === 'problems' ? favorite.problemId : favorite.solutionId) === id;
 
-function writeFavoriteIds(kind: FavoriteKind, ids: string[]) {
-  FavoriteRepository.saveIds(kind, ids);
-}
+export function useFavorites(kind?: FavoriteKind) {
+  const { user, isAuthenticated } = useAuth();
+  const [favorites, setFavorites] = useState<FavoriteState>(emptyFavorites);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-export function useFavorites(kind: FavoriteKind) {
-  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => readFavoriteIds(kind));
+  const reload = useCallback(async () => {
+    if (!user || !isAuthenticated || !FavoriteRepository) {
+      setFavorites(emptyFavorites);
+      setError('');
+      return;
+    }
+    setIsLoading(true);
+    const result = await FavoriteRepository.listByUser(user.id);
+    if (result.ok) {
+      setFavorites(result.data);
+      setError('');
+    } else {
+      setError(result.message);
+    }
+    setIsLoading(false);
+  }, [isAuthenticated, user]);
 
-  useEffect(() => {
-    setFavoriteIds(readFavoriteIds(kind));
-  }, [kind]);
+  useEffect(() => { void reload(); }, [reload]);
 
-  useEffect(() => {
-    writeFavoriteIds(kind, favoriteIds);
-  }, [favoriteIds, kind]);
-
+  const favoriteIds = useMemo(() => kind ? favorites[kind].map((favorite) => favorite.problemId ?? favorite.solutionId).filter((id): id is string => Boolean(id)) : [], [favorites, kind]);
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
-  const isFavorite = (id: string) => favoriteSet.has(id);
-  const addFavorite = (id: string) => setFavoriteIds((current) => current.includes(id) ? current : [...current, id]);
-  const removeFavorite = (id: string) => setFavoriteIds((current) => current.filter((item) => item !== id));
-  const toggleFavorite = (id: string) => setFavoriteIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const isFavorite = useCallback((id: string) => favoriteSet.has(id), [favoriteSet]);
 
-  return { favoriteIds, isFavorite, addFavorite, removeFavorite, toggleFavorite };
+  const setOptimistic = useCallback((targetKind: FavoriteKind, id: string, favorite: boolean) => {
+    setFavorites((current) => {
+      const exists = current[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id));
+      if (favorite && exists) return current;
+      if (!favorite && !exists) return current;
+      const optimistic: Favorite = { id: `optimistic-${targetKind}-${id}`, userId: user?.id ?? '', problemId: targetKind === 'problems' ? id : null, solutionId: targetKind === 'solutions' ? id : null, createdAt: new Date().toISOString() };
+      return { ...current, [targetKind]: favorite ? [optimistic, ...current[targetKind]] : current[targetKind].filter((item) => !matchesFavoriteTarget(item, targetKind, id)) };
+    });
+  }, [user?.id]);
+
+  const addFavorite = useCallback(async (id: string, targetKind: FavoriteKind | undefined = kind) => {
+    if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
+    if (!user || !isAuthenticated) return { ok: false, message: 'Entre na sua conta para favoritar.' };
+    if (!FavoriteRepository) return { ok: false, message: 'Supabase não configurado para favoritos.' };
+    setOptimistic(targetKind, id, true);
+    const result = await FavoriteRepository.add(user.id, { kind: targetKind, id });
+    if (!result.ok) { setOptimistic(targetKind, id, false); setError(result.message); return result; }
+    await reload();
+    return result;
+  }, [isAuthenticated, kind, reload, setOptimistic, user]);
+
+  const removeFavorite = useCallback(async (id: string, targetKind: FavoriteKind | undefined = kind) => {
+    if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
+    if (!user || !isAuthenticated) return { ok: false, message: 'Entre na sua conta para alterar favoritos.' };
+    if (!FavoriteRepository) return { ok: false, message: 'Supabase não configurado para favoritos.' };
+    const removedFavorite = favorites[targetKind].find((item) => matchesFavoriteTarget(item, targetKind, id));
+    setOptimistic(targetKind, id, false);
+    const result = await FavoriteRepository.remove(user.id, { kind: targetKind, id });
+    if (!result.ok) {
+      if (removedFavorite) {
+        setFavorites((current) => current[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id)) ? current : { ...current, [targetKind]: [removedFavorite, ...current[targetKind]] });
+      } else {
+        await reload();
+      }
+      setError(result.message);
+      return result;
+    }
+    await reload();
+    return result;
+  }, [favorites, isAuthenticated, kind, reload, setOptimistic, user]);
+
+  const toggleFavorite = useCallback(async (id: string, targetKind: FavoriteKind | undefined = kind) => {
+    if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
+    return favorites[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id))
+      ? removeFavorite(id, targetKind)
+      : addFavorite(id, targetKind);
+  }, [addFavorite, favorites, kind, removeFavorite]);
+
+  return { favorites, favoriteIds, isFavorite, addFavorite, removeFavorite, toggleFavorite, reload, isLoading, error };
 }

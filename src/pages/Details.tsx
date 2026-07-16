@@ -67,10 +67,10 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
     setFeedback(getShareMessage(result.status, result.url));
   };
 
-  const toggleFavorite = () => {
+  const toggleFavorite = async () => {
     if (!problem) return;
-    favorites.toggleFavorite(problem.id);
-    setFeedback(isFavorite ? 'Problema removido dos favoritos.' : 'Problema adicionado aos favoritos.');
+    const result = await favorites.toggleFavorite(problem.id);
+    setFeedback(result.ok ? (isFavorite ? 'Problema removido dos favoritos.' : 'Problema adicionado aos favoritos.') : result.message);
   };
 
   const proposeContribution = () => {
@@ -181,10 +181,10 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
     setFeedback(getShareMessage(result.status, result.url));
   };
 
-  const toggleFavorite = () => {
+  const toggleFavorite = async () => {
     if (!solution) return;
-    favorites.toggleFavorite(solution.id);
-    setFeedback(isFavorite ? 'Solução removida dos favoritos.' : 'Solução adicionada aos favoritos.');
+    const result = await favorites.toggleFavorite(solution.id);
+    setFeedback(result.ok ? (isFavorite ? 'Solução removida dos favoritos.' : 'Solução adicionada aos favoritos.') : result.message);
   };
 
   const proposeContribution = () => {
