@@ -96,11 +96,11 @@ Consulte `SUPABASE.md` para aplicar e verificar manualmente a migração pelo SQ
 
 ## Sprint 17 — Autenticação social OAuth
 
-A aplicação mantém e-mail/senha e adiciona login/cadastro social via Supabase Auth para Google, GitHub e Microsoft/Azure. O frontend usa apenas a anon key já existente (`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`), não usa service role, não armazena tokens manualmente e delega PKCE/estado ao fluxo padrão do Supabase.
+A aplicação mantém e-mail/senha e adiciona login/cadastro social via Supabase Auth para Google, GitHub e Microsoft/Azure. O frontend usa apenas a anon key já existente (`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`), não usa service role, não armazena tokens manualmente e configura o Supabase Auth com PKCE explícito (`flowType: pkce`) e `detectSessionInUrl: false` para manter o callback sob controle da aplicação.
 
 ### URLs de callback e redirects
 
-A URL pública do GitHub Pages é `https://lucasegg.github.io/banco-de-solucoes/`. Como o app usa hash routing, o redirect OAuth é centralizado para a raiz física segura do Pages, preservando o base path e retornando ao hash após restaurar a sessão:
+A URL pública do GitHub Pages é `https://lucasegg.github.io/banco-de-solucoes/`. Como o app usa hash routing, o redirect OAuth é centralizado para a raiz física segura do Pages, preservando o base path e retornando ao hash após trocar uma única vez o parâmetro `code` por sessão e carregar o perfil:
 
 - Site URL no Supabase: `https://lucasegg.github.io/banco-de-solucoes/`
 - Redirect URL permitida no Supabase: `https://lucasegg.github.io/banco-de-solucoes/`

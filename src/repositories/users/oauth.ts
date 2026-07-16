@@ -46,7 +46,15 @@ export function consumeOAuthReturnTo() {
 
 export function isOAuthCallbackUrl(url = window.location.href) {
   const parsed = new URL(url);
-  return parsed.searchParams.get('oauth') === 'callback' || parsed.searchParams.has('code') || parsed.searchParams.has('error') || parsed.hash.includes('access_token=');
+  return parsed.searchParams.get('oauth') === 'callback' || parsed.searchParams.has('code') || parsed.searchParams.has('error');
+}
+
+export function readOAuthCallbackParams(url = window.location.href) {
+  const parsed = new URL(url);
+  return {
+    code: parsed.searchParams.get('code'),
+    error: parsed.searchParams.get('error_description') ?? parsed.searchParams.get('error'),
+  };
 }
 
 export function cleanOAuthCallbackUrl(targetHash = '#/profile') {

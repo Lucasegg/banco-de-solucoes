@@ -42,10 +42,7 @@ export class SupabaseUserRepository {
     });
   }
 
-  handleOAuthCallback() {
-    const url = new URL(window.location.href);
-    const code = url.searchParams.get('code');
-    if (!code) return this.client.auth.getSession();
+  handleOAuthCallback(code: string) {
     return this.client.auth.exchangeCodeForSession(code);
   }
 

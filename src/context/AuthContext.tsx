@@ -5,7 +5,7 @@ import { supabaseConfig } from '../integrations/supabase/config';
 import { ProfileRepository } from '../repositories/profiles';
 import { SupabaseUserRepository } from '../repositories/users/SupabaseUserRepository';
 import type { RegisterUserInput, UserProfile, UserSettings } from '../types/user';
-import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, translateOAuthError, type SocialAuthProvider } from '../repositories/users/oauth';
+import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, readOAuthCallbackParams, translateOAuthError, type SocialAuthProvider } from '../repositories/users/oauth';
 
 const SUPABASE_LOCAL_SETTINGS_KEY = 'banco-de-solucoes.supabase.profile-settings';
 
@@ -116,28 +116,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const mounted = () => active;
     const finishOAuthCallback = async () => {
       if (!isOAuthCallbackUrl()) return false;
-      const callbackError = new URL(window.location.href).searchParams.get('error_description') ?? new URL(window.location.href).searchParams.get('error');
-      if (callbackError) {
-        const message = translateOAuthError(callbackError);
+      const { code, error: callbackError } = readOAuthCallbackParams();
+      if (callbackError || !code) {
+        const message = translateOAuthError(callbackError ?? 'cancelled');
         setSocialAuthError(message);
         setAuthStatus('anonymous');
         setAuthMessage(message);
+        setSocialAuthProvider(null);
+        socialAttemptInFlight.current = false;
         cleanOAuthCallbackUrl('#/login');
         return true;
       }
       setAuthStatus('loading-session');
-      const { data, error } = await repositories.users.handleOAuthCallback();
+      const { data, error } = await repositories.users.handleOAuthCallback(code);
       if (error) {
         const message = translateOAuthError(error.message);
         setSocialAuthError(message);
         setAuthStatus('network-error');
         setAuthMessage(message);
+        setSocialAuthProvider(null);
+        socialAttemptInFlight.current = false;
         cleanOAuthCallbackUrl('#/login');
         return true;
       }
+      const result = await loadProfile(data.session, mounted);
+      if (!result.ok) return true;
       const target = consumeOAuthReturnTo();
       cleanOAuthCallbackUrl(target);
-      await loadProfile(data.session, mounted);
       return true;
     };
     finishOAuthCallback().then((handled) => {

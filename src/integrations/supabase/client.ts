@@ -4,6 +4,8 @@ import { supabaseConfig } from './config';
 export const supabaseClient: SupabaseClient | null = supabaseConfig.isConfigured
   ? createClient(supabaseConfig.url!, supabaseConfig.anonKey!, {
     auth: {
+      flowType: 'pkce',
+      detectSessionInUrl: false,
       persistSession: true,
       autoRefreshToken: true,
     },
