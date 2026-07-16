@@ -14,9 +14,12 @@ export class SupabaseUserRepository {
         data: {
           username: input.username.trim().toLowerCase(),
           display_name: input.name.trim(),
+          organization: input.organization?.trim() || null,
+          city: input.city?.trim() || null,
+          state: input.state?.trim() || null,
           country: input.country?.trim() || null,
           bio: input.bio?.trim() || null,
-          avatar_url: input.avatarUrl?.trim() || null,
+          website: input.website?.trim() || null,
         },
       },
     });

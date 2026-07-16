@@ -1,6 +1,6 @@
-import type { ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { UserAchievement } from '../types/user';
-import { Award, BarChart3, Bell, Eye, LogOut, Mail, MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Award, BarChart3, Bell, Eye, Globe2, LogOut, Mail, MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useContributions } from '../hooks/useContributions';
 import { useDiscussions } from '../hooks/useDiscussions';
@@ -13,6 +13,14 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
   const contributionData = useContributions(user);
   const moderation = useModeration(user);
   const permissions = usePermissions(user);
+  const [editForm, setEditForm] = useState({ name: '', username: '', organization: '', city: '', state: '', country: '', bio: '', website: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    setEditForm({ name: user.name, username: user.username, organization: user.organization, city: user.city, state: user.state, country: user.country, bio: user.bio, website: user.website ?? '' });
+  }, [user]);
 
   if (!user) return null;
 
@@ -22,6 +30,31 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
   const reviewedContributions = contributionData.contributions.filter((item) => item.reviewerId === user.id || item.reviews.some((review) => review.reviewerId === user.id));
   const reviewedCases = moderation.cases.filter((item) => item.assignedToId === user.id);
   const resolvedCases = reviewedCases.filter((item) => item.status === 'resolved');
+
+  const updateProfileField = (field: keyof typeof editForm, value: string) => setEditForm((current) => ({ ...current, [field]: value }));
+
+  const saveProfile = async (event: FormEvent) => {
+    event.preventDefault();
+    if (savingProfile) return;
+    setProfileMessage(null);
+    const normalizedUsername = editForm.username.trim().toLowerCase();
+    if (!editForm.name.trim() || !normalizedUsername || !editForm.organization.trim() || !editForm.city.trim() || !editForm.state.trim() || !editForm.country.trim() || !editForm.bio.trim()) {
+      setProfileMessage({ type: 'error', text: 'Preencha todos os campos obrigatórios do perfil.' });
+      return;
+    }
+    if (!/^[a-z0-9._-]{3,30}$/.test(normalizedUsername)) {
+      setProfileMessage({ type: 'error', text: 'Use um username com 3 a 30 caracteres: letras minúsculas, números, ponto, hífen ou underline.' });
+      return;
+    }
+    setSavingProfile(true);
+    const result = await updateSettings({ ...editForm, username: normalizedUsername });
+    setSavingProfile(false);
+    if (!result.ok) {
+      setProfileMessage({ type: 'error', text: result.message ?? 'Não foi possível salvar o perfil.' });
+      return;
+    }
+    setProfileMessage({ type: 'success', text: 'Perfil atualizado com sucesso.' });
+  };
 
   const signOut = async () => {
     const result = await logout();
@@ -45,6 +78,27 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
+          <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck size={22} /> Editar perfil</h2>
+            <form onSubmit={saveProfile} className="mt-5 grid gap-4 md:grid-cols-2" aria-busy={savingProfile}>
+              <ProfileInput label="Nome de exibição" value={editForm.name} maxLength={100} required onChange={(value) => updateProfileField('name', value)} />
+              <ProfileInput label="Username" value={editForm.username} maxLength={30} required help="3 a 30 caracteres: a-z, 0-9, ponto, hífen e underline." onChange={(value) => updateProfileField('username', value.toLowerCase())} />
+              <ProfileInput label="Organização" value={editForm.organization} maxLength={120} required onChange={(value) => updateProfileField('organization', value)} />
+              <ProfileInput label="Cidade" value={editForm.city} maxLength={100} required onChange={(value) => updateProfileField('city', value)} />
+              <ProfileInput label="Estado" value={editForm.state} maxLength={100} required onChange={(value) => updateProfileField('state', value)} />
+              <ProfileInput label="País" value={editForm.country} maxLength={100} required onChange={(value) => updateProfileField('country', value)} />
+              <ProfileInput label="Site" value={editForm.website} maxLength={300} type="url" placeholder="https://exemplo.org" onChange={(value) => updateProfileField('website', value)} />
+              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-muted">
+                <p><strong className="text-slate-900">E-mail:</strong> {user.email || 'Não informado'}</p>
+                <p className="mt-2"><strong className="text-slate-900">Papel:</strong> {user.role}</p>
+                <p className="mt-2"><strong className="text-slate-900">Conta criada em:</strong> {new Date(user.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</p>
+              </div>
+              <label className="grid gap-2 text-sm font-medium md:col-span-2" htmlFor="profile-bio">Biografia *<textarea id="profile-bio" className="rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" value={editForm.bio} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => updateProfileField('bio', event.target.value)} rows={5} maxLength={500} required aria-describedby="profile-bio-count" /><span id="profile-bio-count" className="text-xs text-muted">{editForm.bio.length}/500 caracteres</span></label>
+              {profileMessage && <p className={`rounded-2xl px-4 py-3 text-sm md:col-span-2 ${profileMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{profileMessage.text}</p>}
+              <div className="md:col-span-2"><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={savingProfile}>{savingProfile ? 'Salvando...' : 'Salvar perfil'}</button></div>
+            </form>
+          </section>
+
           <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-2xl font-semibold"><BarChart3 size={22} /> Estatísticas</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-5">
@@ -118,7 +172,8 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
         <aside className="space-y-6">
           <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold">Sobre</h2>
-            <p className="mt-4 leading-7 text-muted">{user.bio}</p>
+            <p className="mt-4 leading-7 text-muted">{user.bio || 'Perfil sem biografia pública.'}</p>
+            {user.website && <a className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-teal-700" href={user.website} target="_blank" rel="noreferrer"><Globe2 size={16} /> {user.website}</a>}
             <p className="mt-4 text-sm text-muted">Membro desde {new Date(user.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</p>
           </section>
 
@@ -133,6 +188,17 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
         </aside>
       </div>
     </section>
+  );
+}
+
+function ProfileInput({ label, value, onChange, maxLength, required, help, type = 'text', placeholder }: { label: string; value: string; onChange: (value: string) => void; maxLength: number; required?: boolean; help?: string; type?: string; placeholder?: string }) {
+  const id = `profile-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  return (
+    <label className="grid gap-2 text-sm font-medium" htmlFor={id}>
+      {label}{required ? ' *' : ''}
+      <input id={id} className="rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" type={type} value={value} onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)} maxLength={maxLength} required={required} placeholder={placeholder} aria-describedby={help ? `${id}-help` : undefined} />
+      {help && <span id={`${id}-help`} className="text-xs text-muted">{help}</span>}
+    </label>
   );
 }
 

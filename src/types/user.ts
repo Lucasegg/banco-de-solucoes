@@ -36,6 +36,7 @@ export interface UserProfile {
   country: string;
   bio: string;
   avatarUrl?: string;
+  website?: string;
   createdAt: string;
   stats: UserStats;
   achievements: UserAchievement[];
@@ -58,5 +59,6 @@ export type RegisterUserInput = {
   country?: string;
   avatarUrl?: string;
   bio?: string;
+  website?: string;
   acceptedTerms: boolean;
 };

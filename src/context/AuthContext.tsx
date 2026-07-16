@@ -21,7 +21,8 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   register: (input: RegisterUserInput) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<{ ok: boolean; message?: string }>;
-  updateSettings: (settings: Partial<UserSettings> & Partial<Pick<UserProfile, 'username' | 'name' | 'country' | 'bio' | 'avatarUrl'>>) => Promise<{ ok: boolean; message?: string }>;
+  updateSettings: (settings: Partial<UserSettings> & Partial<Pick<UserProfile, 'username' | 'name' | 'organization' | 'city' | 'state' | 'country' | 'bio' | 'website'>>) => Promise<{ ok: boolean; message?: string }>;
+  isUsernameAvailable: (username: string, currentUserId?: string) => Promise<{ ok: boolean; available: boolean; message?: string }>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -175,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof settings.emailNotifications === 'boolean') localSettings.emailNotifications = settings.emailNotifications;
     if (typeof settings.publicProfile === 'boolean') localSettings.publicProfile = settings.publicProfile;
     if (typeof settings.weeklyDigest === 'boolean') localSettings.weeklyDigest = settings.weeklyDigest;
-    const editable = { username: settings.username, name: settings.name, country: settings.country, bio: settings.bio, avatarUrl: settings.avatarUrl };
+    const editable = { username: settings.username, name: settings.name, organization: settings.organization, city: settings.city, state: settings.state, country: settings.country, bio: settings.bio, website: settings.website };
     const hasRemote = Object.values(editable).some((value) => typeof value === 'string');
     if (hasRemote) {
       const result = await repositories.profiles.updateEditableFields(user.id, editable, user.email);
@@ -191,6 +192,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   };
 
+  const isUsernameAvailable: AuthContextValue['isUsernameAvailable'] = async (username, currentUserId = user?.id) => {
+    if (!repositories) return { ok: false, available: false, message: 'Supabase não configurado.' };
+    return repositories.profiles.isUsernameAvailable(username, currentUserId);
+  };
+
   const value = useMemo<AuthContextValue>(() => ({
     user,
     session,
@@ -203,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     updateSettings,
+    isUsernameAvailable,
   }), [authMessage, authStatus, loading, session, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
