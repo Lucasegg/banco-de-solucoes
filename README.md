@@ -93,3 +93,36 @@ A aplicação usa Supabase Auth para autenticação, sessão e perfis quando `VI
 - Limitações: permissões administrativas críticas em Supabase precisarão de claims confiáveis ou backend seguro em sprint posterior.
 
 Consulte `SUPABASE.md` para aplicar e verificar manualmente a migração pelo SQL Editor.
+
+## Sprint 17 — Autenticação social OAuth
+
+A aplicação mantém e-mail/senha e adiciona login/cadastro social via Supabase Auth para Google, GitHub e Microsoft/Azure. O frontend usa apenas a anon key já existente (`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`), não usa service role, não armazena tokens manualmente e configura o Supabase Auth com PKCE explícito (`flowType: pkce`) e `detectSessionInUrl: false` para manter o callback sob controle da aplicação.
+
+### URLs de callback e redirects
+
+A URL pública do GitHub Pages é `https://lucasegg.github.io/banco-de-solucoes/`. Como o app usa hash routing, o redirect OAuth é centralizado para a raiz física segura do Pages, preservando o base path e retornando ao hash após trocar uma única vez o parâmetro `code` por sessão e carregar o perfil:
+
+- Site URL no Supabase: `https://lucasegg.github.io/banco-de-solucoes/`
+- Redirect URL permitida no Supabase: `https://lucasegg.github.io/banco-de-solucoes/`
+- Redirect URL permitida no Supabase para callback OAuth: `https://lucasegg.github.io/banco-de-solucoes/?oauth=callback`
+- Desenvolvimento local: cadastre também `http://localhost:5173/` e `http://localhost:5173/?oauth=callback`
+
+Nos provedores externos, use a Callback URL do próprio Supabase Auth, no formato:
+
+```text
+https://<PROJECT_REF>.supabase.co/auth/v1/callback
+```
+
+### Providers configurados
+
+- Google: habilite o provider Google no Supabase Auth e cadastre a callback do Supabase no OAuth Client do Google Cloud. Escopos solicitados: `openid email profile`.
+- GitHub: habilite o provider GitHub no Supabase Auth e cadastre a callback do Supabase no GitHub OAuth App. Escopos solicitados: `read:user user:email`; não há solicitação de acesso a repositórios.
+- Microsoft/Azure: habilite o provider `azure` no Supabase Auth e cadastre a callback do Supabase no Microsoft Entra ID. Escopos solicitados: `openid email profile`; não há solicitação de calendário, arquivos ou contatos.
+
+### Migration de perfis
+
+A migration da Sprint 17 atualiza a função `handle_new_auth_user_profile` para perfis criados por identidades sociais. Ela gera `username` inicial seguro e único, preenche `display_name` e `avatar_url` somente como valores iniciais quando o provedor envia metadados confiáveis, mantém `role` sempre como `member` e não sobrescreve campos já editados pelo usuário em logins posteriores.
+
+### Limitações conhecidas
+
+Não há vinculação manual de contas nesta sprint. Se um e-mail já existir com e-mail/senha ou outra identidade, o comportamento seguro depende das regras do Supabase Auth e o frontend apenas mostra uma mensagem explicativa; contas não são mescladas no cliente.

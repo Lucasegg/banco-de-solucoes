@@ -1,6 +1,42 @@
 import { FormEvent, type ChangeEvent, useState } from 'react';
-import { ArrowRight, DatabaseZap, GitBranch, LockKeyhole, UserPlus } from 'lucide-react';
+import { ArrowRight, GitBranch, LockKeyhole, UserPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { SOCIAL_AUTH_PROVIDERS, SOCIAL_PROVIDER_LABELS, type SocialAuthProvider } from '../repositories/users/oauth';
+
+
+function ProviderIcon({ provider }: { provider: SocialAuthProvider }) {
+  if (provider === 'github') return <GitBranch size={16} aria-hidden="true" />;
+  if (provider === 'azure') return <span aria-hidden="true" className="text-base font-bold text-blue-700">M</span>;
+  return <span aria-hidden="true" className="text-base font-bold text-red-600">G</span>;
+}
+
+function SocialAuthButtons({ onSuccess }: { onSuccess?: () => void }) {
+  const { signInWithProvider, socialAuthProvider, socialAuthError } = useAuth();
+  const [localError, setLocalError] = useState('');
+  const start = async (provider: SocialAuthProvider) => {
+    setLocalError('');
+    const result = await signInWithProvider(provider);
+    if (!result.ok) setLocalError(result.message ?? 'Não foi possível iniciar o login social.');
+    else onSuccess?.();
+  };
+  const visibleError = localError || socialAuthError;
+  return (
+    <div className="mt-6">
+      <div className="grid gap-3">
+        {SOCIAL_AUTH_PROVIDERS.map((provider) => {
+          const busy = socialAuthProvider === provider;
+          const disabled = Boolean(socialAuthProvider);
+          return (
+            <button key={provider} className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled={disabled} aria-busy={busy} onClick={() => start(provider)}>
+              <ProviderIcon provider={provider} /> {busy ? 'Redirecionando...' : `Continuar com ${SOCIAL_PROVIDER_LABELS[provider]}`}
+            </button>
+          );
+        })}
+      </div>
+      {visibleError && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{visibleError}</p>}
+    </div>
+  );
+}
 
 const inputClass = 'rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200';
 
@@ -41,6 +77,8 @@ export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
         <label className="mt-4 grid gap-2 text-sm font-medium">Senha<input className={inputClass} type="password" value={password} onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} required /></label>
         {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         <button className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" type="submit">Entrar <ArrowRight size={16} /></button>
+        <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted"><span className="h-px flex-1 bg-line" />ou<span className="h-px flex-1 bg-line" /></div>
+        <SocialAuthButtons />
         <button className="mt-3 w-full rounded-full border border-line px-5 py-3 text-sm font-semibold" type="button" onClick={() => onNavigate('register')}>Criar conta</button>
       </form>
     </section>
@@ -104,10 +142,7 @@ export function Register({ onNavigate }: { onNavigate: (page: string) => void })
       <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800"><UserPlus size={16} /> Cadastro Supabase</span>
       <h1 className="mt-5 text-4xl font-semibold tracking-tight">Crie seu perfil de colaborador.</h1>
       <p className="mt-3 text-muted">O cadastro cria o usuário pelo Supabase Auth. O perfil público é criado automaticamente pela trigger no banco.</p>
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
-        <button className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold text-slate-700" type="button" disabled aria-disabled="true" title="Login social em breve"><DatabaseZap size={16} /> Google · Em breve</button>
-        <button className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold text-slate-700" type="button" disabled aria-disabled="true" title="Login social em breve"><GitBranch size={16} /> GitHub · Em breve</button>
-      </div>
+      <SocialAuthButtons />
       <form onSubmit={submit} className="mt-8 grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">Nome de exibição *<input maxLength={100} className={inputClass} value={form.name} onChange={(event: ChangeEvent<HTMLInputElement>) => update('name', event.target.value)} required /></label>
         <label className="grid gap-2 text-sm font-medium">Nome de usuário *<input maxLength={30} className={inputClass} value={form.username} onChange={(event: ChangeEvent<HTMLInputElement>) => update('username', event.target.value)} placeholder="ex.: marina.costa" required /></label>
