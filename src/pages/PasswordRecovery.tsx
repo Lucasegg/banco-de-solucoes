@@ -13,7 +13,7 @@ function maskEmail(email: string) {
 
 export function PasswordRecovery({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { isAuthenticated, requestPasswordRecovery, verifyPasswordRecoveryCode, updateRecoveredPassword, clearRecoverySession, recoveryStatus, recoveryError } = useAuth();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(recoveryStatus === 'code-verified' ? 3 : 1);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
@@ -28,12 +28,12 @@ export function PasswordRecovery({ onNavigate }: { onNavigate: (page: string) =>
   const strong = Object.values(criteria).every(Boolean);
 
   useEffect(() => { firstField.current?.focus(); }, [step]);
+  useEffect(() => { if (recoveryStatus === 'code-verified') setStep(3); }, [recoveryStatus]);
   useEffect(() => {
     if (!cooldown) return undefined;
     const timer = window.setInterval(() => setCooldown((value) => Math.max(0, value - 1)), 1000);
     return () => window.clearInterval(timer);
   }, [cooldown > 0]);
-  useEffect(() => () => { void clearRecoverySession(); }, []);
 
   const request = async (event?: FormEvent) => {
     event?.preventDefault();

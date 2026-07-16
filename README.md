@@ -147,5 +147,5 @@ Em **Authentication → Rate Limits**, defina limites compatíveis com o produto
 
 - A resposta de envio é neutra para não revelar se a conta existe. Erros de código também não distinguem código inválido, expirado, usado ou pertencente a outro e-mail.
 - Ao concluir, a sessão temporária é encerrada antes do retorno a `#/login`; não há login automático. Ao cancelar, somente uma sessão marcada em memória como recuperação é encerrada, preservando sessões normais.
-- Um reload antes da verificação descarta e-mail e código, exigindo reiniciar o fluxo. Um reload depois da verificação perde o marcador temporário da interface; por segurança, o usuário deve cancelar/sair e solicitar outro código. Nenhum recovery token é persistido manualmente.
+- Um reload antes da verificação descarta e-mail e código, exigindo reiniciar o fluxo. Depois da verificação, um marcador booleano não sensível em `sessionStorage` permite restaurar diretamente a etapa de nova senha enquanto a sessão oficial do Supabase continua válida. OTP, senha, access token, refresh token e recovery token nunca são armazenados nesse marcador, que é removido ao concluir, cancelar ou receber `SIGNED_OUT`.
 - A confirmação de que a senha antiga deixou de funcionar e a nova funciona exige teste integrado contra um projeto Supabase configurado e uma caixa de e-mail real.
