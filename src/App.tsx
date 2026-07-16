@@ -15,6 +15,7 @@ import { usePermissions } from './hooks/usePermissions';
 import { AdminPanel } from './pages/Admin';
 import { SupabaseStatus } from './integrations/supabase/SupabaseStatus';
 import { Account } from './pages/Account';
+import { PasswordRecovery } from './pages/PasswordRecovery';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -25,6 +26,7 @@ const pageToHashPath: Record<string, string> = {
   sobre: '/about',
   login: '/login',
   register: '/register',
+  'password-recovery': '/password-recovery',
   profile: '/profile',
   contributions: '/contributions',
   favorites: '/favorites',
@@ -49,6 +51,7 @@ function pageFromHash(hash: string) {
   if (path === '/about') return 'sobre';
   if (path === '/login') return 'login';
   if (path === '/register') return 'register';
+  if (path === '/password-recovery') return 'password-recovery';
   if (path === '/profile') return 'profile';
   if (path === '/account') return 'account';
   if (path === '/admin') return 'admin';
@@ -109,6 +112,7 @@ export function App() {
       {page === 'sobre' && <About />}
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
+      {page === 'password-recovery' && <PasswordRecovery onNavigate={setPage} />}
       {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
       {page === 'account' && isAuthenticated && <Account onNavigate={setPage} />}
       {page === 'admin' && isAuthenticated && permissions.canAccessAdmin && <AdminPanel />}

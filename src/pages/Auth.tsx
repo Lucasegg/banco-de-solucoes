@@ -77,6 +77,7 @@ export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
         <label className="mt-4 grid gap-2 text-sm font-medium">Senha<input className={inputClass} type="password" value={password} onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} required /></label>
         {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         <button className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" type="submit">Entrar <ArrowRight size={16} /></button>
+        <button className="mt-4 w-full text-sm font-semibold text-slate-700 underline" type="button" onClick={() => onNavigate('password-recovery')}>Esqueci minha senha</button>
         <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted"><span className="h-px flex-1 bg-line" />ou<span className="h-px flex-1 bg-line" /></div>
         <SocialAuthButtons />
         <button className="mt-3 w-full rounded-full border border-line px-5 py-3 text-sm font-semibold" type="button" onClick={() => onNavigate('register')}>Criar conta</button>
@@ -108,8 +109,8 @@ export function Register({ onNavigate }: { onNavigate: (page: string) => void })
       setError('Use um nome de usuário com 3 a 30 caracteres, apenas letras minúsculas, números, ponto, hífen ou underline.');
       return;
     }
-    if (form.password.length < 6) {
-      setError('Use uma senha com pelo menos 6 caracteres.');
+    if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
+      setError('Use uma senha com pelo menos 8 caracteres, uma letra e um número.');
       return;
     }
     if (form.password !== form.confirmPassword) {

@@ -10,6 +10,7 @@ import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, readOA
 const SUPABASE_LOCAL_SETTINGS_KEY = 'banco-de-solucoes.supabase.profile-settings';
 
 export type AuthStatus = 'supabase-unconfigured' | 'loading-session' | 'anonymous' | 'authenticated' | 'profile-missing' | 'email-confirmation-pending' | 'network-error' | 'session-expired';
+export type RecoveryStatus = 'idle' | 'requesting-code' | 'code-sent' | 'verifying-code' | 'code-verified' | 'updating-password' | 'success' | 'error';
 
 export interface AuthContextValue {
   user: UserProfile | null;
@@ -21,6 +22,12 @@ export interface AuthContextValue {
   isLoading: boolean;
   socialAuthProvider: SocialAuthProvider | null;
   socialAuthError?: string;
+  recoveryStatus: RecoveryStatus;
+  recoveryError?: string;
+  requestPasswordRecovery: (email: string) => Promise<{ ok: boolean; message?: string }>;
+  verifyPasswordRecoveryCode: (email: string, code: string) => Promise<{ ok: boolean; message?: string }>;
+  updateRecoveredPassword: (password: string) => Promise<{ ok: boolean; message?: string }>;
+  clearRecoverySession: () => Promise<{ ok: boolean; message?: string }>;
   signInWithProvider: (provider: SocialAuthProvider) => Promise<{ ok: boolean; message?: string }>;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   register: (input: RegisterUserInput) => Promise<{ ok: boolean; message?: string }>;
@@ -62,6 +69,15 @@ function networkMessage(message?: string) {
   return 'Não foi possível concluir a autenticação.';
 }
 
+function recoveryMessage(message?: string, operation: 'request' | 'verify' | 'update' | 'clear' = 'verify') {
+  if (/rate|too many|security purposes/i.test(message ?? '')) return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+  if (/fetch|network|unavailable|timeout/i.test(message ?? '')) return 'Serviço indisponível. Verifique sua conexão e tente novamente.';
+  if (operation === 'verify') return 'Código inválido ou expirado.';
+  if (operation === 'update') return 'Não foi possível alterar a senha. Solicite um novo código e tente novamente.';
+  if (operation === 'clear') return 'A senha foi alterada, mas não foi possível encerrar a sessão temporária. Feche esta janela antes de continuar.';
+  return 'Não foi possível enviar o código agora. Tente novamente mais tarde.';
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -69,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authMessage, setAuthMessage] = useState<string | undefined>(supabaseConfig.isConfigured ? undefined : 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
   const [socialAuthProvider, setSocialAuthProvider] = useState<SocialAuthProvider | null>(null);
   const [socialAuthError, setSocialAuthError] = useState<string | undefined>(undefined);
+  const [recoveryStatus, setRecoveryStatus] = useState<RecoveryStatus>('idle');
+  const [recoveryError, setRecoveryError] = useState<string | undefined>(undefined);
+  const recoverySession = useRef(false);
   const socialAttemptInFlight = useRef(false);
   const loading = authStatus === 'loading-session';
   const initStarted = useRef(false);
@@ -162,6 +181,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     });
     const subscription = repositories.users.onAuthStateChange((_event, nextSession) => {
+      if (_event === 'PASSWORD_RECOVERY' || recoverySession.current) {
+        setSession(nextSession);
+        return;
+      }
       setSocialAuthProvider(null);
       socialAttemptInFlight.current = false;
       void loadProfile(nextSession, mounted);
@@ -234,6 +257,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   };
 
+  const requestPasswordRecovery: AuthContextValue['requestPasswordRecovery'] = async (email) => {
+    if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
+    setRecoveryStatus('requesting-code'); setRecoveryError(undefined);
+    const { error } = await repositories.users.requestPasswordRecovery(email);
+    if (error) { const message = recoveryMessage(error.message, 'request'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
+    setRecoveryStatus('code-sent');
+    return { ok: true, message: 'Se houver uma conta associada a este e-mail, enviaremos um código de recuperação.' };
+  };
+
+  const verifyPasswordRecoveryCode: AuthContextValue['verifyPasswordRecoveryCode'] = async (email, code) => {
+    if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
+    setRecoveryStatus('verifying-code'); setRecoveryError(undefined);
+    recoverySession.current = true;
+    const { data, error } = await repositories.users.verifyPasswordRecoveryCode(email, code);
+    if (error || !data.session) { recoverySession.current = false; const message = recoveryMessage(error?.message); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
+    setSession(data.session); setRecoveryStatus('code-verified');
+    return { ok: true };
+  };
+
+  const clearRecoverySession: AuthContextValue['clearRecoverySession'] = async () => {
+    if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
+    if (!recoverySession.current) { setRecoveryStatus('idle'); setRecoveryError(undefined); return { ok: true }; }
+    const { error } = await repositories.users.clearRecoverySession();
+    if (error) { const message = recoveryMessage(error.message, 'clear'); setRecoveryError(message); return { ok: false, message }; }
+    recoverySession.current = false; setSession(null); setUser(null); setAuthStatus('anonymous'); setRecoveryStatus('idle'); setRecoveryError(undefined);
+    return { ok: true };
+  };
+
+  const updateRecoveredPassword: AuthContextValue['updateRecoveredPassword'] = async (password) => {
+    if (!repositories || !recoverySession.current) return { ok: false, message: 'Sessão de recuperação ausente. Solicite um novo código.' };
+    setRecoveryStatus('updating-password'); setRecoveryError(undefined);
+    const { error } = await repositories.users.updateRecoveredPassword(password);
+    if (error) { const message = recoveryMessage(error.message, 'update'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
+    const cleared = await repositories.users.clearRecoverySession();
+    if (cleared.error) { const message = recoveryMessage(cleared.error.message, 'clear'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
+    recoverySession.current = false; setSession(null); setUser(null); setAuthStatus('anonymous'); setRecoveryStatus('success');
+    return { ok: true, message: 'Senha alterada com sucesso.' };
+  };
+
   const updateSettings: AuthContextValue['updateSettings'] = async (settings) => {
     if (!user || !repositories) return { ok: false, message: 'Usuário não autenticado.' };
     const localSettings: Partial<UserSettings> = {};
@@ -271,6 +333,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: loading,
     socialAuthProvider,
     socialAuthError,
+    recoveryStatus,
+    recoveryError,
+    requestPasswordRecovery,
+    verifyPasswordRecoveryCode,
+    updateRecoveredPassword,
+    clearRecoverySession,
     signInWithProvider,
     login,
     register,
