@@ -126,3 +126,26 @@ A migration da Sprint 17 atualiza a função `handle_new_auth_user_profile` para
 ### Limitações conhecidas
 
 Não há vinculação manual de contas nesta sprint. Se um e-mail já existir com e-mail/senha ou outra identidade, o comportamento seguro depende das regras do Supabase Auth e o frontend apenas mostra uma mensagem explicativa; contas não são mescladas no cliente.
+
+## Sprint 18 — Recuperação de senha por código
+
+O fluxo `#/password-recovery` solicita o e-mail, confirma um OTP dentro da aplicação e, somente depois de o Supabase estabelecer uma sessão de recuperação, permite definir a nova senha. A implementação usa exclusivamente `resetPasswordForEmail`, `verifyOtp({ type: 'recovery' })`, `updateUser({ password })` e `signOut({ scope: 'local' })`; código e senha existem apenas no estado React e nunca são gravados ou registrados. O reenvio tem cooldown visual de 60 segundos. O limite definitivo de tentativas, a expiração e a entrega pertencem ao Supabase Auth.
+
+### Template de e-mail obrigatório
+
+Por padrão, o template de recuperação pode enviar apenas um link. Em **Authentication → Email Templates → Reset Password**, adapte o template para mostrar `{{ .Token }}` (o OTP destinado a `verifyOtp`), e não para pedir que o frontend extraia ou armazene token de uma URL. Não use `{{ .TokenHash }}` no campo de código: esse valor é destinado a links de confirmação (`token_hash`), enquanto esta interface envia o `token` digitado com o tipo `recovery`. Exemplo mínimo de conteúdo: “Seu código de recuperação é: `{{ .Token }}`”. Não inclua credenciais ou chaves no template ou no repositório.
+
+Em **Authentication → URL Configuration**, configure:
+
+- Site URL: `https://lucasegg.github.io/banco-de-solucoes/`;
+- Redirect URL de produção: `https://lucasegg.github.io/banco-de-solucoes/` (o hash `#/password-recovery` é navegação local e não deve ser usado como redirect do servidor);
+- desenvolvimento: `http://localhost:5173/` (e a porta efetivamente usada pelo Vite, se diferente).
+
+Em **Authentication → Rate Limits**, defina limites compatíveis com o produto para envio de e-mails e verificação de OTP. Em **Authentication → Settings**, escolha o tempo de expiração do OTP (o padrão/configuração exata deve ser conferido no projeto e comunicado ao usuário; recomenda-se um período curto). O cooldown de 60 segundos do navegador melhora a experiência, mas pode ser reiniciado por reload e não substitui esses controles do servidor.
+
+### Comportamento e limitações
+
+- A resposta de envio é neutra para não revelar se a conta existe. Erros de código também não distinguem código inválido, expirado, usado ou pertencente a outro e-mail.
+- Ao concluir, a sessão temporária é encerrada antes do retorno a `#/login`; não há login automático. Ao cancelar, somente uma sessão marcada em memória como recuperação é encerrada, preservando sessões normais.
+- Um reload antes da verificação descarta e-mail e código, exigindo reiniciar o fluxo. Depois da verificação, um marcador booleano não sensível em `sessionStorage` permite restaurar diretamente a etapa de nova senha enquanto a sessão oficial do Supabase continua válida. OTP, senha, access token, refresh token e recovery token nunca são armazenados nesse marcador, que é removido ao concluir, cancelar ou receber `SIGNED_OUT`.
+- A confirmação de que a senha antiga deixou de funcionar e a nova funciona exige teste integrado contra um projeto Supabase configurado e uma caixa de e-mail real.

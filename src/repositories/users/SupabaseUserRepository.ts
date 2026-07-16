@@ -30,6 +30,24 @@ export class SupabaseUserRepository {
     return this.client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
   }
 
+  requestPasswordRecovery(email: string) {
+    return this.client.auth.resetPasswordForEmail(email.trim().toLowerCase());
+  }
+
+  verifyPasswordRecoveryCode(email: string, code: string) {
+    return this.client.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: code.replace(/\s+/g, ''),
+      type: 'recovery',
+    });
+  }
+
+  updateRecoveredPassword(password: string) {
+    return this.client.auth.updateUser({ password });
+  }
+
+  clearRecoverySession() { return this.client.auth.signOut({ scope: 'local' }); }
+
   signInWithOAuth(provider: SocialAuthProvider) {
     saveOAuthReturnTo();
     return this.client.auth.signInWithOAuth({
