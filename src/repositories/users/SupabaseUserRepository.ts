@@ -1,5 +1,6 @@
 import type { AuthChangeEvent, Session, SupabaseClient, User } from '@supabase/supabase-js';
 import type { RegisterUserInput } from '../../types/user';
+import { getOAuthRedirectUrl, saveOAuthReturnTo, SOCIAL_PROVIDER_SCOPES, toSupabaseProvider, type SocialAuthProvider } from './oauth';
 
 export type AuthSubscription = { unsubscribe: () => void };
 
@@ -27,6 +28,25 @@ export class SupabaseUserRepository {
 
   signInWithPassword(email: string, password: string) {
     return this.client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+  }
+
+  signInWithOAuth(provider: SocialAuthProvider) {
+    saveOAuthReturnTo();
+    return this.client.auth.signInWithOAuth({
+      provider: toSupabaseProvider(provider),
+      options: {
+        redirectTo: getOAuthRedirectUrl(),
+        scopes: SOCIAL_PROVIDER_SCOPES[provider],
+        queryParams: provider === 'azure' ? { prompt: 'select_account' } : undefined,
+      },
+    });
+  }
+
+  handleOAuthCallback() {
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    if (!code) return this.client.auth.getSession();
+    return this.client.auth.exchangeCodeForSession(code);
   }
 
   signOut() { return this.client.auth.signOut(); }

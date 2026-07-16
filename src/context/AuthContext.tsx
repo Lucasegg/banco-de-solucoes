@@ -5,6 +5,7 @@ import { supabaseConfig } from '../integrations/supabase/config';
 import { ProfileRepository } from '../repositories/profiles';
 import { SupabaseUserRepository } from '../repositories/users/SupabaseUserRepository';
 import type { RegisterUserInput, UserProfile, UserSettings } from '../types/user';
+import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, translateOAuthError, type SocialAuthProvider } from '../repositories/users/oauth';
 
 const SUPABASE_LOCAL_SETTINGS_KEY = 'banco-de-solucoes.supabase.profile-settings';
 
@@ -18,6 +19,9 @@ export interface AuthContextValue {
   isSupabaseConfigured: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
+  socialAuthProvider: SocialAuthProvider | null;
+  socialAuthError?: string;
+  signInWithProvider: (provider: SocialAuthProvider) => Promise<{ ok: boolean; message?: string }>;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   register: (input: RegisterUserInput) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<{ ok: boolean; message?: string }>;
@@ -63,6 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>(supabaseConfig.isConfigured ? 'loading-session' : 'supabase-unconfigured');
   const [authMessage, setAuthMessage] = useState<string | undefined>(supabaseConfig.isConfigured ? undefined : 'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
+  const [socialAuthProvider, setSocialAuthProvider] = useState<SocialAuthProvider | null>(null);
+  const [socialAuthError, setSocialAuthError] = useState<string | undefined>(undefined);
+  const socialAttemptInFlight = useRef(false);
   const loading = authStatus === 'loading-session';
   const initStarted = useRef(false);
 
@@ -107,7 +114,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initStarted.current = true;
     let active = true;
     const mounted = () => active;
-    repositories.users.getSession().then(({ data, error }: { data: { session: Session | null }; error: { message: string } | null }) => {
+    const finishOAuthCallback = async () => {
+      if (!isOAuthCallbackUrl()) return false;
+      const callbackError = new URL(window.location.href).searchParams.get('error_description') ?? new URL(window.location.href).searchParams.get('error');
+      if (callbackError) {
+        const message = translateOAuthError(callbackError);
+        setSocialAuthError(message);
+        setAuthStatus('anonymous');
+        setAuthMessage(message);
+        cleanOAuthCallbackUrl('#/login');
+        return true;
+      }
+      setAuthStatus('loading-session');
+      const { data, error } = await repositories.users.handleOAuthCallback();
+      if (error) {
+        const message = translateOAuthError(error.message);
+        setSocialAuthError(message);
+        setAuthStatus('network-error');
+        setAuthMessage(message);
+        cleanOAuthCallbackUrl('#/login');
+        return true;
+      }
+      const target = consumeOAuthReturnTo();
+      cleanOAuthCallbackUrl(target);
+      await loadProfile(data.session, mounted);
+      return true;
+    };
+    finishOAuthCallback().then((handled) => {
+      if (handled || !mounted()) return;
+      repositories.users.getSession().then(({ data, error }: { data: { session: Session | null }; error: { message: string } | null }) => {
       if (!mounted()) return;
       if (error) {
         setAuthStatus('network-error');
@@ -115,8 +150,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       void loadProfile(data.session, mounted);
+      });
     });
     const subscription = repositories.users.onAuthStateChange((_event, nextSession) => {
+      setSocialAuthProvider(null);
+      socialAttemptInFlight.current = false;
       void loadProfile(nextSession, mounted);
     });
     return () => {
@@ -153,6 +191,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true, message: 'Cadastro recebido. Confirme seu e-mail antes de entrar.' };
     }
     return loadProfile(data.session, () => true);
+  };
+
+  const signInWithProvider: AuthContextValue['signInWithProvider'] = async (provider) => {
+    if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
+    if (socialAttemptInFlight.current) return { ok: false, message: 'Já existe uma tentativa de login social em andamento.' };
+    socialAttemptInFlight.current = true;
+    setSocialAuthProvider(provider);
+    setSocialAuthError(undefined);
+    const { error } = await repositories.users.signInWithOAuth(provider);
+    if (error) {
+      socialAttemptInFlight.current = false;
+      setSocialAuthProvider(null);
+      const message = translateOAuthError(error.message);
+      setSocialAuthError(message);
+      return { ok: false, message };
+    }
+    return { ok: true };
   };
 
   const logout: AuthContextValue['logout'] = async () => {
@@ -205,12 +260,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isSupabaseConfigured: supabaseConfig.isConfigured,
     isAuthenticated: authStatus === 'authenticated' && Boolean(user),
     isLoading: loading,
+    socialAuthProvider,
+    socialAuthError,
+    signInWithProvider,
     login,
     register,
     logout,
     updateSettings,
     isUsernameAvailable,
-  }), [authMessage, authStatus, loading, session, user]);
+  }), [authMessage, authStatus, loading, session, socialAuthError, socialAuthProvider, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
