@@ -139,9 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cleanOAuthCallbackUrl('#/login');
         return true;
       }
-      const result = await loadProfile(data.session, mounted);
-      if (!result.ok) return true;
       const target = consumeOAuthReturnTo();
+      cleanOAuthCallbackUrl('#/profile');
+      const result = await loadProfile(data.session, mounted);
+      if (!result.ok) {
+        cleanOAuthCallbackUrl('#/profile');
+        return true;
+      }
       cleanOAuthCallbackUrl(target);
       return true;
     };
