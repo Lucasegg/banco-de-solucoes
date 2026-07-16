@@ -22,12 +22,20 @@ export type ProfileLoadResult = { ok: true; profile: UserProfile } | { ok: false
 
 const profileSelect = 'id, username, display_name, organization, city, state, country, bio, avatar_url, website, role, created_at, updated_at';
 const usernameRegex = /^[a-z0-9._-]{3,30}$/;
+const websiteRegex = /^https?:\/\//i;
 
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
 function isNullableString(value: unknown): value is string | null | undefined { return value === null || value === undefined || typeof value === 'string'; }
 function requiredString(value: unknown): value is string { return typeof value === 'string' && value.trim().length > 0; }
 function safeTrim(value: string | null | undefined) { return value?.trim() ?? ''; }
 function nullableTrim(value: string | undefined) { const trimmed = value?.trim() ?? ''; return trimmed.length > 0 ? trimmed : null; }
+function normalizeWebsite(value: string | undefined) {
+  const website = nullableTrim(value);
+  if (!website) return { ok: true as const, value: null };
+  if (website.length > 300) return { ok: false as const, message: 'O site deve ter no máximo 300 caracteres.' };
+  if (!websiteRegex.test(website)) return { ok: false as const, message: 'Informe um site começando com http:// ou https://.' };
+  return { ok: true as const, value: website };
+}
 function roleKey(value: unknown): UserRole { return value === 'curator' || value === 'moderator' || value === 'admin' ? value : 'member'; }
 function roleLabel(role: UserRole) { return ({ member: 'Colaborador(a)', curator: 'Curador(a)', moderator: 'Moderador(a)', admin: 'Administrador(a)' } as const)[role]; }
 export function normalizeUsername(value: string) { return value.trim().toLowerCase(); }
@@ -112,6 +120,9 @@ export class ProfileRepository {
   }
 
   async updateOwnProfile(userId: string, fields: Partial<EditableProfileFields>, email = ''): Promise<ProfileLoadResult> {
+    const website = normalizeWebsite(fields.website);
+    if (!website.ok) return { ok: false, reason: 'invalid', message: website.message };
+
     const payload = {
       username: typeof fields.username === 'string' ? normalizeUsername(fields.username) : undefined,
       display_name: typeof fields.name === 'string' ? nullableTrim(fields.name) : undefined,
@@ -120,7 +131,7 @@ export class ProfileRepository {
       state: typeof fields.state === 'string' ? nullableTrim(fields.state) : undefined,
       country: typeof fields.country === 'string' ? nullableTrim(fields.country) : undefined,
       bio: typeof fields.bio === 'string' ? nullableTrim(fields.bio) : undefined,
-      website: typeof fields.website === 'string' ? nullableTrim(fields.website) : undefined,
+      website: typeof fields.website === 'string' ? website.value : undefined,
     };
     const { data, error } = await this.client.from('profiles').update(payload).eq('id', userId).select(profileSelect).single();
     if (error) {
