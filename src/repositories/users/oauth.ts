@@ -1,20 +1,18 @@
 import type { Provider } from '@supabase/supabase-js';
 import { APP_BASE_PATH, getNormalizedOrigin, getOAuthCallback, isSupportedOrigin } from '../../config/appUrls';
 
-export type SocialAuthProvider = 'google' | 'github' | 'azure';
+export type SocialAuthProvider = 'google' | 'github';
 
-export const SOCIAL_AUTH_PROVIDERS: readonly SocialAuthProvider[] = ['google', 'github', 'azure'] as const;
+export const SOCIAL_AUTH_PROVIDERS: readonly SocialAuthProvider[] = ['google', 'github'] as const;
 
 export const SOCIAL_PROVIDER_LABELS: Record<SocialAuthProvider, string> = {
   google: 'Google',
   github: 'GitHub',
-  azure: 'Outlook',
 };
 
 export const SOCIAL_PROVIDER_SCOPES: Record<SocialAuthProvider, string> = {
   google: 'openid email profile',
   github: 'read:user user:email',
-  azure: 'openid email profile',
 };
 
 const OAUTH_RETURN_TO_KEY = 'banco-de-solucoes.oauth.returnTo';

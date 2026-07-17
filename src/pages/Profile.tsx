@@ -56,7 +56,7 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
     let avatarUrl = user.avatarUrl;
     setAvatarError('');
     if (avatarFile) {
-      if (!ImageUploadRepository) { setProfileMessage({ type: 'error', text: 'Supabase Storage não configurado.' }); setSavingProfile(false); return; }
+      if (!ImageUploadRepository) { setProfileMessage({ type: 'error', text: 'Não foi possível enviar a imagem no momento.' }); setSavingProfile(false); return; }
       const upload = await ImageUploadRepository.replaceImage('avatars', user.id, avatarFile, user.avatarUrl, setAvatarProgress);
       if (!upload.ok) { setAvatarError(upload.message); setSavingProfile(false); return; }
       avatarUrl = upload.url;

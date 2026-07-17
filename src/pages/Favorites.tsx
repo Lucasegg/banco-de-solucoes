@@ -18,7 +18,7 @@ export function Favorites({ onNavigate }: { onNavigate: (page: string) => void }
         {favorites.error && <div className="mt-5 rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">{favorites.error}</div>}
       </div>
 
-      {favorites.isLoading ? <EmptyState title="Carregando favoritos" message="Buscando seus favoritos no Supabase." /> : !hasFavorites ? <EmptyState title="Nenhum favorito ainda" message="Favorite problemas e soluções para encontrá-los nesta página." actionLabel="Explorar problemas" onAction={() => onNavigate('problemas')} /> : (
+      {favorites.isLoading ? <EmptyState title="Carregando favoritos" message="Buscando seus favoritos..." /> : !hasFavorites ? <EmptyState title="Nenhum favorito ainda" message="Favorite problemas e soluções para encontrá-los nesta página." actionLabel="Explorar problemas" onAction={() => onNavigate('problemas')} /> : (
         <>
           <section className="space-y-4">
             <div className="flex items-center justify-between gap-4">

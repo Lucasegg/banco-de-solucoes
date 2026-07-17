@@ -9,7 +9,7 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
     <div className="space-y-14">
       <section className="rounded-[2rem] border border-line bg-white p-8 shadow-soft md:p-14">
         <div className="max-w-3xl">
-          <span className="rounded-full border border-line px-3 py-1 text-sm text-muted">Base mundial de conhecimento colaborativo</span>
+          <span className="rounded-full border border-line px-3 py-1 text-sm text-muted">Base Nacional de conhecimento colaborativo</span>
           <h1 className="mt-6 text-5xl font-semibold tracking-tight md:text-7xl">Conecte problemas reais a soluções que podem escalar.</h1>
           <p className="mt-6 text-lg leading-8 text-muted">Uma plataforma open source para mapear desafios, catalogar soluções, aproximar pessoas, empresas e projetos, e transformar conhecimento disperso em ação coordenada.</p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -22,8 +22,8 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
         {[
           [Globe2, `${problems.length} problemas`, 'Desafios descritos com contexto, categoria e impacto.'],
           [Network, `${solutions.length} soluções`, 'Propostas conectadas a problemas e maturidade.'],
-          [CheckCircle2, `${implemented} implementadas`, 'Soluções com execução registrada nos dados mockados.'],
-          [UsersRound, '128 colaboradores', 'Pessoas e organizações simuladas para validar a experiência.'],
+          [CheckCircle2, `${implemented} implementadas`, 'Soluções com execução registrada na plataforma.'],
+          [UsersRound, '128 colaboradores', 'Pessoas e organizações colaborando em rede.'],
         ].map(([Icon, title, text]) => (
           <div key={String(title)} className="rounded-3xl border border-line bg-white p-6">
             <Icon className="mb-4 text-slate-700" />

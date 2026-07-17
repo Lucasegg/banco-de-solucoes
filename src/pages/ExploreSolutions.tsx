@@ -47,7 +47,7 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
     let active = true;
     async function loadSolutions() {
       setLoading(true);
-      if (!SolutionRepository) { setError('Supabase não configurado para carregar soluções.'); setLoading(false); return; }
+      if (!SolutionRepository) { setError('Não foi possível carregar as soluções no momento.'); setLoading(false); return; }
       const result = await SolutionRepository.list();
       if (!active) return;
       if (result.ok) { setSolutions(result.data); setError(''); } else setError(result.message);
@@ -113,7 +113,6 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
     <section className="space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <span className="text-sm font-medium text-muted">/solutions</span>
           <h1 className="mt-2 text-4xl font-semibold tracking-tight">Banco de Soluções</h1>
           <p className="mt-3 max-w-2xl text-muted">Ideias, pilotos e iniciativas validadas conectadas por ID aos problemas que pretendem resolver.</p>
         </div>
@@ -121,7 +120,7 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
       </div>
       <CatalogToolbar search={search} searchPlaceholder="Pesquisar soluções por título, descrição ou tags" filters={filterSelects} sort={sort} sortOptions={solutionSortOptions} resultLabel={`${filteredSolutions.length} ${filteredSolutions.length === 1 ? 'solução encontrada' : 'soluções encontradas'}`} favoritesOnly={favoritesOnly} onSearchChange={(value) => { resetPage(); setSearch(value); }} onFilterChange={updateFilter} onSortChange={(value) => { resetPage(); setSort(value as SolutionSort); }} onFavoritesOnlyChange={(value) => { resetPage(); setFavoritesOnly(value); }} onClear={clearFilters} />
       {error && <div className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
-      {loading ? <EmptyState title="Carregando soluções" message="Buscando dados reais no Supabase." /> : filteredSolutions.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite soluções para encontrá-las rapidamente neste filtro.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outras soluções.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
+      {loading ? <EmptyState title="Carregando soluções" message="Buscando soluções..." /> : filteredSolutions.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite soluções para encontrá-las rapidamente neste filtro.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outras soluções.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {paginatedSolutions.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={onOpen} isFavorite={favorites.isFavorite(solution.id)} onToggleFavorite={(id) => { void favorites.toggleFavorite(id); }} />)}
         </div>
