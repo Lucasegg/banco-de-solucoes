@@ -1,24 +1,21 @@
-import type { Contribution, ContributionChange, ContributionReview, ContributionStatus, ContributionTargetType, ContributionType, SerializableValue } from '../../types/contribution';
-import { localStorageAdapter } from '../../storage/LocalStorageAdapter';
-import { ModerationRepository, createAction, isAction } from '../moderation';
-import type { ModerationAction } from '../../types/moderation';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabaseClient } from '../../integrations/supabase/client';
+import type { Contribution, ContributionPayload, ContributionStatus, ContributionTargetType, ContributionType } from '../../types/contribution';
 
-const STORAGE_KEY = 'banco-de-solucoes.contributions';
-const contributionTypes: ContributionType[] = ['Correção', 'Atualização', 'Nova evidência', 'Novo caso real', 'Nova versão', 'Nova relação', 'Melhoria geral'];
-const statuses: ContributionStatus[] = ['Pendente', 'Em revisão', 'Aprovada', 'Rejeitada', 'Cancelada'];
-const targetTypes: ContributionTargetType[] = ['problem', 'solution'];
-function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
-function isSerializable(value: unknown): value is SerializableValue { if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) return true; if (Array.isArray(value)) return value.every(isSerializable); if (isRecord(value)) return Object.values(value).every(isSerializable); return false; }
-function isChange(value: unknown): value is ContributionChange { return isRecord(value) && typeof value.id === 'string' && typeof value.field === 'string' && typeof value.label === 'string' && isSerializable(value.previousValue) && isSerializable(value.proposedValue); }
-function isReview(value: unknown): value is ContributionReview { return isRecord(value) && typeof value.id === 'string' && statuses.includes(value.status as ContributionStatus) && typeof value.reviewerId === 'string' && typeof value.reviewerName === 'string' && typeof value.message === 'string' && typeof value.createdAt === 'string'; }
-export function isContribution(value: unknown): value is Contribution { return isRecord(value) && typeof value.id === 'string' && targetTypes.includes(value.targetType as ContributionTargetType) && typeof value.targetId === 'string' && typeof value.targetTitle === 'string' && typeof value.targetOwnerName === 'string' && contributionTypes.includes(value.type as ContributionType) && statuses.includes(value.status as ContributionStatus) && typeof value.title === 'string' && typeof value.description === 'string' && typeof value.justification === 'string' && Array.isArray(value.changes) && value.changes.length > 0 && value.changes.every(isChange) && typeof value.authorId === 'string' && typeof value.authorName === 'string' && typeof value.createdAt === 'string' && typeof value.updatedAt === 'string' && Array.isArray(value.reviews) && value.reviews.every(isReview); }
-function normalizeContribution(value: unknown): Contribution | null { if (!isContribution(value)) return null; return { ...value, reviewerId: typeof value.reviewerId === 'string' ? value.reviewerId : null, reviewerName: typeof value.reviewerName === 'string' ? value.reviewerName : null }; }
-export const ContributionRepository = {
-  key: STORAGE_KEY,
-  list: () => localStorageAdapter.list(STORAGE_KEY, { normalizer: normalizeContribution }),
-  save: (contributions: Contribution[]) => localStorageAdapter.set(STORAGE_KEY, contributions.filter(isContribution)),
-  saveWithModerationAction: (contributions: Contribution[], action: Omit<ModerationAction, 'id' | 'createdAt'>) => localStorageAdapter.transaction([
-    { type: 'set', key: STORAGE_KEY, value: contributions.filter(isContribution) },
-    { type: 'set', key: ModerationRepository.keys.actions, value: [createAction(action), ...ModerationRepository.listActions()].filter(isAction) },
-  ]),
-};
+type Result<T> = { ok: true; data: T } | { ok: false; message: string };
+type Row = { id: string; user_id: string; problem_id: string | null; solution_id: string | null; contribution_type: string; payload: unknown; status: string; moderator_id: string | null; rejection_reason: string | null; created_at: string; reviewed_at: string | null; problems?: { title: string } | null; solutions?: { title: string } | null };
+const columns = 'id,user_id,problem_id,solution_id,contribution_type,payload,status,moderator_id,rejection_reason,created_at,reviewed_at,problems(title),solutions(title)';
+const statuses: ContributionStatus[] = ['pending', 'reviewing', 'approved', 'rejected'];
+const types: ContributionType[] = ['correction', 'update', 'evidence', 'general'];
+const message = (error: unknown, fallback: string) => error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' ? error.message : fallback;
+function payload(value: unknown): value is ContributionPayload { if (!value || typeof value !== 'object' || Array.isArray(value)) return false; const p = value as Record<string, unknown>; return typeof p.description === 'string' && typeof p.summary === 'string' && Array.isArray(p.references) && p.references.every((x) => typeof x === 'string') && Array.isArray(p.images) && p.images.every((x) => typeof x === 'string') && Array.isArray(p.changes) && p.changes.length > 0; }
+function map(row: Row): Contribution | null { if (!statuses.includes(row.status as ContributionStatus) || !types.includes(row.contribution_type as ContributionType) || !payload(row.payload) || Boolean(row.problem_id) === Boolean(row.solution_id)) return null; const targetType: ContributionTargetType = row.problem_id ? 'problem' : 'solution'; return { id: row.id, userId: row.user_id, problemId: row.problem_id, solutionId: row.solution_id, targetType, targetId: row.problem_id ?? row.solution_id!, targetTitle: row.problems?.title ?? row.solutions?.title ?? 'Conteúdo removido', contributionType: row.contribution_type as ContributionType, payload: row.payload, status: row.status as ContributionStatus, moderatorId: row.moderator_id, rejectionReason: row.rejection_reason, createdAt: row.created_at, reviewedAt: row.reviewed_at }; }
+function mapped(data: unknown[] | null): Result<Contribution[]> { const values = (data ?? []).map((x) => map(x as Row)); return values.some((x) => !x) ? { ok: false, message: 'O servidor retornou contribuições inválidas.' } : { ok: true, data: values as Contribution[] }; }
+
+export class SupabaseContributionRepository {
+  constructor(private readonly client: SupabaseClient) {}
+  async list(): Promise<Result<Contribution[]>> { const { data, error } = await this.client.from('contributions').select(columns).order('created_at', { ascending: false }); return error ? { ok: false, message: message(error, 'Não foi possível listar contribuições.') } : mapped(data as unknown[] | null); }
+  async create(input: { userId: string; targetType: ContributionTargetType; targetId: string; contributionType: ContributionType; payload: ContributionPayload }): Promise<Result<Contribution>> { if (!input.targetId || !payload(input.payload)) return { ok: false, message: 'Informe alvo e conteúdo da contribuição.' }; const { data, error } = await this.client.from('contributions').insert({ user_id: input.userId, problem_id: input.targetType === 'problem' ? input.targetId : null, solution_id: input.targetType === 'solution' ? input.targetId : null, contribution_type: input.contributionType, payload: input.payload }).select(columns).single(); if (error) return { ok: false, message: message(error, 'Não foi possível enviar a contribuição.') }; const value = map(data as unknown as Row); return value ? { ok: true, data: value } : { ok: false, message: 'O servidor retornou uma contribuição inválida.' }; }
+  async review(id: string, status: 'approved' | 'rejected', reason?: string): Promise<Result<null>> { const { error } = await this.client.rpc('review_contribution', { p_contribution_id: id, p_status: status, p_rejection_reason: reason?.trim() || null }); return error ? { ok: false, message: message(error, 'Não foi possível concluir a revisão.') } : { ok: true, data: null }; }
+}
+export const ContributionRepository = supabaseClient ? new SupabaseContributionRepository(supabaseClient) : null;

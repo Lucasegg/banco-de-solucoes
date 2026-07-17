@@ -1,53 +1,42 @@
 export type ContributionTargetType = 'problem' | 'solution';
-export type ContributionType = 'Correção' | 'Atualização' | 'Nova evidência' | 'Novo caso real' | 'Nova versão' | 'Nova relação' | 'Melhoria geral';
-export type ContributionStatus = 'Pendente' | 'Em revisão' | 'Aprovada' | 'Rejeitada' | 'Cancelada';
-
+export type ContributionStatus = 'pending' | 'reviewing' | 'approved' | 'rejected';
+export type ContributionType = 'correction' | 'update' | 'evidence' | 'general';
 export type SerializableValue = string | number | boolean | null | SerializableValue[] | { [key: string]: SerializableValue };
 
 export interface ContributionChange {
-  id: string;
+  id?: string;
   field: string;
   label: string;
   previousValue: SerializableValue;
   proposedValue: SerializableValue;
 }
 
-export interface ContributionReview {
-  id: string;
-  status: ContributionStatus;
-  reviewerId: string;
-  reviewerName: string;
-  message: string;
-  createdAt: string;
+export interface ContributionPayload {
+  title?: string;
+  description: string;
+  summary: string;
+  references: string[];
+  images: string[];
+  changes: ContributionChange[];
 }
 
 export interface Contribution {
   id: string;
+  userId: string;
+  problemId: string | null;
+  solutionId: string | null;
   targetType: ContributionTargetType;
   targetId: string;
   targetTitle: string;
-  targetOwnerName: string;
-  type: ContributionType;
+  contributionType: ContributionType;
+  payload: ContributionPayload;
   status: ContributionStatus;
-  title: string;
-  description: string;
-  justification: string;
-  changes: ContributionChange[];
-  authorId: string;
-  authorName: string;
+  moderatorId: string | null;
+  rejectionReason: string | null;
   createdAt: string;
-  updatedAt: string;
-  reviews: ContributionReview[];
-  reviewerId: string | null;
-  reviewerName: string | null;
+  reviewedAt: string | null;
 }
 
-export interface ContributionStats {
-  sent: number;
-  approved: number;
-  rejected: number;
-  pending: number;
-  approvalRate: number;
-  reputationPoints: number;
-  badges: Array<{ id: string; title: string; description: string; level: 'bronze' | 'silver' | 'gold'; unlockedAt: string }>;
-}
+export const contributionStatusLabel: Record<ContributionStatus, string> = {
+  pending: 'Pendente', reviewing: 'Em revisão', approved: 'Aprovada', rejected: 'Rejeitada',
+};

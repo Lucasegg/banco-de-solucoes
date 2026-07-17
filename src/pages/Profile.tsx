@@ -33,7 +33,7 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
   const reputation = discussions.reputations.find((item) => item.userId === user?.id);
   const userComments = discussions.allComments.filter((comment) => comment.authorId === user?.id && !comment.deleted);
   const adminActions = moderation.actions.filter((action) => action.moderatorId === user.id);
-  const reviewedContributions = contributionData.contributions.filter((item) => item.reviewerId === user.id || item.reviews.some((review) => review.reviewerId === user.id));
+  const reviewedContributions = contributionData.contributions.filter((item) => item.moderatorId === user.id);
   const reviewedCases = moderation.cases.filter((item) => item.assignedToId === user.id);
   const resolvedCases = reviewedCases.filter((item) => item.status === 'resolved');
 
@@ -166,7 +166,7 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
               <Stat label="Reputação por contribuições" value={contributionData.stats?.reputationPoints ?? 0} suffix="pts" />
             </div>
             <div className="mt-5 space-y-3">
-              {contributionData.contributions.filter((item) => item.authorId === user.id).slice(0, 3).map((item) => <article key={item.id} className="rounded-3xl bg-slate-50 p-4 text-sm"><strong>{item.title}</strong><p className="mt-1 text-muted">{item.status} · {item.type} · {item.targetTitle}</p></article>)}
+              {contributionData.contributions.filter((item) => item.userId === user.id).slice(0, 3).map((item) => <article key={item.id} className="rounded-3xl bg-slate-50 p-4 text-sm"><strong>{item.payload.title || item.targetTitle}</strong><p className="mt-1 text-muted">{item.status} · {item.contributionType} · {item.targetTitle}</p></article>)}
               {contributionData.stats?.sent === 0 && <p className="rounded-3xl bg-slate-50 p-5 text-sm text-muted">Suas contribuições recentes aparecerão aqui.</p>}
             </div>
           </section>

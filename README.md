@@ -206,3 +206,19 @@ Visitantes podem ler comentários e contagens. Tentativas de comentar, reagir ou
 4. Na conta A, adicione e remova cada reação; clique duas vezes rapidamente, recarregue e confirme contagens, seleção persistida e ausência de duplicatas.
 5. Favorite e desfavorite cards e detalhes de problemas e soluções. Confira as duas seções em **Meus Favoritos** e remova itens diretamente nessa tela.
 6. Entre com a conta B e confirme que os favoritos da conta A não aparecem nem podem ser consultados; volte à conta A e confirme persistência após reload.
+
+## Sprint 21 — Contribuições e Moderação
+
+A Sprint 21 implementa propostas moderadas para problemas e soluções no fluxo **UI → hooks → repositories → Supabase**. O botão **Contribuir** abre um formulário com título opcional, descrição, resumo, referências, imagem de apoio e alterações estruturadas. O envio cria somente uma linha `pending`; o conteúdo publicado não é atualizado pelo navegador.
+
+A migration `20260717160000_sprint21_contributions.sql` cria `contributions` e `contribution_audit`, valida alvo exclusivo, payload não vazio e os quatro status permitidos, adiciona índices e ativa RLS. Pessoas autenticadas inserem e consultam apenas suas propostas; curadores e administradores consultam a fila. Aprovação e rejeição usam a RPC transacional `review_contribution`: ela bloqueia a linha, valida campos permitidos, aplica alterações aprovadas ao alvo, preenche revisor/data e grava a auditoria na mesma transação. Rejeições exigem motivo e nunca alteram o conteúdo principal.
+
+A área **Minhas contribuições** oferece filtros de pendentes, aprovadas e rejeitadas, com alvo, data e status. O painel administrativo permite pesquisar, filtrar, abrir a comparação entre conteúdo atual e proposto, aprovar ou rejeitar. A política de moderador é derivada do papel persistido em `profiles` (`curator` ou `admin`); nenhuma credencial privilegiada é exposta no frontend.
+
+### Validação manual
+
+1. Aplique todas as migrations e entre como membro; envie contribuições para um problema e uma solução e confirme que ambos permanecem inalterados.
+2. Confirme que esse membro vê somente suas contribuições e que uma sessão anônima não consulta as tabelas de moderação.
+3. Entre como curador ou administrador, pesquise a fila, abra a comparação e rejeite uma proposta com motivo; confirme o conteúdo original e a auditoria.
+4. Aprove outra proposta; confirme conteúdo, `approved`, `moderator_id`, `reviewed_at` e a linha correspondente em `contribution_audit`.
+5. Tente inserir payload vazio, alvo duplo/ausente e status fora da lista; confirme a rejeição pelo banco.
