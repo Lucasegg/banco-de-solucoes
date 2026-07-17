@@ -15,6 +15,7 @@ import { shareCurrentHashUrl, type ShareStatus } from '../utils/share';
 import { ImageUploadField } from '../components/forms/ImageUploadField';
 import { ImageUploadRepository, type UploadProgress } from '../repositories/images';
 import { usePermissions } from '../hooks/usePermissions';
+import { ItemReactionBar } from '../components/discussions/ItemReactionBar';
 
 
 function getShareMessage(status: ShareStatus, url: string) {
@@ -169,7 +170,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
-      <div className="lg:col-span-2"><DiscussionList title="Discussão do problema" targetType="problem" comments={discussion.comments} reactions={discussion.reactions} currentUserId={discussion.currentUserId} canMarkBestAnswer={discussion.canMarkBestAnswer} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onReply={(content, parentId) => discussion.addComment(content, parentId)} onReact={discussion.toggleReaction} onMarkBestAnswer={discussion.markBestAnswer} onEdit={discussion.editComment} onDelete={discussion.deleteComment} onReport={discussion.reportComment} /></div>
+      <div className="lg:col-span-2"><ItemReactionBar target={{ kind: 'problem', id: problem.id }} /><DiscussionList title="Discussão do problema" comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
     </section>
   );
 }
@@ -327,7 +328,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Problemas relacionados</h2>{related.map((problem) => <button key={problem.id} onClick={() => onNavigate(`problema:${problem.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{problem.title}</strong><p className="mt-2 text-sm text-muted">{problem.category} · {problem.city}, {problem.state} · {problem.status}</p></button>)}</aside>
-      <div className="lg:col-span-2"><DiscussionList title="Discussão da solução" targetType="solution" comments={discussion.comments} reactions={discussion.reactions} currentUserId={discussion.currentUserId} canMarkBestAnswer={discussion.canMarkBestAnswer} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onReply={(content, parentId) => discussion.addComment(content, parentId)} onReact={discussion.toggleReaction} onMarkBestAnswer={discussion.markBestAnswer} onEdit={discussion.editComment} onDelete={discussion.deleteComment} onReport={discussion.reportComment} /></div>
+      <div className="lg:col-span-2"><ItemReactionBar target={{ kind: 'solution', id: solution.id }} /><DiscussionList title="Discussão da solução" comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
     </section>
   );
 }

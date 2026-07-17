@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FavoriteRepository, type Favorite, type FavoriteKind } from '../repositories/favorites';
 import { useAuth } from './useAuth';
 
@@ -13,6 +13,7 @@ export function useFavorites(kind?: FavoriteKind) {
   const [favorites, setFavorites] = useState<FavoriteState>(emptyFavorites);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const pending = useRef(new Set<string>());
 
   const reload = useCallback(async () => {
     if (!user || !isAuthenticated || !FavoriteRepository) {
@@ -21,14 +22,19 @@ export function useFavorites(kind?: FavoriteKind) {
       return;
     }
     setIsLoading(true);
-    const result = await FavoriteRepository.listByUser(user.id);
-    if (result.ok) {
-      setFavorites(result.data);
-      setError('');
-    } else {
-      setError(result.message);
+    try {
+      const result = await FavoriteRepository.listByUser(user.id);
+      if (result.ok) {
+        setFavorites(result.data);
+        setError('');
+      } else {
+        setError(result.message);
+      }
+    } catch {
+      setError('Ocorreu um erro inesperado ao carregar os favoritos.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, [isAuthenticated, user]);
 
   useEffect(() => { void reload(); }, [reload]);
@@ -81,10 +87,22 @@ export function useFavorites(kind?: FavoriteKind) {
 
   const toggleFavorite = useCallback(async (id: string, targetKind: FavoriteKind | undefined = kind) => {
     if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
-    return favorites[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id))
-      ? removeFavorite(id, targetKind)
-      : addFavorite(id, targetKind);
-  }, [addFavorite, favorites, kind, removeFavorite]);
+    const key = `${targetKind}:${id}`;
+    if (pending.current.has(key)) return { ok: false, message: 'Aguarde a alteração anterior.' };
+    pending.current.add(key);
+    try {
+      return favorites[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id))
+        ? await removeFavorite(id, targetKind)
+        : await addFavorite(id, targetKind);
+    } catch {
+      await reload();
+      const message = 'Ocorreu um erro inesperado ao alterar o favorito.';
+      setError(message);
+      return { ok: false, message };
+    } finally {
+      pending.current.delete(key);
+    }
+  }, [addFavorite, favorites, kind, reload, removeFavorite]);
 
   return { favorites, favoriteIds, isFavorite, addFavorite, removeFavorite, toggleFavorite, reload, isLoading, error };
 }

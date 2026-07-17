@@ -42,6 +42,7 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [favoriteMessage, setFavoriteMessage] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -120,9 +121,10 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
       </div>
       <CatalogToolbar search={search} searchPlaceholder="Pesquisar soluções por título, descrição ou tags" filters={filterSelects} sort={sort} sortOptions={solutionSortOptions} resultLabel={`${filteredSolutions.length} ${filteredSolutions.length === 1 ? 'solução encontrada' : 'soluções encontradas'}`} favoritesOnly={favoritesOnly} onSearchChange={(value) => { resetPage(); setSearch(value); }} onFilterChange={updateFilter} onSortChange={(value) => { resetPage(); setSort(value as SolutionSort); }} onFavoritesOnlyChange={(value) => { resetPage(); setFavoritesOnly(value); }} onClear={clearFilters} />
       {error && <div className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+      {favoriteMessage && <div className="rounded-3xl border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-800">{favoriteMessage}</div>}
       {loading ? <EmptyState title="Carregando soluções" message="Buscando soluções..." /> : filteredSolutions.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite soluções para encontrá-las rapidamente neste filtro.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outras soluções.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {paginatedSolutions.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={onOpen} isFavorite={favorites.isFavorite(solution.id)} onToggleFavorite={(id) => { void favorites.toggleFavorite(id); }} />)}
+          {paginatedSolutions.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={onOpen} isFavorite={favorites.isFavorite(solution.id)} onToggleFavorite={(id) => { void favorites.toggleFavorite(id).then((result) => setFavoriteMessage(result.ok ? '' : (result.message ?? 'Não foi possível alterar o favorito.'))); }} />)}
         </div>
         <Pagination currentPage={page} totalItems={filteredSolutions.length} itemsPerPage={itemsPerPage} onPageChange={setPage} />
       </>}
