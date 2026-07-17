@@ -1,4 +1,4 @@
-import { createContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabaseClient } from '../integrations/supabase/client';
 import { supabaseConfig } from '../integrations/supabase/config';
@@ -36,6 +36,7 @@ export interface AuthContextValue {
   isLoading: boolean;
   socialAuthProvider: SocialAuthProvider | null;
   socialAuthError?: string;
+  resetSocialAuthAttempt: () => void;
   recoveryStatus: RecoveryStatus;
   recoveryError?: string;
   requestPasswordRecovery: (email: string) => Promise<{ ok: boolean; message?: string }>;
@@ -103,8 +104,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [recoveryError, setRecoveryError] = useState<string | undefined>(undefined);
   const recoverySession = useRef(false);
   const socialAttemptInFlight = useRef(false);
+  const socialAttemptTimeout = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const oauthCallbackInProgress = useRef(false);
+  const pageWasHiddenDuringSocialAttempt = useRef(false);
   const loading = authStatus === 'loading-session';
   const initStarted = useRef(false);
+
+  const cancelSocialAttemptTimeout = useCallback(() => {
+    if (socialAttemptTimeout.current !== null) {
+      window.clearTimeout(socialAttemptTimeout.current);
+      socialAttemptTimeout.current = null;
+    }
+  }, []);
+
+  const resetSocialAuthAttempt = useCallback(() => {
+    cancelSocialAttemptTimeout();
+    socialAttemptInFlight.current = false;
+    pageWasHiddenDuringSocialAttempt.current = false;
+    setSocialAuthProvider(null);
+  }, [cancelSocialAttemptTimeout]);
 
   const repositories = useMemo(() => {
     if (!supabaseClient) return null;
@@ -149,14 +167,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const mounted = () => active;
     const finishOAuthCallback = async () => {
       if (!isOAuthCallbackUrl()) return false;
+      oauthCallbackInProgress.current = true;
+      cancelSocialAttemptTimeout();
       const { code, error: callbackError } = readOAuthCallbackParams();
       if (callbackError || !code) {
         const message = translateOAuthError(callbackError ?? 'cancelled');
         setSocialAuthError(message);
         setAuthStatus('anonymous');
         setAuthMessage(message);
-        setSocialAuthProvider(null);
-        socialAttemptInFlight.current = false;
+        oauthCallbackInProgress.current = false;
+        resetSocialAuthAttempt();
         cleanOAuthCallbackUrl('#/login');
         return true;
       }
@@ -167,14 +187,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSocialAuthError(message);
         setAuthStatus('network-error');
         setAuthMessage(message);
-        setSocialAuthProvider(null);
-        socialAttemptInFlight.current = false;
+        oauthCallbackInProgress.current = false;
+        resetSocialAuthAttempt();
         cleanOAuthCallbackUrl('#/login');
         return true;
       }
       const target = consumeOAuthReturnTo();
       cleanOAuthCallbackUrl('#/profile');
       const result = await loadProfile(data.session, mounted);
+      oauthCallbackInProgress.current = false;
+      resetSocialAuthAttempt();
       if (!result.ok) {
         cleanOAuthCallbackUrl('#/profile');
         return true;
@@ -207,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const subscription = repositories.users.onAuthStateChange((event, nextSession) => {
       if (event === 'SIGNED_OUT') {
+        resetSocialAuthAttempt();
         recoverySession.current = false;
         setRecoveryMarker(false);
         setSession(null);
@@ -222,16 +245,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (nextSession && hasRecoveryMarker()) setRecoveryStatus('code-verified');
         return;
       }
-      setSocialAuthProvider(null);
-      socialAttemptInFlight.current = false;
+      if (event === 'SIGNED_IN') resetSocialAuthAttempt();
       void loadProfile(nextSession, mounted);
     });
     return () => {
       active = false;
+      cancelSocialAttemptTimeout();
       subscription.unsubscribe();
       initStarted.current = false;
     };
-  }, [repositories]);
+  }, [cancelSocialAttemptTimeout, repositories, resetSocialAuthAttempt]);
+
+  useEffect(() => {
+    const resetIfReturnedWithoutCallback = () => {
+      if (!socialAttemptInFlight.current || oauthCallbackInProgress.current || isOAuthCallbackUrl()) return;
+      resetSocialAuthAttempt();
+    };
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted || pageWasHiddenDuringSocialAttempt.current) resetIfReturnedWithoutCallback();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (socialAttemptInFlight.current) pageWasHiddenDuringSocialAttempt.current = true;
+        return;
+      }
+      if (pageWasHiddenDuringSocialAttempt.current) resetIfReturnedWithoutCallback();
+    };
+    const handleFocus = () => {
+      if (pageWasHiddenDuringSocialAttempt.current) resetIfReturnedWithoutCallback();
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [resetSocialAuthAttempt]);
 
   const login: AuthContextValue['login'] = async (email, password) => {
     if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
@@ -266,12 +317,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
     if (socialAttemptInFlight.current) return { ok: false, message: 'Já existe uma tentativa de login social em andamento.' };
     socialAttemptInFlight.current = true;
+    pageWasHiddenDuringSocialAttempt.current = false;
     setSocialAuthProvider(provider);
     setSocialAuthError(undefined);
+    cancelSocialAttemptTimeout();
+    socialAttemptTimeout.current = window.setTimeout(() => {
+      if (!oauthCallbackInProgress.current && !isOAuthCallbackUrl()) resetSocialAuthAttempt();
+    }, 15_000);
     const { error } = await repositories.users.signInWithOAuth(provider);
     if (error) {
-      socialAttemptInFlight.current = false;
-      setSocialAuthProvider(null);
+      resetSocialAuthAttempt();
       const message = translateOAuthError(error.message);
       setSocialAuthError(message);
       return { ok: false, message };
@@ -374,6 +429,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: loading,
     socialAuthProvider,
     socialAuthError,
+    resetSocialAuthAttempt,
     recoveryStatus,
     recoveryError,
     requestPasswordRecovery,
@@ -386,7 +442,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     updateSettings,
     isUsernameAvailable,
-  }), [authMessage, authStatus, loading, session, socialAuthError, socialAuthProvider, user]);
+  }), [authMessage, authStatus, loading, resetSocialAuthAttempt, session, socialAuthError, socialAuthProvider, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

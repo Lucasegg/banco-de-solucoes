@@ -42,8 +42,8 @@ const inputClass = 'rounded-2xl border border-line bg-white px-4 py-3 text-sm ou
 
 export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { login } = useAuth();
-  const [email, setEmail] = useState('marina@bancodesolucoes.dev');
-  const [password, setPassword] = useState('solucoes123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const submit = async (event: FormEvent) => {
@@ -73,8 +73,8 @@ export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
       </div>
       <form onSubmit={submit} className="rounded-[2rem] border border-line bg-white p-8 shadow-soft">
         <h2 className="text-2xl font-semibold">Login</h2>
-        <label className="mt-6 grid gap-2 text-sm font-medium">E-mail<input className={inputClass} type="email" value={email} onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} required /></label>
-        <label className="mt-4 grid gap-2 text-sm font-medium">Senha<input className={inputClass} type="password" value={password} onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} required /></label>
+        <label className="mt-6 grid gap-2 text-sm font-medium">E-mail<input className={inputClass} type="email" autoComplete="email" value={email} onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} required /></label>
+        <label className="mt-4 grid gap-2 text-sm font-medium">Senha<input className={inputClass} type="password" autoComplete="current-password" value={password} onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} required /></label>
         {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         <button className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" type="submit">Entrar <ArrowRight size={16} /></button>
         <button className="mt-4 w-full text-sm font-semibold text-slate-700 underline" type="button" onClick={() => onNavigate('password-recovery')}>Esqueci minha senha</button>

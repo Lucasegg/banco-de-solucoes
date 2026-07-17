@@ -8,7 +8,7 @@ export const SOCIAL_AUTH_PROVIDERS: readonly SocialAuthProvider[] = ['google', '
 export const SOCIAL_PROVIDER_LABELS: Record<SocialAuthProvider, string> = {
   google: 'Google',
   github: 'GitHub',
-  azure: 'Microsoft',
+  azure: 'Outlook',
 };
 
 export const SOCIAL_PROVIDER_SCOPES: Record<SocialAuthProvider, string> = {
@@ -61,7 +61,7 @@ export function toSupabaseProvider(provider: SocialAuthProvider): Provider {
 
 export function translateOAuthError(message?: string) {
   if (!message) return 'Não foi possível concluir o login social.';
-  if (/provider|unsupported|disabled|not enabled/i.test(message)) return 'Este provedor social não está habilitado no Supabase.';
+  if (/provider|unsupported|disabled|not enabled/i.test(message)) return 'O login com este provedor ainda não está habilitado. Tente outra opção ou entre com e-mail e senha.';
   if (/cancel|denied|access_denied/i.test(message)) return 'Login social cancelado antes da autorização.';
   if (/identity|already|exists|email/i.test(message)) return 'Este e-mail pode já estar associado a outra forma de login. Entre com e-mail e senha ou use o mesmo provedor já conectado.';
   if (/network|fetch|timeout/i.test(message)) return 'Falha de rede ao concluir o login social.';
