@@ -18,6 +18,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { ItemReactionBar } from '../components/discussions/ItemReactionBar';
 import { ProblemTimeline } from '../components/problems/ProblemTimeline';
 import { problemStatuses } from '../types/problemTimeline';
+import { ProblemLocationMap } from '../components/map/ProblemLocationMap';
 
 
 function getShareMessage(status: ShareStatus, url: string) {
@@ -169,6 +170,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
           </div>
           {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><ImageUploadField label="Imagem do problema" currentUrl={problem.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem do problema ${problem.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}>{problemStatuses.map((status) => <option key={status}>{status}</option>)}</select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
           <Feedback message={feedback} />
+          <ProblemLocationMap problemId={problem.id} onOpen={() => undefined} />
           {showContributionForm && <ContributionForm targetType="problem" targetId={problem.id} fields={problemFields} onClose={() => setShowContributionForm(false)} />}
         </div>
       </article>

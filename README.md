@@ -308,3 +308,11 @@ Cada problema possui uma **linha do tempo pública**, ordenada cronologicamente,
 O novo papel `verified_organization` identifica organizações autorizadas. A interface apenas reflete essa permissão: a RPC `publish_problem_update` valida `auth.uid()` e o papel no banco, registra atualização, eventual mudança de status, auditoria e notificações na mesma transação. O ator e a identidade institucional são sempre obtidos de `profiles` no banco, nunca do cliente; uma organização verificada sem `organization` preenchida não pode publicar. Para moderadores e administradores, a organização do perfil é usada quando existir, sem permitir sobrescrita. A tabela histórica é pública para leitura, mas escrita direta é revogada e não possui chave estrangeira destrutiva. No modo local/mock, a aplicação continua navegável e apresenta a timeline vazia; a publicação oficial informa que requer Supabase.
 
 Fluxo: criação do problema → evento automático; alteração de status → evento automático; atualização oficial → evento oficial, auditoria e aviso aos usuários que favoritaram o problema (exceto o próprio ator).
+
+## Sprint 25 — Mapa público e busca territorial
+
+A rota `#/mapa` consulta somente a área visível, com debounce, limite de 200 registros e agrupamento de marcadores. Estado, cidade, bairro, categoria, status, verificação e atualização recente podem ser combinados. A seção **Explore por região** da home não apresenta métricas inventadas.
+
+As coordenadas são opcionais. `geolocation_precision` distingue estado, cidade, bairro, logradouro aproximado e coordenada exata; localizações não exatas são arredondadas antes da apresentação. Endereços residenciais não devem ser inseridos em `geolocation_source` nem em metadados. A migration não geocodifica registros existentes e não usa serviços pagos.
+
+`get_problems_in_bounds` valida limites, respeita RLS por ser `SECURITY INVOKER` e limita a resposta. `get_problem_region_summary` agrega totais reais por estado/cidade. Sem Supabase, o `MapRepository` usa exclusivamente os registros já existentes em `mapProblems` no `StorageAdapter`, sem fabricar conteúdo. A limitação atual é que o mapa vetorial leve não baixa tiles externos; validações integradas das RPCs exigem um projeto Supabase com a migration aplicada.

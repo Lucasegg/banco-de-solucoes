@@ -13,6 +13,7 @@ interface LayoutProps {
 const links = [
   ['home', 'Home'],
   ['problemas', 'Problemas'],
+  ['mapa', 'Mapa'],
   ['solucoes', 'Soluções'],
   ['novo-problema', 'Cadastrar problema'],
   ['nova-solucao', 'Cadastrar solução'],
