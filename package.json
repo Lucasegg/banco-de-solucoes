@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit",
+    "test:sprint26": "node --experimental-strip-types --test src/services/systemHealth.test.ts",
+    "check:database": "node --experimental-strip-types scripts/checkDatabase.ts"
   },
   "dependencies": {
     "vite": "latest",

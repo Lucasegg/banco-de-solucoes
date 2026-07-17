@@ -21,6 +21,7 @@ import { Notifications } from './pages/Notifications';
 import { PublicMap } from './pages/PublicMap';
 import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaReturnTo';
 import { isPasswordRecoveryCallbackUrl } from './repositories/users/passwordRecoveryCallback';
+import { AdminSystem } from './pages/AdminSystem';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -39,6 +40,7 @@ const pageToHashPath: Record<string, string> = {
   account: '/account',
   'mfa-challenge': '/mfa-challenge',
   admin: '/admin',
+  'admin-system': '/admin/system',
   notifications: '/notificacoes',
   mapa: '/mapa',
 };
@@ -63,6 +65,7 @@ function pageFromHash(hash: string) {
   if (path === '/profile') return 'profile';
   if (path === '/account') return 'account';
   if (path === '/mfa-challenge') return 'mfa-challenge';
+  if (path === '/admin/system') return 'admin-system';
   if (path === '/admin') return 'admin';
   if (path === '/notificacoes') return 'notifications';
   if (path === '/mapa') return 'mapa';
@@ -109,11 +112,11 @@ export function App() {
       return;
     }
     if (!mfaRequired && page === 'mfa-challenge' && isAuthenticated) { setPage('profile'); return; }
-    if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'notifications' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
+    if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'notifications' || page === 'admin' || page === 'admin-system' || kind === 'contribution') && !isAuthenticated) {
       setMfaReturnTo(window.location.hash);
       setPage('login');
     }
-    if (!isLoading && page === 'admin' && isAuthenticated && !permissions.canAccessAdmin) {
+    if (!isLoading && (page === 'admin' || page === 'admin-system') && isAuthenticated && !permissions.canAccessAdmin) {
       setPage('profile');
     }
   }, [isAuthenticated, isLoading, mfaRequired, page, permissions.canAccessAdmin]);
@@ -136,6 +139,7 @@ export function App() {
       {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
       {page === 'account' && isAuthenticated && <Account onNavigate={setPage} />}
       {page === 'admin' && isAuthenticated && permissions.canAccessAdmin && <AdminPanel />}
+      {page === 'admin-system' && isAuthenticated && permissions.canAccessAdmin && <AdminSystem />}
       {page === 'contributions' && isAuthenticated && <ContributionsList onNavigate={setPage} />}
       {page === 'favorites' && isAuthenticated && <Favorites onNavigate={setPage} />}
       {page === 'notifications' && isAuthenticated && <Notifications />}

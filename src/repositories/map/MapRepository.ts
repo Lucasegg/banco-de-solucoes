@@ -3,6 +3,7 @@ import { supabaseClient } from '../../integrations/supabase/client';
 import { localStorageAdapter } from '../../storage/LocalStorageAdapter';
 import type { MapBounds, MapFilters, MapProblem, ProblemRegionSummary } from '../../types/map';
 import type { Problem, ProblemCategory, ProblemStatus } from '../../types/domain';
+import { logger } from '../../lib/logger';
 
 type Result<T> = { ok: true; data: T } | { ok: false; message: string };
 const message = (error: unknown) => error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Não foi possível carregar o mapa.';
@@ -21,7 +22,7 @@ export class MapRepository {
   async getProblemsInBounds(bounds: MapBounds,filters: MapFilters={}): Promise<Result<MapProblem[]>> {
     if(!this.client) return {ok:true,data:localMapProblems().filter(p=>inBounds(p,bounds)&&filter(p,filters)).slice(0,200)};
     const {data,error}=await this.client.rpc('get_problems_in_bounds',{north:bounds.north,south:bounds.south,east:bounds.east,west:bounds.west,p_status:filters.status||null,p_category:filters.category||null,p_state:filters.state||null,p_city:filters.city||null,p_neighborhood:filters.neighborhood||null,verified_only:Boolean(filters.verifiedOnly),recently_updated_only:Boolean(filters.recentlyUpdatedOnly),p_limit:200});
-    if(error)return {ok:false,message:message(error)};
+    if(error){logger.error('Falha ao carregar problemas do mapa',error,{operation:'get_problems_in_bounds'});return {ok:false,message:'Não foi possível atualizar o mapa. Verifique sua conexão e tente novamente.'};}
     return {ok:true,data:(data||[]).map((r:Record<string,unknown>)=>({id:String(r.id),title:String(r.title),category:r.category,status:r.status,city:String(r.city),state:String(r.state),neighborhood:r.neighborhood?String(r.neighborhood):undefined,location:{latitude:Number(r.latitude),longitude:Number(r.longitude),precision:r.geolocation_precision},updatedAt:String(r.updated_at),verified:Boolean(r.source_verified_at)} as MapProblem))};
   }
   async getRegionSummary(): Promise<Result<ProblemRegionSummary[]>> { if(!this.client)return {ok:true,data:[]}; const {data,error}=await this.client.rpc('get_problem_region_summary'); if(error)return {ok:false,message:message(error)}; return {ok:true,data:(data||[]).map((r:Record<string,unknown>)=>({state:String(r.state),city:String(r.city),totalProblems:Number(r.total_problems),inProgress:Number(r.in_progress),resolved:Number(r.resolved),lastUpdated:String(r.last_updated)}))}; }
