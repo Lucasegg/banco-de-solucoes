@@ -11,6 +11,7 @@ import { clearMfaReturnTo, setMfaReturnTo } from '../repositories/users/mfaRetur
 import type { RegisterUserInput, UserProfile, UserSettings } from '../types/user';
 import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, readOAuthCallbackParams, translateOAuthError, type SocialAuthProvider } from '../repositories/users/oauth';
 import { clearPasswordRecoveryFlowState, PASSWORD_RECOVERY_ACTIVE_KEY, readRecoveryStorage, removeRecoveryStorage, writeRecoveryStorage } from '../repositories/users/passwordRecoveryState';
+import { cleanPasswordRecoveryCallbackUrl, isPasswordRecoveryCallbackUrl, readPasswordRecoveryCallback } from '../repositories/users/passwordRecoveryCallback';
 
 const SUPABASE_LOCAL_SETTINGS_KEY = 'banco-de-solucoes.supabase.profile-settings';
 function hasRecoveryMarker() {
@@ -23,7 +24,7 @@ function setRecoveryMarker(active: boolean) {
 }
 
 export type AuthStatus = 'supabase-unconfigured' | 'loading-session' | 'anonymous' | 'authenticated' | 'profile-missing' | 'email-confirmation-pending' | 'network-error' | 'session-expired' | 'mfa-required';
-export type RecoveryStatus = 'idle' | 'requesting-code' | 'code-sent' | 'verifying-code' | 'code-verified' | 'updating-password' | 'success' | 'error';
+export type RecoveryStatus = 'idle' | 'requesting-link' | 'link-sent' | 'processing-link' | 'link-ready' | 'updating-password' | 'success' | 'error';
 
 export interface AuthContextValue {
   user: UserProfile | null;
@@ -39,7 +40,6 @@ export interface AuthContextValue {
   recoveryStatus: RecoveryStatus;
   recoveryError?: string;
   requestPasswordRecovery: (email: string) => Promise<{ ok: boolean; message?: string }>;
-  verifyPasswordRecoveryCode: (email: string, code: string) => Promise<{ ok: boolean; message?: string }>;
   updateRecoveredPassword: (password: string) => Promise<{ ok: boolean; message?: string }>;
   clearRecoverySession: () => Promise<{ ok: boolean; message?: string }>;
   signInWithProvider: (provider: SocialAuthProvider) => Promise<{ ok: boolean; message?: string }>;
@@ -97,13 +97,13 @@ function networkMessage(message?: string) {
   return 'Não foi possível concluir a autenticação.';
 }
 
-function recoveryMessage(message?: string, operation: 'request' | 'verify' | 'update' | 'clear' = 'verify') {
+function recoveryMessage(message?: string, operation: 'request' | 'callback' | 'update' | 'clear' = 'callback') {
   if (/rate|too many|security purposes|429/i.test(message ?? '')) return 'Muitas solicitações foram realizadas. Aguarde antes de tentar novamente.';
   if (/fetch|network|unavailable|timeout|connection/i.test(message ?? '')) return 'Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.';
-  if (operation === 'verify') return 'Código inválido ou expirado. Verifique o código ou solicite um novo.';
-  if (operation === 'update') return 'Não foi possível alterar a senha. Solicite um novo código e tente novamente.';
+  if (operation === 'callback') return 'O link de recuperação expirou ou já foi utilizado. Solicite um novo.';
+  if (operation === 'update') return 'Não foi possível alterar a senha. Solicite um novo link e tente novamente.';
   if (operation === 'clear') return 'A senha foi alterada, mas não foi possível encerrar a sessão temporária. Feche esta janela antes de continuar.';
-  return 'Não foi possível enviar o código. Tente novamente mais tarde.';
+  return 'Não foi possível solicitar o link. Tente novamente mais tarde.';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -207,6 +207,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initStarted.current = true;
     let active = true;
     const mounted = () => active;
+    const finishPasswordRecoveryCallback = async () => {
+      if (!isPasswordRecoveryCallbackUrl()) return false;
+      const { code, hasError } = readPasswordRecoveryCallback();
+      recoverySession.current = true;
+      setRecoveryMarker(true);
+      setRecoveryStatus('processing-link');
+      setRecoveryError(undefined);
+      setUser(null);
+      setAuthStatus('anonymous');
+      if (hasError || !code) {
+        recoverySession.current = false;
+        clearPasswordRecoveryFlowState();
+        setSession(null);
+        setRecoveryStatus('error');
+        setRecoveryError(recoveryMessage(undefined, 'callback'));
+        cleanPasswordRecoveryCallbackUrl();
+        return true;
+      }
+      const { data, error } = await repositories.users.handlePasswordRecoveryCallback(code).catch(() => ({ data: { session: null }, error: { message: 'network' } }));
+      if (error || !data.session) {
+        await repositories.users.clearRecoverySession().catch(() => undefined);
+        recoverySession.current = false;
+        clearPasswordRecoveryFlowState();
+        setSession(null);
+        setRecoveryStatus('error');
+        setRecoveryError(recoveryMessage(error?.message, 'callback'));
+        cleanPasswordRecoveryCallbackUrl();
+        return true;
+      }
+      recoverySession.current = true;
+      setRecoveryMarker(true);
+      setSession(data.session);
+      setUser(null);
+      setAuthStatus('anonymous');
+      setRecoveryStatus('link-ready');
+      cleanPasswordRecoveryCallbackUrl();
+      return true;
+    };
     const finishOAuthCallback = async () => {
       if (!isOAuthCallbackUrl()) return false;
       oauthCallbackInProgress.current = true;
@@ -247,7 +285,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cleanOAuthCallbackUrl(target);
       return true;
     };
-    finishOAuthCallback().then((handled) => {
+    const finishAuthCallback = async () => {
+      if (await finishPasswordRecoveryCallback()) return true;
+      return finishOAuthCallback();
+    };
+    finishAuthCallback().then((handled) => {
       if (handled || !mounted()) return;
       repositories.users.getSession().then(({ data, error }: { data: { session: Session | null }; error: { message: string } | null }) => {
       if (!mounted()) return;
@@ -262,11 +304,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setAuthStatus('anonymous');
         setAuthMessage(undefined);
-        setRecoveryStatus('code-verified');
+        setRecoveryStatus('link-ready');
         setRecoveryError(undefined);
         return;
       }
-      if (!data.session && hasRecoveryMarker()) setRecoveryMarker(false);
+      if (!data.session && hasRecoveryMarker()) {
+        clearPasswordRecoveryFlowState();
+        setRecoveryStatus('error');
+        setRecoveryError(recoveryMessage(undefined, 'callback'));
+      }
       void evaluateSession(data.session, mounted);
       });
     });
@@ -282,10 +328,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (event === 'PASSWORD_RECOVERY' || recoverySession.current || hasRecoveryMarker()) {
         recoverySession.current = true;
+        setRecoveryMarker(true);
         setSession(nextSession);
         setUser(null);
         setAuthStatus('anonymous');
-        if (nextSession && hasRecoveryMarker()) setRecoveryStatus('code-verified');
+        if (nextSession) setRecoveryStatus('link-ready');
+        if (event === 'PASSWORD_RECOVERY') cleanPasswordRecoveryCallbackUrl();
         return;
       }
       if (event === 'SIGNED_IN') resetSocialAuthAttempt();
@@ -394,25 +442,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestPasswordRecovery: AuthContextValue['requestPasswordRecovery'] = async (email) => {
     if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
-    setRecoveryStatus('requesting-code'); setRecoveryError(undefined);
+    setRecoveryStatus('requesting-link'); setRecoveryError(undefined);
     try {
       const { error } = await repositories.users.requestPasswordRecovery(email);
       if (error) { const message = recoveryMessage(error.message, 'request'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
-      setRecoveryStatus('code-sent');
-      return { ok: true, message: 'Caso exista uma conta associada a este e-mail, enviaremos um código de recuperação.' };
+      setRecoveryStatus('link-sent');
+      return { ok: true, message: 'Caso exista uma conta associada a este e-mail, enviaremos um link para redefinir sua senha.' };
     } catch { const message = recoveryMessage('network', 'request'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
-  };
-
-  const verifyPasswordRecoveryCode: AuthContextValue['verifyPasswordRecoveryCode'] = async (email, code) => {
-    if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
-    setRecoveryStatus('verifying-code'); setRecoveryError(undefined);
-    recoverySession.current = true;
-    const { data, error } = await repositories.users.verifyPasswordRecoveryCode(email, code).catch(() => ({ data: { session: null }, error: { message: 'network' } }));
-    if (error || !data.session) { recoverySession.current = false; const message = recoveryMessage(error?.message); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
-    setRecoveryMarker(true);
-    recoverySession.current = true;
-    setSession(data.session); setRecoveryStatus('code-verified');
-    return { ok: true };
   };
 
   const clearRecoverySession: AuthContextValue['clearRecoverySession'] = async () => {
@@ -426,7 +462,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateRecoveredPassword: AuthContextValue['updateRecoveredPassword'] = async (password) => {
-    if (!repositories || (!recoverySession.current && !hasRecoveryMarker())) return { ok: false, message: 'A verificação expirou. Solicite um novo código.' };
+    if (!repositories || (!recoverySession.current && !hasRecoveryMarker())) return { ok: false, message: 'O link de recuperação expirou ou já foi utilizado. Solicite um novo.' };
     recoverySession.current = true;
     setRecoveryStatus('updating-password'); setRecoveryError(undefined);
     const { error } = await repositories.users.updateRecoveredPassword(password).catch(() => ({ error: { message: 'network' } }));
@@ -527,7 +563,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     recoveryStatus,
     recoveryError,
     requestPasswordRecovery,
-    verifyPasswordRecoveryCode,
     updateRecoveredPassword,
     clearRecoverySession,
     signInWithProvider,

@@ -16,7 +16,6 @@ export const SOCIAL_PROVIDER_SCOPES: Record<SocialAuthProvider, string> = {
 };
 
 const OAUTH_RETURN_TO_KEY = 'banco-de-solucoes.oauth.returnTo';
-const CALLBACK_MARKER = 'oauth=callback';
 const SAFE_HASH_PATH = /^#\/(?!\/)[a-z0-9/_?.=&:%@+\-.]*$/i;
 
 export function getOAuthRedirectUrl() {
@@ -37,7 +36,7 @@ export function consumeOAuthReturnTo() {
 
 export function isOAuthCallbackUrl(url = window.location.href) {
   const parsed = new URL(url);
-  return isSupportedOrigin(parsed) && (`oauth=${parsed.searchParams.get('oauth')}` === CALLBACK_MARKER || parsed.searchParams.has('code') || parsed.searchParams.has('error'));
+  return isSupportedOrigin(parsed) && parsed.searchParams.get('oauth') === 'callback';
 }
 
 export function readOAuthCallbackParams(url = window.location.href) {

@@ -131,30 +131,35 @@ A migration da Sprint 17 atualiza a função `handle_new_auth_user_profile` para
 
 Não há vinculação manual de contas nesta sprint. Se um e-mail já existir com e-mail/senha ou outra identidade, o comportamento seguro depende das regras do Supabase Auth e o frontend apenas mostra uma mensagem explicativa; contas não são mescladas no cliente.
 
-## Sprint 18 — Recuperação de senha por código
+## Sprint 18 — Recuperação de senha por link
 
-O fluxo `#/password-recovery` solicita o e-mail, confirma um OTP de seis dígitos dentro da aplicação e, somente depois de o Supabase estabelecer uma sessão oficial de recuperação, permite definir a nova senha. A implementação usa exclusivamente `resetPasswordForEmail`, `verifyOtp({ type: 'recovery' })`, `updateUser({ password })` e `signOut({ scope: 'local' })`. O Supabase gera e valida o código; a aplicação não gera códigos, não usa tabela própria e mantém código e senha somente no estado React, sem gravá-los ou registrá-los. Depois da troca, a sessão temporária é encerrada e o usuário deve fazer login normal novamente, inclusive cumprir o desafio TOTP se a conta tiver MFA.
+O fluxo real é: **e-mail → link padrão do Supabase → retorno à aplicação → nova senha → logout → login**. A solicitação usa `resetPasswordForEmail(email, { redirectTo })`; no retorno PKCE, a aplicação identifica exclusivamente `?recovery=callback`, troca o `code` uma única vez com `exchangeCodeForSession`, reconhece a sessão como recuperação e abre `#/password-recovery`. A senha é alterada com `updateUser({ password })` e a sessão temporária é encerrada com `signOut({ scope: 'local' })`. Nenhum parâmetro do link, código PKCE, access token ou refresh token é armazenado manualmente.
 
-### Template de e-mail obrigatório
+### Redirect URL obrigatória
 
-No Dashboard, acesse **Authentication → Email Templates → Reset Password**. Use o assunto sugerido **“Código para recuperar sua senha | Banco de Soluções”** e inclua `{{ .Token }}` no corpo. Remova `{{ .ConfirmationURL }}`: o fluxo oficial não depende mais de link. Não use `{{ .TokenHash }}` no campo de código, pois a interface envia o `token` digitado com o tipo `recovery`. Exemplo mínimo: “Seu código de recuperação é: `{{ .Token }}`”. Essa alteração é manual; a aplicação não modifica configurações externas. Não inclua credenciais ou chaves no template ou no repositório.
+O template padrão de recuperação por link do Supabase deve ser mantido sem alteração. No Dashboard, acesse **Authentication → URL Configuration → Redirect URLs** e autorize exatamente:
+
+- produção: `https://www.bancodesolucoes.com.br/?recovery=callback`;
+- desenvolvimento: `http://localhost:5173/?recovery=callback` (e a origem/porta efetivamente usada pelo Vite, se diferente).
+
+Os parâmetros PKCE precisam chegar antes do hash router; por isso `redirectTo` aponta para a query estável `?recovery=callback`. Depois de processar e limpar o callback, o frontend navega para `#/password-recovery`. Não use o endereço legado do GitHub Pages como destino principal.
 
 Em **Authentication → URL Configuration**, configure:
 
 - Site URL: `https://www.bancodesolucoes.com.br/`;
-- Redirect URL de produção: `https://www.bancodesolucoes.com.br/` (a tela oficial é `https://www.bancodesolucoes.com.br/#/password-recovery`, mas o hash é navegação local e não deve ser usado como redirect do servidor);
+- Redirect URL de recuperação: `https://www.bancodesolucoes.com.br/?recovery=callback`;
 - desenvolvimento: `http://localhost:5173/` (e a porta efetivamente usada pelo Vite, se diferente).
 
-Em **Authentication → Rate Limits**, defina limites compatíveis com o produto para envio de e-mails e verificação de OTP. Em **Authentication → Settings**, confira **Email OTP Expiration**. A validade recomendada para este projeto é **10 minutos**, mas a validade real é a configurada no Dashboard; alterar esse parâmetro afeta também outros fluxos de autenticação por e-mail.
+Em **Authentication → Rate Limits**, defina limites compatíveis com o produto para envio de e-mails. A validade real do link pertence ao Supabase e não é representada pelo cooldown da interface.
 
-O provedor de e-mail padrão do Supabase destina-se somente a testes e possui limite baixo de envio. Produção deve usar **SMTP próprio** configurado no Dashboard. Até essa configuração, envio e reenvio podem receber rate limit; a aplicação mostra esse erro técnico com mensagem pública apropriada, sem convertê-lo em sucesso e sem revelar se o e-mail pertence a uma conta. Nenhuma credencial SMTP ou secret deve ser adicionada ao repositório.
+O provedor de e-mail padrão do Supabase possui limites baixos e pode aplicar rate limit no envio ou reenvio. A aplicação mostra esse erro técnico com mensagem pública apropriada, sem convertê-lo em sucesso e sem revelar se o e-mail pertence a uma conta. Este fluxo não exige SMTP próprio nem alteração do template padrão.
 
 ### Comportamento e limitações
 
-- A resposta de envio é neutra para não revelar se a conta existe. Erros de código também não distinguem código inválido, expirado, usado ou pertencente a outro e-mail.
+- A resposta de envio é neutra para não revelar se a conta existe. Links inválidos, expirados, utilizados ou malformados recebem a mesma mensagem pública e seus parâmetros são removidos da URL.
 - Ao concluir, a sessão temporária é encerrada antes do retorno a `#/login`; não há login automático nem alteração ou remoção de fatores MFA. Ao cancelar, somente uma sessão marcada como recuperação é encerrada, preservando sessões normais.
-- O cooldown visual de reenvio é de **90 segundos** e usa um timestamp absoluto em `sessionStorage`, portanto sobrevive a reload sem recomeçar indevidamente. Ele limita apenas o botão da interface e **não** representa a validade ou expiração do OTP. E-mail e etapa não sensível também podem ser restaurados; OTP, senha, access token, refresh token e recovery token nunca são armazenados manualmente. Todo o estado é removido ao concluir, cancelar, voltar ao login, receber `SIGNED_OUT` ou iniciar outra recuperação.
-- Links antigos com parâmetros de recuperação não são consumidos nem combinados com o fluxo por código. A aplicação remove os parâmetros sensíveis da URL, abre `#/password-recovery` e orienta a solicitar um novo código.
+- O cooldown visual de reenvio é de **90 segundos** e usa um timestamp absoluto em `sessionStorage`, portanto sobrevive a reload sem recomeçar indevidamente. Ele limita apenas o botão da interface e **não** representa a validade do link. Somente o e-mail, a confirmação de solicitação, o timestamp e um marcador booleano de recuperação ativa podem ser restaurados; senha e parâmetros/tokens do callback nunca são armazenados manualmente.
+- O listener central trata `PASSWORD_RECOVERY` e também `SIGNED_IN` durante um callback já marcado como recuperação sem carregar perfil, executar MFA ou liberar rotas protegidas. O callback OAuth possui marcador diferente (`?oauth=callback`) e somente um handler troca cada código por sessão.
 - A confirmação de que a senha antiga deixou de funcionar e a nova funciona exige teste integrado contra um projeto Supabase configurado e uma caixa de e-mail real.
 
 ## Sprint 19 — Autenticação multifator TOTP
