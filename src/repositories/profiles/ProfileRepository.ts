@@ -36,8 +36,8 @@ function normalizeWebsite(value: string | undefined) {
   if (!websiteRegex.test(website)) return { ok: false as const, message: 'Informe um site começando com http:// ou https://.' };
   return { ok: true as const, value: website };
 }
-function roleKey(value: unknown): UserRole { return value === 'curator' || value === 'moderator' || value === 'admin' ? value : 'member'; }
-function roleLabel(role: UserRole) { return ({ member: 'Colaborador(a)', curator: 'Curador(a)', moderator: 'Moderador(a)', admin: 'Administrador(a)' } as const)[role]; }
+function roleKey(value: unknown): UserRole { return value === 'curator' || value === 'moderator' || value === 'verified_organization' || value === 'admin' ? value : 'member'; }
+function roleLabel(role: UserRole) { return ({ member: 'Colaborador(a)', curator: 'Curador(a)', moderator: 'Moderador(a)', verified_organization: 'Organização verificada', admin: 'Administrador(a)' } as const)[role]; }
 export function normalizeUsername(value: string) { return value.trim().toLowerCase(); }
 export function isValidUsername(value: string) { return usernameRegex.test(normalizeUsername(value)); }
 function isProfileRow(value: unknown): value is ProfileRow {

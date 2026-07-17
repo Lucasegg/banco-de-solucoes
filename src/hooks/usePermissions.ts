@@ -15,6 +15,7 @@ export function getPermissions(user: UserProfile | null | undefined) {
     canViewAudit: isAdmin,
     canManageRoles: isAdmin,
     canViewModerationHistory: isAdmin || hasRole(user, ['curator', 'moderator']),
+    canPublishOfficialUpdate: isAdmin || hasRole(user, ['verified_organization', 'moderator']),
   };
 }
 

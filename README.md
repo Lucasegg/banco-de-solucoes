@@ -300,3 +300,11 @@ A migration `20260717230000_verified_problem_catalog.sql` importa, de forma idem
 - Descarte clandestino de entulho e contaminação do solo na Zona Sul — Secretaria Municipal de Segurança Urbana (13/02/2025).
 
 A identidade externa é a combinação de `source_url` com `source_metadata.external_source_key`. A migration usa IDs estáveis, `ON CONFLICT DO NOTHING` e não altera registros de usuários. Nenhuma linha persistida é apagada: o catálogo demonstrativo antigo existia somente nos arquivos do frontend.
+
+## Linha do tempo e atualizações oficiais (Sprint 24)
+
+Cada problema possui uma **linha do tempo pública**, ordenada cronologicamente, com sua criação, mudanças de status e comunicados oficiais. Organizações verificadas, moderadores e administradores podem usar **Nova atualização** nos detalhes do problema para publicar título, descrição e, opcionalmente, avançar o status.
+
+O novo papel `verified_organization` identifica organizações autorizadas. A interface apenas reflete essa permissão: a RPC `publish_problem_update` valida `auth.uid()` e o papel no banco, registra atualização, eventual mudança de status, auditoria e notificações na mesma transação. O ator e a identidade institucional são sempre obtidos de `profiles` no banco, nunca do cliente; uma organização verificada sem `organization` preenchida não pode publicar. Para moderadores e administradores, a organização do perfil é usada quando existir, sem permitir sobrescrita. A tabela histórica é pública para leitura, mas escrita direta é revogada e não possui chave estrangeira destrutiva. No modo local/mock, a aplicação continua navegável e apresenta a timeline vazia; a publicação oficial informa que requer Supabase.
+
+Fluxo: criação do problema → evento automático; alteração de status → evento automático; atualização oficial → evento oficial, auditoria e aviso aos usuários que favoritaram o problema (exceto o próprio ator).

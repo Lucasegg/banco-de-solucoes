@@ -1,5 +1,6 @@
 export type ImpactLevel = 'local' | 'regional' | 'national' | 'global';
-export type ProblemStatus = 'Aberto' | 'Em andamento' | 'Resolvido';
+export type { ProblemStatus } from './problemTimeline';
+import type { ProblemStatus } from './problemTimeline';
 export type SolutionStatus = 'Proposta' | 'Em teste' | 'Implementada' | 'Validada' | 'Arquivada';
 export type SolutionMaturityLevel = 'Ideia' | 'Protótipo' | 'Piloto' | 'Em operação' | 'Escalável';
 export type ImplementationDifficulty = 'Baixa' | 'Média' | 'Alta';

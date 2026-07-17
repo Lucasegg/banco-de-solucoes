@@ -9,9 +9,16 @@ interface CardActions {
 }
 
 const problemStatusStyles: Record<Problem['status'], string> = {
-  Aberto: 'bg-amber-50 text-amber-700',
-  'Em andamento': 'bg-sky-50 text-sky-700',
+  Reportado: 'bg-amber-50 text-amber-700',
+  'Em análise': 'bg-sky-50 text-sky-700',
+  'Em vistoria': 'bg-cyan-50 text-cyan-700',
+  Planejado: 'bg-indigo-50 text-indigo-700',
+  Licitado: 'bg-violet-50 text-violet-700',
+  'Em execução': 'bg-blue-50 text-blue-700',
+  'Parcialmente resolvido': 'bg-lime-50 text-lime-700',
   Resolvido: 'bg-emerald-50 text-emerald-700',
+  Arquivado: 'bg-slate-100 text-slate-700',
+  Reaberto: 'bg-orange-50 text-orange-700',
 };
 
 const solutionStatusStyles: Record<SolutionStatus, string> = {

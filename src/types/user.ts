@@ -1,5 +1,5 @@
 export type UserAchievementLevel = 'bronze' | 'silver' | 'gold';
-export type UserRole = 'member' | 'curator' | 'moderator' | 'admin';
+export type UserRole = 'member' | 'curator' | 'moderator' | 'verified_organization' | 'admin';
 
 export interface UserStats {
   problemsSubmitted: number;
