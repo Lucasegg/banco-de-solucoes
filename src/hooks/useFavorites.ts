@@ -22,14 +22,19 @@ export function useFavorites(kind?: FavoriteKind) {
       return;
     }
     setIsLoading(true);
-    const result = await FavoriteRepository.listByUser(user.id);
-    if (result.ok) {
-      setFavorites(result.data);
-      setError('');
-    } else {
-      setError(result.message);
+    try {
+      const result = await FavoriteRepository.listByUser(user.id);
+      if (result.ok) {
+        setFavorites(result.data);
+        setError('');
+      } else {
+        setError(result.message);
+      }
+    } catch {
+      setError('Ocorreu um erro inesperado ao carregar os favoritos.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, [isAuthenticated, user]);
 
   useEffect(() => { void reload(); }, [reload]);
@@ -85,12 +90,19 @@ export function useFavorites(kind?: FavoriteKind) {
     const key = `${targetKind}:${id}`;
     if (pending.current.has(key)) return { ok: false, message: 'Aguarde a alteração anterior.' };
     pending.current.add(key);
-    const result = favorites[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id))
-      ? await removeFavorite(id, targetKind)
-      : await addFavorite(id, targetKind);
-    pending.current.delete(key);
-    return result;
-  }, [addFavorite, favorites, kind, removeFavorite]);
+    try {
+      return favorites[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id))
+        ? await removeFavorite(id, targetKind)
+        : await addFavorite(id, targetKind);
+    } catch {
+      await reload();
+      const message = 'Ocorreu um erro inesperado ao alterar o favorito.';
+      setError(message);
+      return { ok: false, message };
+    } finally {
+      pending.current.delete(key);
+    }
+  }, [addFavorite, favorites, kind, reload, removeFavorite]);
 
   return { favorites, favoriteIds, isFavorite, addFavorite, removeFavorite, toggleFavorite, reload, isLoading, error };
 }
