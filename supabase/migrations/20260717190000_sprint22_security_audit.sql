@@ -20,7 +20,7 @@ grant execute on function public.has_role(text[]), public.has_role(text), public
 
 create table public.audit_events (
   id uuid primary key default gen_random_uuid(),
-  actor_id uuid references public.profiles(id) on delete set null,
+  actor_id uuid,
   event_type text not null check (event_type in (
     'auth.login_succeeded','auth.logout','auth.mfa_enabled','auth.mfa_disabled',
     'problem.created','problem.updated','problem.deleted','solution.created','solution.updated','solution.deleted',
