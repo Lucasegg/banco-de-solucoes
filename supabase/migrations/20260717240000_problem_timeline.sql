@@ -78,17 +78,27 @@ for f in execute format('select user_id from public.favorites where %I=$1',v_kin
 end loop; return new;
 end $$;
 
-create or replace function public.publish_problem_update(p_problem_id uuid,p_title text,p_description text,p_organization text,p_status text default null)
+create or replace function public.publish_problem_update(p_problem_id uuid,p_title text,p_description text,p_status text default null)
 returns uuid language plpgsql security definer set search_path=public as $$
-declare v_actor uuid:=auth.uid(); v_role text; v_old_status text; v_event_id uuid; v_favorite record;
+declare
+  v_actor uuid:=auth.uid();
+  v_role text;
+  v_organization text;
+  v_actor_name text;
+  v_old_status text;
+  v_event_id uuid;
+  v_favorite record;
 begin
   if v_actor is null then raise exception 'Authentication required' using errcode='42501'; end if;
-  select role into v_role from public.profiles where id=v_actor;
+  select p.role,nullif(trim(p.organization),''),coalesce(nullif(trim(p.display_name),''),nullif(trim(p.username),''),'Usuário da plataforma')
+  into v_role,v_organization,v_actor_name from public.profiles p where p.id=v_actor;
   if v_role is null or v_role not in ('verified_organization','moderator','admin') then
     raise exception 'Not authorized to publish official updates' using errcode='42501';
   end if;
-  if length(trim(coalesce(p_title,''))) not between 1 and 160 or length(coalesce(p_description,''))>5000
-     or length(trim(coalesce(p_organization,''))) not between 1 and 160 then
+  if v_role='verified_organization' and v_organization is null then
+    raise exception 'Verified organization profile requires an organization' using errcode='23514';
+  end if;
+  if length(trim(coalesce(p_title,''))) not between 1 and 160 or length(coalesce(p_description,''))>5000 then
     raise exception 'Invalid official update' using errcode='22023';
   end if;
   if p_status is not null and p_status not in ('Reportado','Em análise','Em vistoria','Planejado','Licitado','Em execução','Parcialmente resolvido','Resolvido','Arquivado','Reaberto') then
@@ -97,19 +107,21 @@ begin
   select status into v_old_status from public.problems where id=p_problem_id for update;
   if not found then raise exception 'Problem not found' using errcode='P0002'; end if;
   insert into public.problem_timeline(problem_id,actor_id,event_type,title,description,official,organization_name,metadata)
-  values(p_problem_id,v_actor,'problem.official_update',trim(p_title),nullif(trim(p_description),''),true,trim(p_organization),'{}') returning id into v_event_id;
+  values(p_problem_id,v_actor,'problem.official_update',trim(p_title),nullif(trim(p_description),''),true,v_organization,'{}') returning id into v_event_id;
   if p_status is not null and p_status is distinct from v_old_status then
     perform set_config('app.official_update','true',true);
     update public.problems set status=p_status where id=p_problem_id;
   end if;
-  perform public.write_audit_event('problem.updated','problem',p_problem_id,jsonb_build_object('official_update_id',v_event_id,'organization',trim(p_organization)));
+  perform public.write_audit_event('problem.updated','problem',p_problem_id,jsonb_strip_nulls(jsonb_build_object(
+    'official_update_id',v_event_id,'organization',v_organization,'actor_name',v_actor_name
+  )));
   for v_favorite in select user_id from public.favorites where problem_id=p_problem_id and user_id<>v_actor loop
-    perform public.create_notification(v_favorite.user_id,'favorite.content_updated','Atualização no problema','O problema recebeu atualização.','problem',p_problem_id,'/problema:'||p_problem_id,jsonb_build_object('official',true),v_actor);
+    perform public.create_notification(v_favorite.user_id,'favorite.content_updated','Atualização no problema','O problema recebeu atualização.','problem',p_problem_id,'/problems/'||p_problem_id,jsonb_build_object('official',true),v_actor);
   end loop;
   return v_event_id;
 end $$;
-revoke all on function public.publish_problem_update(uuid,text,text,text,text) from public,anon;
-grant execute on function public.publish_problem_update(uuid,text,text,text,text) to authenticated;
+revoke all on function public.publish_problem_update(uuid,text,text,text) from public,anon;
+grant execute on function public.publish_problem_update(uuid,text,text,text) to authenticated;
 
 -- Allow administrators to assign the new role through the existing protected RPC.
 create or replace function public.update_user_role(p_user_id uuid,p_role text)

@@ -13,8 +13,8 @@ export class SupabaseProblemTimelineRepository {
     if (error) return { ok: false, message: message(error) };
     return { ok: true, data: ((data ?? []) as TimelineRow[]).map((row) => ({ id:row.id,eventType:row.event_type as ProblemTimelineType,title:row.title,description:row.description,official:row.official,organizationName:row.organization_name,statusBefore:row.status_before,statusAfter:row.status_after,actorName:row.actor_name,createdAt:row.created_at })) };
   }
-  async publishOfficialUpdate(problemId:string,title:string,description:string,organization:string,status?:ProblemStatus):Promise<RepositoryResult<string>> {
-    const { data,error }=await this.client.rpc('publish_problem_update',{p_problem_id:problemId,p_title:title,p_description:description,p_organization:organization,p_status:status??null});
+  async publishOfficialUpdate(problemId:string,title:string,description:string,status?:ProblemStatus):Promise<RepositoryResult<string>> {
+    const { data,error }=await this.client.rpc('publish_problem_update',{p_problem_id:problemId,p_title:title,p_description:description,p_status:status??null});
     return error?{ok:false,message:message(error)}:{ok:true,data:data as string};
   }
 }
