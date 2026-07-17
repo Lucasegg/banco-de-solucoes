@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { DatabaseZap, LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import { NotificationBell } from './notifications/NotificationBell';
 
 interface LayoutProps {
   children: ReactNode;
@@ -49,6 +50,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
             ))}
             {isAuthenticated && user ? (
               <>
+              <NotificationBell onNavigate={onNavigate} />
               <button
                 onClick={() => onNavigate('favorites')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'favorites' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}

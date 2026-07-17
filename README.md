@@ -244,3 +244,26 @@ Os limites contra abuso incluem comentário não vazio com até 2.000 caracteres
 5. Envie comentários vazios/acima do limite e contribuições grandes, duplicadas ou além do teto pendente; confirme mensagens sanitizadas.
 
 Limitações reais: eventos de Auth/MFA não são persistidos sem um hook/backend confiável do Supabase Auth; a migration não altera recuperação de senha, OAuth ou o comportamento MFA existente. Não há rate limiter externo nem exportação/retenção de logs nesta sprint. A verificação integrada de policies exige um projeto Supabase e contas com papéis distintos.
+
+## Sprint 23 — Notificações e Central de Atividades
+
+A Sprint 23 adiciona uma central interna, sem e-mail, push ou integrações externas. A tabela `notifications` mantém os UUIDs históricos sem foreign keys para perfil ou conteúdo, restringe título/mensagem, metadata a um objeto de até 4 KiB sem chaves sensíveis e `action_url` a caminhos internos. Os tipos permitidos são `contribution.approved`, `contribution.rejected`, `comment.created`, `comment.replied`, `comment.reacted`, `favorite.content_updated` e `user.role_changed`.
+
+RLS permite que uma pessoa autenticada selecione somente linhas em que `recipient_id = auth.uid()`. `anon` não possui privilégios e `INSERT`, `UPDATE` e `DELETE` são revogados de clientes autenticados; nem administradores recebem leitura global. A função interna `create_notification` é `SECURITY DEFINER`, tem `search_path` fixo e não pode ser executada por clientes. As RPCs concedidas a `authenticated` são `get_notifications` (filtros e limite de 1–100), `get_unread_notification_count`, `mark_notification_read` e `mark_all_notifications_read`; elas derivam o destinatário exclusivamente de `auth.uid()` e não retornam `recipient_id`.
+
+Triggers transacionais notificam a decisão de uma contribuição, comentários e respostas sem auto-notificação ou duplicação entre autor do conteúdo e do comentário pai, atualizações relevantes de favoritos e mudanças de papel. A função de alteração de papel continua gravando auditoria e agora cria a notificação na mesma transação. Atualizações de favoritos consideram somente campos visíveis (`title`, `summary`, `description`, `status` e `tags`), ignorando timestamps e contadores. O esquema atual não persiste reações de comentários (a barra legada é somente local e não está conectada à interface); portanto `comment.reacted` fica reservado no contrato e a geração transacional desse evento depende da futura persistência dessas reações. Não foi criada uma tabela paralela insegura nesta sprint.
+
+No frontend, o sino autenticado mostra até cinco registros, badge limitado visualmente a `99+`, estados de foco, indicador de não lida e link interno compatível com o roteamento por hash. A rota protegida `#/notificacoes` oferece filtro por tipo, somente não lidas, carregamento incremental e ações idempotentes. O hook acessa apenas o repository, cancela atualizações após desmontagem e não consulta quando não há sessão.
+
+### Roteiro manual da Sprint 23
+
+1. Aprove e rejeite contribuições e confirme uma notificação por mudança real de status, sem duplicação em outro update.
+2. Com duas contas, comente conteúdo alheio, comente conteúdo próprio e responda um comentário; confirme destinatário, supressão da auto-notificação e preferência por `comment.replied`.
+3. Altere um papel como administrador e confirme auditoria e notificação juntas, com o papel em português e sem UUID na mensagem.
+4. Favorite um item com a conta A e altere um campo visível com a conta B; confirme a notificação. Altere apenas contador/timestamp e confirme que nada é criado.
+5. Confirme que A não lê nem marca registros de B, que escrita/remoção direta na tabela falha e que admin não possui bypass pessoal.
+6. Marque uma e depois todas como lidas; confira lista, contador, badge, estados vazios e idempotência após recarregar.
+7. Teste sino e página em desktop/mobile, navegação por teclado e links internos sob `HashRouter`.
+8. Remova perfil ou conteúdo em ambiente de teste e confirme que a linha histórica permanece (sem foreign keys).
+
+Notificações antigas poderão ser arquivadas ou removidas em sprint futura; não há cron job nesta entrega. A validação completa de RLS e triggers requer aplicar as migrations a um projeto Supabase e usar ao menos duas contas. Reações persistentes de comentários são a limitação conhecida descrita acima.
