@@ -44,8 +44,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [readAtById, setReadAtById] = useState<Record<string, string>>({});
   const [allReadAt, setAllReadAt] = useState<string | null>(null);
 
-  const clearState = useCallback(() => {
-    setLoadedUserId(null);
+  const setEmptyState = useCallback((stateUserId: string | null) => {
+    setLoadedUserId(stateUserId);
     setRecentItems([]);
     setUnreadCount(0);
     setLoading(false);
@@ -56,10 +56,18 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     setAllReadAt(null);
   }, []);
 
+  const clearState = useCallback(() => {
+    setEmptyState(null);
+  }, [setEmptyState]);
+
   const reload = useCallback(async () => {
     const requestedUserId = userId;
-    if (!requestedUserId || !NotificationRepository) {
+    if (!requestedUserId) {
       if (mounted.current) clearState();
+      return;
+    }
+    if (!NotificationRepository) {
+      if (mounted.current) setEmptyState(requestedUserId);
       return;
     }
 
@@ -78,7 +86,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     else if (listed.ok) setError(counted.message);
     setLoadedUserId(requestedUserId);
     setLoading(false);
-  }, [clearState, userId]);
+  }, [clearState, setEmptyState, userId]);
 
   useEffect(() => {
     mounted.current = true;
