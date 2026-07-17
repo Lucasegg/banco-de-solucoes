@@ -7,7 +7,7 @@ import { SupabaseUserRepository } from '../repositories/users/SupabaseUserReposi
 import { MfaRepository } from '../repositories/users/MfaRepository';
 import type { AssuranceLevel, MfaEnrollment, MfaFactor, MfaStatus } from '../types/mfa';
 import { normalizeTotpCode, selectVerifiedFactor } from '../types/mfa';
-import { clearMfaReturnTo, saveMfaReturnTo } from '../repositories/users/mfaReturnTo';
+import { clearMfaReturnTo, setMfaReturnTo } from '../repositories/users/mfaReturnTo';
 import type { RegisterUserInput, UserProfile, UserSettings } from '../types/user';
 import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, readOAuthCallbackParams, translateOAuthError, type SocialAuthProvider } from '../repositories/users/oauth';
 
@@ -242,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const target = consumeOAuthReturnTo();
       cleanOAuthCallbackUrl('#/profile');
       const result = await evaluateSession(data.session, mounted);
-      if ('mfaRequired' in result && result.mfaRequired) saveMfaReturnTo(target);
+      if ('mfaRequired' in result && result.mfaRequired) setMfaReturnTo(target);
       oauthCallbackInProgress.current = false;
       resetSocialAuthAttempt();
       if (!result.ok) {

@@ -6,12 +6,17 @@ export function normalizeMfaReturnTo(value?: string | null): string | null {
   return value;
 }
 
-export function saveMfaReturnTo(value?: string | null) {
-  let safeDestination = normalizeMfaReturnTo(value);
+export function setMfaReturnTo(value?: string | null) {
+  const safeDestination = normalizeMfaReturnTo(value) ?? '#/profile';
+  try { window.sessionStorage.setItem(MFA_RETURN_TO_KEY, safeDestination); } catch { /* Profile remains the fallback. */ }
+  return safeDestination;
+}
+
+export function ensureMfaReturnTo(value?: string | null) {
+  let safeDestination: string | null = null;
   try {
-    // A transição intermediária por login ou pelo próprio desafio não pode
-    // sobrescrever um destino protegido capturado anteriormente.
-    safeDestination ??= normalizeMfaReturnTo(window.sessionStorage.getItem(MFA_RETURN_TO_KEY));
+    safeDestination = normalizeMfaReturnTo(window.sessionStorage.getItem(MFA_RETURN_TO_KEY));
+    safeDestination ??= normalizeMfaReturnTo(value);
     safeDestination ??= '#/profile';
     window.sessionStorage.setItem(MFA_RETURN_TO_KEY, safeDestination);
   } catch { safeDestination ??= '#/profile'; }
