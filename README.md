@@ -224,3 +224,23 @@ Os detalhes de cada problema e solução exibem um histórico público sanitizad
 3. Entre como curador ou administrador, pesquise a fila, abra a comparação e rejeite uma proposta com motivo; confirme o conteúdo original e a auditoria.
 4. Aprove outra proposta; confirme conteúdo, `approved`, `moderator_id`, `reviewed_at` e a linha correspondente em `contribution_audit`.
 5. Tente inserir payload vazio, alvo duplo/ausente e status fora da lista; confirme a rejeição pelo banco.
+
+## Sprint 22 — Segurança, Auditoria e Observabilidade
+
+A migration `20260717190000_sprint22_security_audit.sql` cria `audit_events`, uma trilha append-only com tipos controlados, metadata JSON limitada a 4 KiB e bloqueio explícito de chaves associadas a senhas, tokens, sessões, segredos MFA, chaves de API e credenciais. Não há policy nem privilégio de `UPDATE` ou `DELETE`; `INSERT` direto também é negado. Os índices cobrem data, evento, ator e alvo. A RLS permite leitura somente a administradores, e a consulta administrativa paginada passa por RPC, trazendo o nome do ator no mesmo acesso para evitar N+1.
+
+São registrados transacionalmente eventos de criação, alteração e exclusão de problemas/soluções, aprovação/rejeição de contribuições, moderação de comentários e alteração de papéis. Os tipos de autenticação e MFA estão reservados na lista controlada, mas **não são falsamente gravados pelo frontend**: login/logout não possuem uma transação de banco confiável comum à operação do Supabase Auth, e segredos/códigos MFA jamais são enviados à auditoria. Tentativas não autorizadas também só devem ser gravadas por uma fronteira confiável; a falha de uma transação não pode persistir uma linha na mesma transação abortada.
+
+Os helpers `has_role`, `is_admin`, `can_review_contributions` e `can_moderate_comments` centralizam autorização no banco. `update_user_role` bloqueia não administradores, aceita somente papéis conhecidos, trava a linha do perfil e impede a remoção do último administrador. A mudança e os valores anterior/novo são auditados na mesma transação. A aba **Papéis** usa uma RPC que lista perfis em lote, enquanto **Auditoria** oferece evento, alvo, ator, período, busca, ordenação e páginas de 50 itens; UUIDs aparecem apenas abreviados como referência secundária.
+
+Os limites contra abuso incluem comentário não vazio com até 2.000 caracteres; contribuição de até 16 KiB, 1–20 mudanças sem campos duplicados, no máximo 10 referências, 5 imagens e 20 contribuições pendentes por autor; mudanças também exigem objeto, campo não vazio e `proposedValue`. Restrições sobre dados preexistentes são criadas `NOT VALID` para não reescrever migrations mescladas e devem ser validadas após saneamento. Erros do banco são mapeados por código para mensagens públicas e não exibem SQL, stack trace nem detalhes do Supabase.
+
+### Roteiro manual
+
+1. Aplique todas as migrations; como membro, confirme que `SELECT/INSERT/UPDATE/DELETE` direto em `audit_events` falha e que `update_user_role` é negada.
+2. Como admin, altere um papel e confirme evento com ator/nome e valores anterior/novo. Tente remover o único admin e confirme a recusa.
+3. Crie/edite/exclua problema ou solução e revise uma contribuição; confira um evento por operação e ausência de conteúdo sensível.
+4. Teste os filtros e paginação da aba Auditoria e confirme que curador, moderador e anônimo não a consultam.
+5. Envie comentários vazios/acima do limite e contribuições grandes, duplicadas ou além do teto pendente; confirme mensagens sanitizadas.
+
+Limitações reais: eventos de Auth/MFA não são persistidos sem um hook/backend confiável do Supabase Auth; a migration não altera recuperação de senha, OAuth ou o comportamento MFA existente. Não há rate limiter externo nem exportação/retenção de logs nesta sprint. A verificação integrada de policies exige um projeto Supabase e contas com papéis distintos.

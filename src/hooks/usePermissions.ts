@@ -12,6 +12,8 @@ export function getPermissions(user: UserProfile | null | undefined) {
     canAccessAdmin: isAdmin || hasRole(user, ['curator', 'moderator']),
     canReviewContributions: isAdmin || hasRole(user, ['curator']),
     canModerateComments: isAdmin || hasRole(user, ['moderator']),
+    canViewAudit: isAdmin,
+    canManageRoles: isAdmin,
     canViewModerationHistory: isAdmin || hasRole(user, ['curator', 'moderator']),
   };
 }
