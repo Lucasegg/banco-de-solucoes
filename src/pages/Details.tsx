@@ -5,7 +5,6 @@ import { Bookmark, Calendar, Eye, ExternalLink, GitBranch, Heart, Lightbulb, Map
 import { ContributionForm } from '../components/contributions/ContributionForm';
 import { ContributionHistory } from '../components/contributions/ContributionHistory';
 import { DiscussionList } from '../components/discussions/DiscussionList';
-import { caseStudies, evidences, improvements, solutionVersions } from '../data/mockData';
 import { ProblemRepository } from '../repositories/problems';
 import { SolutionRepository } from '../repositories/solutions';
 import type { Problem } from '../types/domain';
@@ -146,10 +145,11 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <article className="overflow-hidden rounded-[2rem] border border-line bg-white shadow-sm">
-        <img src={problem.image} alt={`Imagem do problema ${problem.title}`} className="h-72 w-full object-cover md:h-96" />
+        {problem.image && <img src={problem.image} alt={`Imagem do problema ${problem.title}`} className="h-72 w-full object-cover md:h-96" />}
         <div className="p-8">
           <div className="flex flex-wrap gap-2 text-sm"><Badge>{problem.category}</Badge><Badge>{problem.status}</Badge><Badge>{problem.city}, {problem.state}</Badge></div>
           <h1 className="mt-5 text-4xl font-semibold tracking-tight">{problem.title}</h1>
+          {problem.importedFromExternalSource && <div className="mt-6 rounded-3xl border border-teal-100 bg-teal-50 p-5 text-sm text-teal-950"><strong>Fonte externa verificada</strong><p className="mt-2">Registro criado a partir de informação pública</p><dl className="mt-3 space-y-1"><div><dt className="inline font-semibold">Fonte: </dt><dd className="inline">{problem.sourceName}</dd></div>{problem.sourcePublishedAt && <div><dt className="inline font-semibold">Publicação: </dt><dd className="inline">{formatDate(problem.sourcePublishedAt)}</dd></div>}{problem.sourceVerifiedAt && <div><dt className="inline font-semibold">Última verificação: </dt><dd className="inline">{formatDate(problem.sourceVerifiedAt)}</dd></div>}</dl>{problem.sourceUrl && <a href={problem.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 font-semibold underline">Consultar fonte original <ExternalLink size={16} /></a>}</div>}
           <p className="mt-5 text-lg leading-8 text-muted">{problem.description}</p>
           <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Info icon={<MapPin size={18} />} label="Cidade" value={`${problem.city}, ${problem.state}`} />
@@ -285,10 +285,10 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   };
 
   if (!solution) return <EmptyDetail message={loadError || 'Carregando solução...'} />;
-  const versions = solutionVersions.filter((version) => version.solutionId === solution.id);
-  const references = evidences.filter((evidence) => evidence.solutionId === solution.id);
-  const realCases = caseStudies.filter((caseStudy) => caseStudy.solutionId === solution.id);
-  const solutionImprovements = improvements.filter((improvement) => improvement.solutionId === solution.id);
+  const versions: SolutionVersion[] = [];
+  const references: Evidence[] = [];
+  const realCases: CaseStudy[] = [];
+  const solutionImprovements: Improvement[] = [];
   const solutionFields = [
     { field: 'title', label: 'Título', value: solution.title },
     { field: 'summary', label: 'Resumo', value: solution.summary },
@@ -304,7 +304,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <article className="overflow-hidden rounded-[2rem] border border-teal-100 bg-white shadow-sm">
-        <img src={solution.image} alt={`Imagem da solução ${solution.title}`} className="h-72 w-full object-cover md:h-96" />
+        {solution.image && <img src={solution.image} alt={`Imagem da solução ${solution.title}`} className="h-72 w-full object-cover md:h-96" />}
         <div className="p-8">
           <div className="flex flex-wrap gap-2 text-sm"><Badge>{solution.category}</Badge><Badge>{solution.status}</Badge><Badge>{solution.maturityLevel}</Badge><Badge>{solution.implementationDifficulty}</Badge></div>
           <h1 className="mt-5 text-4xl font-semibold tracking-tight">{solution.title}</h1>

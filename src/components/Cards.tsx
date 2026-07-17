@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Building2, Eye, Gauge, Heart, MapPin, MessageCircle, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, ExternalLink, Eye, Gauge, Heart, MapPin, MessageCircle, Sparkles } from 'lucide-react';
 import type { Problem, Solution, SolutionStatus } from '../types/domain';
 
 interface CardActions {
@@ -25,8 +25,8 @@ const solutionStatusStyles: Record<SolutionStatus, string> = {
 export function ProblemCard({ problem, onOpen, isFavorite, onToggleFavorite }: { problem: Problem } & CardActions) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-line bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
-      <div className="relative h-48 overflow-hidden">
-        <img src={problem.image} alt={`Imagem do problema ${problem.title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+      <div className={`relative overflow-hidden ${problem.image ? 'h-48' : 'h-14 bg-slate-50'}`}>
+        {problem.image && <img src={problem.image} alt={`Imagem do problema ${problem.title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
         <button type="button" onClick={(event: { stopPropagation: () => void }) => { event.stopPropagation(); onToggleFavorite?.(problem.id); }} aria-pressed={isFavorite} aria-label={isFavorite ? `Remover ${problem.title} dos favoritos` : `Adicionar ${problem.title} aos favoritos`} className={`absolute right-4 top-4 rounded-full p-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 ${isFavorite ? 'bg-rose-600 text-white' : 'bg-white/90 text-slate-700 hover:text-rose-600'}`}><Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} /></button>
         <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${problemStatusStyles[problem.status]}`}>{problem.status}</span>
       </div>
@@ -37,6 +37,7 @@ export function ProblemCard({ problem, onOpen, isFavorite, onToggleFavorite }: {
         </div>
         <h3 className="text-xl font-semibold tracking-tight">{problem.title}</h3>
         <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted">{problem.summary}</p>
+        {problem.importedFromExternalSource && <div className="mt-4 rounded-2xl border border-teal-100 bg-teal-50 p-3 text-xs text-teal-900"><strong>Fonte externa verificada</strong><span className="mt-1 block">{problem.sourceName}</span>{problem.sourceUrl && <a href={problem.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={(event: { stopPropagation: () => void }) => event.stopPropagation()} className="mt-2 inline-flex items-center gap-1 font-semibold underline">Consultar fonte original <ExternalLink size={13} /></a>}</div>}
         <div className="mt-5 grid grid-cols-3 gap-2 text-xs text-slate-500">
           <Metric icon={<Heart size={15} />} value={problem.likes} label="curtidas" />
           <Metric icon={<MessageCircle size={15} />} value={problem.comments} label="comentários" />
@@ -57,8 +58,8 @@ function Metric({ icon, value, label }: { icon: ReactNode; value: number; label:
 export function SolutionCard({ solution, onOpen, isFavorite, onToggleFavorite }: { solution: Solution } & CardActions) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
-      <div className="relative h-44 overflow-hidden">
-        <img src={solution.image} alt={`Imagem da solução ${solution.title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+      <div className={`relative overflow-hidden ${solution.image ? 'h-44' : 'h-14 bg-teal-50'}`}>
+        {solution.image && <img src={solution.image} alt={`Imagem da solução ${solution.title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
         <button type="button" onClick={(event: { stopPropagation: () => void }) => { event.stopPropagation(); onToggleFavorite?.(solution.id); }} aria-pressed={isFavorite} aria-label={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} className={`absolute right-4 top-4 rounded-full p-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 ${isFavorite ? 'bg-rose-600 text-white' : 'bg-white/90 text-slate-700 hover:text-rose-600'}`}><Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} /></button>
         <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${solutionStatusStyles[solution.status]}`}>{solution.status}</span>
       </div>

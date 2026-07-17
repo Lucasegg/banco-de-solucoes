@@ -1,44 +1,47 @@
-import { ArrowRight, CheckCircle2, Globe2, Network, Sparkles, UsersRound } from 'lucide-react';
-import { SolutionCard } from '../components/Cards';
-import { problems, solutions } from '../data/mockData';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Globe2, Sparkles } from 'lucide-react';
+import { ProblemCard, SolutionCard } from '../components/Cards';
+import { EmptyState } from '../components/EmptyState';
+import { ProblemRepository } from '../repositories/problems';
+import { SolutionRepository } from '../repositories/solutions';
+import type { Problem, Solution } from '../types/domain';
 
 export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const highlighted = solutions.filter((solution) => solution.status === 'Implementada' || solution.status === 'Validada').slice(0, 3);
-  const implemented = solutions.filter((solution) => solution.status === 'Implementada').length;
-  return (
-    <div className="space-y-14">
-      <section className="rounded-[2rem] border border-line bg-white p-8 shadow-soft md:p-14">
-        <div className="max-w-3xl">
-          <span className="rounded-full border border-line px-3 py-1 text-sm text-muted">Base Nacional de conhecimento colaborativo</span>
-          <h1 className="mt-6 text-5xl font-semibold tracking-tight md:text-7xl">Conecte problemas reais a soluções que podem escalar.</h1>
-          <p className="mt-6 text-lg leading-8 text-muted">Uma plataforma open source para mapear desafios, catalogar soluções, aproximar pessoas, empresas e projetos, e transformar conhecimento disperso em ação coordenada.</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={() => onNavigate('problemas')} className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400">Explorar problemas</button>
-            <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-400">Ver soluções <ArrowRight size={16} /></button>
-          </div>
-        </div>
-      </section>
-      <section className="grid gap-4 md:grid-cols-4">
-        {[
-          [Globe2, `${problems.length} problemas`, 'Desafios descritos com contexto, categoria e impacto.'],
-          [Network, `${solutions.length} soluções`, 'Propostas conectadas a problemas e maturidade.'],
-          [CheckCircle2, `${implemented} implementadas`, 'Soluções com execução registrada na plataforma.'],
-          [UsersRound, 'Comunidade colaborativa', 'Pessoas e organizações compartilhando conhecimento e experiências.'],
-        ].map(([Icon, title, text]) => (
-          <div key={String(title)} className="rounded-3xl border border-line bg-white p-6">
-            <Icon className="mb-4 text-slate-700" />
-            <h2 className="text-xl font-semibold">{String(title)}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">{String(text)}</p>
-          </div>
-        ))}
-      </section>
-      <section className="space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div><span className="inline-flex items-center gap-2 text-sm font-medium text-teal-700"><Sparkles size={16} /> Soluções em destaque</span><h2 className="mt-2 text-3xl font-semibold tracking-tight">Iniciativas prontas para inspirar ação</h2></div>
-          <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white">Ver soluções <ArrowRight size={16} /></button>
-        </div>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{highlighted.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={(id) => onNavigate(`solucao:${id}`)} />)}</div>
-      </section>
-    </div>
-  );
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [solutions, setSolutions] = useState<Solution[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    async function loadCatalog() {
+      if (!ProblemRepository || !SolutionRepository) {
+        if (active) { setError('O catálogo não está disponível sem uma conexão configurada.'); setLoading(false); }
+        return;
+      }
+      const [problemResult, solutionResult] = await Promise.all([ProblemRepository.list(), SolutionRepository.list()]);
+      if (!active) return;
+      if (problemResult.ok) setProblems(problemResult.data.slice(0, 6)); else setError(problemResult.message);
+      if (solutionResult.ok) setSolutions(solutionResult.data.slice(0, 3)); else setError((current) => current || solutionResult.message);
+      setLoading(false);
+    }
+    void loadCatalog();
+    return () => { active = false; };
+  }, []);
+
+  return <div className="space-y-14">
+    <section className="rounded-[2rem] border border-line bg-white p-8 shadow-soft md:p-14"><div className="max-w-3xl">
+      <span className="rounded-full border border-line px-3 py-1 text-sm text-muted">Base nacional de conhecimento colaborativo</span>
+      <h1 className="mt-6 text-5xl font-semibold tracking-tight md:text-7xl">Conecte problemas reais a soluções que podem escalar.</h1>
+      <p className="mt-6 text-lg leading-8 text-muted">Registros cadastrados pela comunidade e informações públicas com proveniência verificável.</p>
+      <div className="mt-8 flex flex-wrap gap-3"><button onClick={() => onNavigate('problemas')} className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white">Explorar problemas</button><button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold">Ver soluções <ArrowRight size={16} /></button></div>
+    </div></section>
+    {error && <div className="rounded-3xl border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-900">{error}</div>}
+    <section className="space-y-6"><div><span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700"><Globe2 size={16} /> Problemas publicados</span><h2 className="mt-2 text-3xl font-semibold">Catálogo com origem identificada</h2></div>
+      {loading ? <EmptyState title="Carregando catálogo" message="Buscando registros publicados..." /> : problems.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{problems.map((problem) => <ProblemCard key={problem.id} problem={problem} onOpen={(id) => onNavigate(`problema:${id}`)} />)}</div> : <EmptyState title="Nenhum problema publicado" message="Ainda não há registros publicados nesta seção." />}
+    </section>
+    <section className="space-y-6"><div><span className="inline-flex items-center gap-2 text-sm font-medium text-teal-700"><Sparkles size={16} /> Soluções publicadas</span><h2 className="mt-2 text-3xl font-semibold">Soluções cadastradas pela comunidade</h2></div>
+      {loading ? <EmptyState title="Carregando soluções" message="Buscando soluções publicadas..." /> : solutions.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{solutions.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={(id) => onNavigate(`solucao:${id}`)} />)}</div> : <EmptyState title="Nenhuma solução publicada" message="Ainda não há registros publicados nesta seção." />}
+    </section>
+  </div>;
 }

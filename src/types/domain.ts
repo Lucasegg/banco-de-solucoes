@@ -26,7 +26,7 @@ export interface Problem {
   city: string;
   state: string;
   country: string;
-  image: string;
+  image?: string;
   createdAt: string;
   author: string;
   authorId?: string;
@@ -36,6 +36,14 @@ export interface Problem {
   comments: number;
   impactLevel: ImpactLevel;
   tags: string[];
+  importedFromExternalSource: boolean;
+  sourceType?: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  sourcePublishedAt?: string;
+  sourceAccessedAt?: string;
+  sourceVerifiedAt?: string;
+  sourceMetadata?: Record<string, unknown>;
 }
 
 export interface SolutionVersion {
@@ -86,7 +94,7 @@ export interface Solution {
   summary: string;
   description: string;
   category: SolutionCategory;
-  image: string;
+  image?: string;
   organization: string;
   author: string;
   authorId?: string;
