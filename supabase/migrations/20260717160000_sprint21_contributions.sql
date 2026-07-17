@@ -17,6 +17,8 @@ create table public.contributions (
   constraint contributions_payload_check check (jsonb_typeof(payload) = 'object' and payload <> '{}'::jsonb and jsonb_array_length(coalesce(payload->'changes', '[]'::jsonb)) > 0),
   constraint contributions_review_fields_check check ((status in ('pending', 'reviewing') and reviewed_at is null) or (status in ('approved', 'rejected') and reviewed_at is not null and moderator_id is not null))
 );
+alter table public.contributions add constraint contributions_user_profile_fkey foreign key (user_id) references public.profiles(id) on delete cascade;
+alter table public.contributions add constraint contributions_moderator_profile_fkey foreign key (moderator_id) references public.profiles(id) on delete set null;
 create index contributions_user_created_idx on public.contributions(user_id, created_at desc);
 create index contributions_status_created_idx on public.contributions(status, created_at);
 create index contributions_problem_idx on public.contributions(problem_id) where problem_id is not null;
@@ -29,6 +31,7 @@ create table public.contribution_audit (
   action text not null check (action in ('approved', 'rejected')),
   created_at timestamptz not null default timezone('utc', now())
 );
+alter table public.contribution_audit add constraint contribution_audit_moderator_profile_fkey foreign key (moderator_id) references public.profiles(id) on delete restrict;
 create index contribution_audit_contribution_idx on public.contribution_audit(contribution_id, created_at desc);
 create index contribution_audit_moderator_idx on public.contribution_audit(moderator_id, created_at desc);
 
@@ -41,7 +44,8 @@ grant execute on function public.is_contribution_moderator() to authenticated;
 
 alter table public.contributions enable row level security;
 alter table public.contribution_audit enable row level security;
-create policy "Users read own contributions" on public.contributions for select to authenticated using (user_id = auth.uid() or public.is_contribution_moderator());
+create policy "Public reads reviewed contributions" on public.contributions for select to anon using (status in ('approved', 'rejected'));
+create policy "Users read visible contributions" on public.contributions for select to authenticated using (status in ('approved', 'rejected') or user_id = auth.uid() or public.is_contribution_moderator());
 create policy "Users create own contributions" on public.contributions for insert to authenticated with check (user_id = auth.uid() and status = 'pending' and moderator_id is null and reviewed_at is null and rejection_reason is null);
 create policy "Moderators read contribution audit" on public.contribution_audit for select to authenticated using (public.is_contribution_moderator());
 -- Escritas de moderação passam exclusivamente pela função transacional abaixo.
@@ -83,3 +87,22 @@ begin
 end; $$;
 revoke all on function public.review_contribution(uuid, text, text) from public;
 grant execute on function public.review_contribution(uuid, text, text) to authenticated;
+
+-- Histórico público sanitizado: não expõe UUIDs de autoria/moderação nem propostas abertas.
+create or replace function public.get_contribution_history(p_problem_id uuid default null, p_solution_id uuid default null)
+returns table (id uuid, problem_id uuid, solution_id uuid, contribution_type text, payload jsonb, status text, rejection_reason text, created_at timestamptz, reviewed_at timestamptz, target_title text, author_name text, author_avatar_url text)
+language sql stable security definer set search_path = public as $$
+  select c.id, c.problem_id, c.solution_id, c.contribution_type, c.payload, c.status, c.rejection_reason,
+    c.created_at, c.reviewed_at, coalesce(p.title, s.title),
+    coalesce(nullif(trim(author.display_name), ''), nullif(trim(author.username), ''), 'Colaborador(a)'), author.avatar_url
+  from public.contributions c
+  join public.profiles author on author.id = c.user_id
+  left join public.problems p on p.id = c.problem_id
+  left join public.solutions s on s.id = c.solution_id
+  where ((p_problem_id is not null)::integer + (p_solution_id is not null)::integer) = 1
+    and c.status in ('approved', 'rejected')
+    and ((p_problem_id is not null and c.problem_id = p_problem_id) or (p_solution_id is not null and c.solution_id = p_solution_id))
+  order by c.created_at desc;
+$$;
+revoke all on function public.get_contribution_history(uuid, uuid) from public;
+grant execute on function public.get_contribution_history(uuid, uuid) to anon, authenticated;

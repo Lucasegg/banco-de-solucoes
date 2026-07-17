@@ -215,6 +215,8 @@ A migration `20260717160000_sprint21_contributions.sql` cria `contributions` e `
 
 A área **Minhas contribuições** oferece filtros de pendentes, aprovadas e rejeitadas, com alvo, data e status. O painel administrativo permite pesquisar, filtrar, abrir a comparação entre conteúdo atual e proposto, aprovar ou rejeitar. A política de moderador é derivada do papel persistido em `profiles` (`curator` ou `admin`); nenhuma credencial privilegiada é exposta no frontend.
 
+Os detalhes de cada problema e solução exibem um histórico público sanitizado com somente contribuições aprovadas ou rejeitadas, incluindo autor, avatar disponível, data, status e resumo. Propostas `pending` e `reviewing` continuam visíveis apenas ao próprio autor em **Minhas contribuições** e aos moderadores no Admin. Autores e moderadores são carregados junto das contribuições por relacionamentos explícitos com `profiles`, sem consultas N+1. A aba administrativa de histórico também consulta `contribution_audit` no Supabase, portanto decisões permanecem disponíveis após reload e entre navegadores sem substituir o histórico legado da moderação de comentários.
+
 ### Validação manual
 
 1. Aplique todas as migrations e entre como membro; envie contribuições para um problema e uma solução e confirme que ambos permanecem inalterados.

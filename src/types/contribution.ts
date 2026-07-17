@@ -28,13 +28,25 @@ export interface Contribution {
   targetType: ContributionTargetType;
   targetId: string;
   targetTitle: string;
+  userName: string;
+  userAvatarUrl: string | null;
   contributionType: ContributionType;
   payload: ContributionPayload;
   status: ContributionStatus;
   moderatorId: string | null;
+  moderatorName: string | null;
   rejectionReason: string | null;
   createdAt: string;
   reviewedAt: string | null;
+}
+
+export interface ContributionAudit {
+  id: string;
+  contributionId: string;
+  moderatorId: string;
+  moderatorName: string;
+  action: 'approved' | 'rejected';
+  createdAt: string;
 }
 
 export const contributionStatusLabel: Record<ContributionStatus, string> = {
