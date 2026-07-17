@@ -2,12 +2,18 @@ import { useState, type FormEvent } from 'react';
 import { LogOut, ShieldCheck } from 'lucide-react';
 import { TotpInput } from '../components/TotpInput';
 import { useAuth } from '../hooks/useAuth';
+import { clearMfaReturnTo, consumeMfaReturnTo } from '../repositories/users/mfaReturnTo';
 
 export function MfaChallenge({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { mfaStatus, mfaError, verifyMfaChallenge, logout, refreshMfaStatus } = useAuth();
   const [code, setCode] = useState(''); const busy = mfaStatus === 'verifying' || mfaStatus === 'loading';
-  const submit = async (event: FormEvent) => { event.preventDefault(); const result = await verifyMfaChallenge(code); setCode(''); if (result.ok) onNavigate('profile'); };
-  const leave = async () => { await logout(); onNavigate('login'); };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const result = await verifyMfaChallenge(code);
+    setCode('');
+    if (result.ok) window.location.hash = consumeMfaReturnTo();
+  };
+  const leave = async () => { clearMfaReturnTo(); await logout(); onNavigate('login'); };
   return <section className="mx-auto max-w-lg rounded-[2rem] border border-line bg-white p-8 shadow-soft">
     <ShieldCheck className="text-primary" aria-hidden="true" /><h1 className="mt-4 text-3xl font-semibold">Confirme sua identidade</h1>
     <p className="mt-3 text-muted">Digite o código gerado pelo seu aplicativo autenticador.</p>

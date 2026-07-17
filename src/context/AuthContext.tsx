@@ -7,6 +7,7 @@ import { SupabaseUserRepository } from '../repositories/users/SupabaseUserReposi
 import { MfaRepository } from '../repositories/users/MfaRepository';
 import type { AssuranceLevel, MfaEnrollment, MfaFactor, MfaStatus } from '../types/mfa';
 import { normalizeTotpCode, selectVerifiedFactor } from '../types/mfa';
+import { clearMfaReturnTo, saveMfaReturnTo } from '../repositories/users/mfaReturnTo';
 import type { RegisterUserInput, UserProfile, UserSettings } from '../types/user';
 import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, readOAuthCallbackParams, translateOAuthError, type SocialAuthProvider } from '../repositories/users/oauth';
 
@@ -200,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const verified = selectVerifiedFactor(listed.factors);
     if (verified && assurance.currentLevel === 'aal1' && assurance.nextLevel === 'aal2') {
       setUser(null); setAuthStatus('mfa-required'); setMfaStatus('challenge-required');
-      return { ok: true };
+      return { ok: true, mfaRequired: true };
     }
     setMfaStatus(verified ? 'enabled' : 'disabled');
     return loadProfile(nextSession, mounted);
@@ -241,6 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const target = consumeOAuthReturnTo();
       cleanOAuthCallbackUrl('#/profile');
       const result = await evaluateSession(data.session, mounted);
+      if ('mfaRequired' in result && result.mfaRequired) saveMfaReturnTo(target);
       oauthCallbackInProgress.current = false;
       resetSocialAuthAttempt();
       if (!result.ok) {
@@ -391,7 +393,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setAuthStatus('anonymous');
-    setAuthMessage(undefined); setMfaEnrollment(null); setMfaFactors([]); setMfaStatus('unavailable');
+    setAuthMessage(undefined); setMfaEnrollment(null); setMfaFactors([]); setMfaStatus('unavailable'); clearMfaReturnTo();
     return { ok: true };
   };
 

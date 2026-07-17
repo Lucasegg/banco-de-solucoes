@@ -17,6 +17,7 @@ import { SupabaseStatus } from './integrations/supabase/SupabaseStatus';
 import { Account } from './pages/Account';
 import { PasswordRecovery } from './pages/PasswordRecovery';
 import { MfaChallenge } from './pages/MfaChallenge';
+import { saveMfaReturnTo } from './repositories/users/mfaReturnTo';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -95,9 +96,14 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (mfaRequired && page !== 'mfa-challenge') { setPage('mfa-challenge'); return; }
+    if (mfaRequired && page !== 'mfa-challenge') {
+      saveMfaReturnTo(window.location.hash);
+      setPage('mfa-challenge');
+      return;
+    }
     if (!mfaRequired && page === 'mfa-challenge' && isAuthenticated) { setPage('profile'); return; }
     if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
+      saveMfaReturnTo(window.location.hash);
       setPage('login');
     }
     if (!isLoading && page === 'admin' && isAuthenticated && !permissions.canAccessAdmin) {
