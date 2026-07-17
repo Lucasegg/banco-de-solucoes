@@ -62,7 +62,18 @@ create or replace function public.audit_domain_change() returns trigger language
 declare v_type text; v_id uuid;
 begin
   if auth.uid() is null then return coalesce(new, old); end if;
-  v_type := tg_table_name || '.' || lower(tg_op);
+  v_type := case
+    when tg_table_name = 'problems' and tg_op = 'INSERT' then 'problem.created'
+    when tg_table_name = 'problems' and tg_op = 'UPDATE' then 'problem.updated'
+    when tg_table_name = 'problems' and tg_op = 'DELETE' then 'problem.deleted'
+    when tg_table_name = 'solutions' and tg_op = 'INSERT' then 'solution.created'
+    when tg_table_name = 'solutions' and tg_op = 'UPDATE' then 'solution.updated'
+    when tg_table_name = 'solutions' and tg_op = 'DELETE' then 'solution.deleted'
+    else null
+  end;
+  if v_type is null then
+    raise exception 'Unsupported audit trigger source' using errcode='22023';
+  end if;
   v_id := case when tg_op='DELETE' then old.id else new.id end;
   perform public.write_audit_event(v_type, rtrim(tg_table_name, 's'), v_id, '{}'::jsonb);
   return coalesce(new, old);
