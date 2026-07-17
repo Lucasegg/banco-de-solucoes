@@ -17,6 +17,7 @@ import { SupabaseStatus } from './integrations/supabase/SupabaseStatus';
 import { Account } from './pages/Account';
 import { PasswordRecovery } from './pages/PasswordRecovery';
 import { MfaChallenge } from './pages/MfaChallenge';
+import { Notifications } from './pages/Notifications';
 import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaReturnTo';
 import { isPasswordRecoveryCallbackUrl } from './repositories/users/passwordRecoveryCallback';
 
@@ -37,6 +38,7 @@ const pageToHashPath: Record<string, string> = {
   account: '/account',
   'mfa-challenge': '/mfa-challenge',
   admin: '/admin',
+  notifications: '/notificacoes',
 };
 
 function normalizeHash(hash: string) {
@@ -60,6 +62,7 @@ function pageFromHash(hash: string) {
   if (path === '/account') return 'account';
   if (path === '/mfa-challenge') return 'mfa-challenge';
   if (path === '/admin') return 'admin';
+  if (path === '/notificacoes') return 'notifications';
   if (path === '/contributions') return 'contributions';
   if (path === '/favorites') return 'favorites';
   if (path === '/diagnostics') return 'diagnostics';
@@ -103,7 +106,7 @@ export function App() {
       return;
     }
     if (!mfaRequired && page === 'mfa-challenge' && isAuthenticated) { setPage('profile'); return; }
-    if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
+    if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'notifications' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
       setMfaReturnTo(window.location.hash);
       setPage('login');
     }
@@ -131,6 +134,7 @@ export function App() {
       {page === 'admin' && isAuthenticated && permissions.canAccessAdmin && <AdminPanel />}
       {page === 'contributions' && isAuthenticated && <ContributionsList onNavigate={setPage} />}
       {page === 'favorites' && isAuthenticated && <Favorites onNavigate={setPage} />}
+      {page === 'notifications' && isAuthenticated && <Notifications />}
       {page === 'diagnostics' && <SupabaseStatus />}
       {kind === 'contribution' && isAuthenticated && <ContributionDetails id={id} />}
     </Layout>
