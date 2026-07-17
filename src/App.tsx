@@ -18,6 +18,7 @@ import { Account } from './pages/Account';
 import { PasswordRecovery } from './pages/PasswordRecovery';
 import { MfaChallenge } from './pages/MfaChallenge';
 import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaReturnTo';
+import { clearPasswordRecoveryFlowState, PASSWORD_RECOVERY_LEGACY_NOTICE_KEY, writeRecoveryStorage } from './repositories/users/passwordRecoveryState';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -73,10 +74,21 @@ function hashFromPage(page: string) {
   return `#${pageToHashPath[page] ?? '/'}`;
 }
 
+function sanitizeLegacyRecoveryUrl() {
+  const rawUrl = `${window.location.search}${window.location.hash}`;
+  const isRecovery = /(?:^|[?#&])type=recovery(?:&|$)/i.test(rawUrl);
+  const hasSensitiveRecoveryParameter = /(?:^|[?#&])(?:access_token|refresh_token|token_hash)=/i.test(rawUrl);
+  if (!isRecovery && !hasSensitiveRecoveryParameter) return false;
+  clearPasswordRecoveryFlowState({ keepLegacyNotice: true });
+  writeRecoveryStorage(PASSWORD_RECOVERY_LEGACY_NOTICE_KEY, 'true');
+  window.history.replaceState(null, document.title, `${window.location.pathname}#/password-recovery`);
+  return true;
+}
+
 export function App() {
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
   const permissions = usePermissions(user);
-  const [page, setPageState] = useState(() => pageFromHash(window.location.hash));
+  const [page, setPageState] = useState(() => sanitizeLegacyRecoveryUrl() ? 'password-recovery' : pageFromHash(window.location.hash));
   const [kind, id] = page.split(':');
   const setPage = (nextPage: string) => {
     const nextHash = hashFromPage(nextPage);

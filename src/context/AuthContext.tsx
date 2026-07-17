@@ -10,21 +10,16 @@ import { normalizeTotpCode, selectVerifiedFactor } from '../types/mfa';
 import { clearMfaReturnTo, setMfaReturnTo } from '../repositories/users/mfaReturnTo';
 import type { RegisterUserInput, UserProfile, UserSettings } from '../types/user';
 import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, readOAuthCallbackParams, translateOAuthError, type SocialAuthProvider } from '../repositories/users/oauth';
+import { clearPasswordRecoveryFlowState, PASSWORD_RECOVERY_ACTIVE_KEY, readRecoveryStorage, removeRecoveryStorage, writeRecoveryStorage } from '../repositories/users/passwordRecoveryState';
 
 const SUPABASE_LOCAL_SETTINGS_KEY = 'banco-de-solucoes.supabase.profile-settings';
-const PASSWORD_RECOVERY_ACTIVE_KEY = 'banco-de-solucoes.password-recovery.active';
-
 function hasRecoveryMarker() {
-  try { return window.sessionStorage.getItem(PASSWORD_RECOVERY_ACTIVE_KEY) === 'true'; } catch { return false; }
+  return readRecoveryStorage(PASSWORD_RECOVERY_ACTIVE_KEY) === 'true';
 }
 
 function setRecoveryMarker(active: boolean) {
-  try {
-    if (active) window.sessionStorage.setItem(PASSWORD_RECOVERY_ACTIVE_KEY, 'true');
-    else window.sessionStorage.removeItem(PASSWORD_RECOVERY_ACTIVE_KEY);
-  } catch {
-    // The in-memory marker remains authoritative when storage is unavailable.
-  }
+  if (active) writeRecoveryStorage(PASSWORD_RECOVERY_ACTIVE_KEY, 'true');
+  else removeRecoveryStorage(PASSWORD_RECOVERY_ACTIVE_KEY);
 }
 
 export type AuthStatus = 'supabase-unconfigured' | 'loading-session' | 'anonymous' | 'authenticated' | 'profile-missing' | 'email-confirmation-pending' | 'network-error' | 'session-expired' | 'mfa-required';
@@ -103,12 +98,12 @@ function networkMessage(message?: string) {
 }
 
 function recoveryMessage(message?: string, operation: 'request' | 'verify' | 'update' | 'clear' = 'verify') {
-  if (/rate|too many|security purposes/i.test(message ?? '')) return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
-  if (/fetch|network|unavailable|timeout/i.test(message ?? '')) return 'Serviço indisponível. Verifique sua conexão e tente novamente.';
-  if (operation === 'verify') return 'Código inválido ou expirado.';
+  if (/rate|too many|security purposes|429/i.test(message ?? '')) return 'Muitas solicitações foram realizadas. Aguarde antes de tentar novamente.';
+  if (/fetch|network|unavailable|timeout|connection/i.test(message ?? '')) return 'Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.';
+  if (operation === 'verify') return 'Código inválido ou expirado. Verifique o código ou solicite um novo.';
   if (operation === 'update') return 'Não foi possível alterar a senha. Solicite um novo código e tente novamente.';
   if (operation === 'clear') return 'A senha foi alterada, mas não foi possível encerrar a sessão temporária. Feche esta janela antes de continuar.';
-  return 'Não foi possível enviar o código agora. Tente novamente mais tarde.';
+  return 'Não foi possível enviar o código. Tente novamente mais tarde.';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -279,7 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT') {
         resetSocialAuthAttempt();
         recoverySession.current = false;
-        setRecoveryMarker(false);
+        clearPasswordRecoveryFlowState();
         setSession(null);
         setUser(null);
         setAuthStatus('anonymous');
@@ -400,17 +395,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const requestPasswordRecovery: AuthContextValue['requestPasswordRecovery'] = async (email) => {
     if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
     setRecoveryStatus('requesting-code'); setRecoveryError(undefined);
-    const { error } = await repositories.users.requestPasswordRecovery(email);
-    if (error) { const message = recoveryMessage(error.message, 'request'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
-    setRecoveryStatus('code-sent');
-    return { ok: true, message: 'Se houver uma conta associada a este e-mail, enviaremos um código de recuperação.' };
+    try {
+      const { error } = await repositories.users.requestPasswordRecovery(email);
+      if (error) { const message = recoveryMessage(error.message, 'request'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
+      setRecoveryStatus('code-sent');
+      return { ok: true, message: 'Caso exista uma conta associada a este e-mail, enviaremos um código de recuperação.' };
+    } catch { const message = recoveryMessage('network', 'request'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
   };
 
   const verifyPasswordRecoveryCode: AuthContextValue['verifyPasswordRecoveryCode'] = async (email, code) => {
     if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
     setRecoveryStatus('verifying-code'); setRecoveryError(undefined);
     recoverySession.current = true;
-    const { data, error } = await repositories.users.verifyPasswordRecoveryCode(email, code);
+    const { data, error } = await repositories.users.verifyPasswordRecoveryCode(email, code).catch(() => ({ data: { session: null }, error: { message: 'network' } }));
     if (error || !data.session) { recoverySession.current = false; const message = recoveryMessage(error?.message); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
     setRecoveryMarker(true);
     recoverySession.current = true;
@@ -422,21 +419,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!repositories) return { ok: false, message: 'Supabase não configurado.' };
     if (!recoverySession.current && !hasRecoveryMarker()) { setRecoveryStatus('idle'); setRecoveryError(undefined); return { ok: true }; }
     recoverySession.current = true;
-    const { error } = await repositories.users.clearRecoverySession();
+    const { error } = await repositories.users.clearRecoverySession().catch(() => ({ error: { message: 'network' } }));
     if (error) { const message = recoveryMessage(error.message, 'clear'); setRecoveryError(message); return { ok: false, message }; }
-    recoverySession.current = false; setRecoveryMarker(false); setSession(null); setUser(null); setAuthStatus('anonymous'); setRecoveryStatus('idle'); setRecoveryError(undefined);
+    recoverySession.current = false; clearPasswordRecoveryFlowState(); setSession(null); setUser(null); setAuthStatus('anonymous'); setRecoveryStatus('idle'); setRecoveryError(undefined);
     return { ok: true };
   };
 
   const updateRecoveredPassword: AuthContextValue['updateRecoveredPassword'] = async (password) => {
-    if (!repositories || (!recoverySession.current && !hasRecoveryMarker())) return { ok: false, message: 'Sessão de recuperação ausente. Solicite um novo código.' };
+    if (!repositories || (!recoverySession.current && !hasRecoveryMarker())) return { ok: false, message: 'A verificação expirou. Solicite um novo código.' };
     recoverySession.current = true;
     setRecoveryStatus('updating-password'); setRecoveryError(undefined);
-    const { error } = await repositories.users.updateRecoveredPassword(password);
+    const { error } = await repositories.users.updateRecoveredPassword(password).catch(() => ({ error: { message: 'network' } }));
     if (error) { const message = recoveryMessage(error.message, 'update'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
-    const cleared = await repositories.users.clearRecoverySession();
+    const cleared = await repositories.users.clearRecoverySession().catch(() => ({ error: { message: 'network' } }));
     if (cleared.error) { const message = recoveryMessage(cleared.error.message, 'clear'); setRecoveryStatus('error'); setRecoveryError(message); return { ok: false, message }; }
-    recoverySession.current = false; setRecoveryMarker(false); setSession(null); setUser(null); setAuthStatus('anonymous'); setRecoveryStatus('success');
+    recoverySession.current = false; clearPasswordRecoveryFlowState(); setSession(null); setUser(null); setAuthStatus('anonymous'); setRecoveryStatus('success');
     return { ok: true, message: 'Senha alterada com sucesso.' };
   };
 
