@@ -35,7 +35,6 @@ export type SolutionInput = Pick<Solution, 'title' | 'summary' | 'description' |
 
 const selectColumns = 'id,author_id,author_name,title,summary,description,category,image_url,organization,status,maturity_level,implementation_difficulty,estimated_cost,implementation_time,location,country,impact_metric,likes,comments,views,tags,evidence_links,created_at,updated_at,solution_problems(problem_id)';
 const selectColumnsWithProblemFilter = 'id,author_id,author_name,title,summary,description,category,image_url,organization,status,maturity_level,implementation_difficulty,estimated_cost,implementation_time,location,country,impact_metric,likes,comments,views,tags,evidence_links,created_at,updated_at,solution_problems!inner(problem_id)';
-const fallbackImage = 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80';
 const categories: SolutionCategory[] = ['Infraestrutura', 'Educação', 'Saúde', 'Segurança', 'Tecnologia', 'Mobilidade', 'Meio Ambiente', 'Assistência Social', 'Empreendedorismo', 'Outros'];
 const statuses: SolutionStatus[] = ['Proposta', 'Em teste', 'Implementada', 'Validada', 'Arquivada'];
 const maturities: SolutionMaturityLevel[] = ['Ideia', 'Protótipo', 'Piloto', 'Em operação', 'Escalável'];
@@ -63,7 +62,7 @@ export function parseSolutionRow(value: unknown): SolutionRow | null {
 
 export function mapSolutionRowToDomain(row: SolutionRow): Solution {
   const relatedProblemIds = row.solution_problems?.map((link) => link.problem_id) ?? [];
-  return { id: row.id, authorId: row.author_id, title: row.title, summary: row.summary, description: row.description, category: safe(row.category, categories, 'Outros'), image: row.image_url || fallbackImage, organization: row.organization, author: row.author_name || 'Autor não informado', createdAt: row.created_at, updatedAt: row.updated_at, status: safe(row.status, statuses, 'Proposta'), maturityLevel: safe(row.maturity_level, maturities, 'Ideia'), implementationDifficulty: safe(row.implementation_difficulty, difficulties, 'Baixa'), estimatedCost: row.estimated_cost || 'Não informado', implementationTime: row.implementation_time || 'Não informado', location: row.location, country: row.country, impactMetric: row.impact_metric, likes: row.likes, comments: row.comments, views: row.views, relatedProblemIds, tags: row.tags, evidenceLinks: row.evidence_links };
+  return { id: row.id, authorId: row.author_id, title: row.title, summary: row.summary, description: row.description, category: safe(row.category, categories, 'Outros'), image: row.image_url || undefined, organization: row.organization, author: row.author_name || 'Autor não informado', createdAt: row.created_at, updatedAt: row.updated_at, status: safe(row.status, statuses, 'Proposta'), maturityLevel: safe(row.maturity_level, maturities, 'Ideia'), implementationDifficulty: safe(row.implementation_difficulty, difficulties, 'Baixa'), estimatedCost: row.estimated_cost || 'Não informado', implementationTime: row.implementation_time || 'Não informado', location: row.location, country: row.country, impactMetric: row.impact_metric, likes: row.likes, comments: row.comments, views: row.views, relatedProblemIds, tags: row.tags, evidenceLinks: row.evidence_links };
 }
 
 function mapRows(data: unknown[] | null): RepositoryResult<Solution[]> {

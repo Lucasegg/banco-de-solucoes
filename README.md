@@ -20,7 +20,7 @@ A visão completa do Banco de Soluções está documentada em [VISION.md](VISION
 - TypeScript
 - Vite
 - TailwindCSS
-- Dados mockados tipados
+- Catálogo persistido no Supabase com proveniência
 - GitHub Actions
 - GitHub Pages
 
@@ -61,7 +61,6 @@ O build usa a raiz `/`, copia `public/CNAME` para `dist/CNAME` e é publicado em
 ```text
 src/
   components/      Componentes reutilizáveis
-  data/            Dados fictícios tipados
   lib/             Preparação para integrações futuras
   pages/           Páginas da aplicação
   types/           Tipos compartilhados
@@ -91,7 +90,7 @@ A aplicação usa Supabase Auth para autenticação, sessão e perfis quando `VI
 - Profile: a tabela `public.profiles` é criada por migration SQL e preenchida automaticamente por trigger em `auth.users`.
 - Campos editáveis pelo formulário comum: `username`, `display_name`, `country`, `bio` e `avatar_url`; `role` não é editável pelo cliente.
 - GitHub Actions: o build recebe `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` de secrets, mas pull requests sem secrets continuam compilando.
-- Domínios locais: problemas, soluções, comentários, reações, favoritos, contribuições e moderação continuam em localStorage via repositórios atuais.
+- Problemas e soluções são lidos do Supabase; a ausência de configuração não ativa catálogo demonstrativo.
 - Limitações: permissões administrativas críticas em Supabase precisarão de claims confiáveis ou backend seguro em sprint posterior.
 
 Consulte `SUPABASE.md` para aplicar e verificar manualmente a migração pelo SQL Editor.
@@ -267,3 +266,37 @@ No frontend, o sino autenticado mostra até cinco registros, badge limitado visu
 8. Remova perfil ou conteúdo em ambiente de teste e confirme que a linha histórica permanece (sem foreign keys).
 
 Notificações antigas poderão ser arquivadas ou removidas em sprint futura; não há cron job nesta entrega. A validação completa de RLS e triggers requer aplicar as migrations a um projeto Supabase e usar ao menos duas contas. Reações persistentes de comentários são a limitação conhecida descrita acima.
+
+## Política de dados reais e proveniência
+
+A interface pública apresenta somente registros criados por pessoas autenticadas, importações controladas de fontes públicas verificáveis ou um estado vazio explícito. O catálogo não usa exemplos, números gerados, perfis simulados nem restaura dados demonstrativos pelo navegador. Se o Supabase não estiver configurado, a aplicação informa que o catálogo está indisponível em vez de substituí-lo por conteúdo local.
+
+### Autoria e fonte externa
+
+O **autor** é uma pessoa autenticada que publicou um registro na plataforma. Uma **fonte externa** é apenas a origem documental de uma importação: o órgão, portal ou entidade responsável pela publicação não recebe conta, perfil ou autoria no Banco de Soluções. Importações são identificadas por “Registro criado a partir de informação pública” e “Fonte externa verificada”, com nome, URL HTTPS, data da publicação quando conhecida, acesso e última verificação.
+
+Uma fonte é considerada verificável quando tem responsável identificável, endereço HTTPS acessível, data ou contexto de publicação rastreável e conteúdo suficiente para sustentar o resumo autoral. A revisão confirma que a publicação suporta o relato; ela **não comprova necessariamente que o problema permanece no mesmo estado atualmente**. Relatos de portais participativos são qualificados como relatos ou propostas, e não como diagnóstico técnico definitivo.
+
+### Imagens e métricas
+
+Importações iniciais não têm fotografia. Não se usa banco de imagens para representar um local real. Uma imagem futura precisa vir da publicação com uso/hotlink apropriado, ser armazenada com licença e atribuição compatíveis ou estar explicitamente marcada como ilustração. Visualizações, curtidas e comentários pertencem exclusivamente ao Banco de Soluções e começam em zero; métricas, custos, resultados, beneficiários, maturidade e implementação externos não são inferidos.
+
+### Revisão periódica de fontes
+
+1. Abrir a URL original e confirmar HTTPS, responsável e aderência do resumo.
+2. Registrar a data em `source_verified_at` e atualizar `source_accessed_at` quando houver novo acesso editorial.
+3. Preservar a chave `external_source_key`; não trocar a importação por um registro de usuário.
+4. Se a página sair do ar ou mudar de sentido, manter o histórico, sinalizar a limitação e submeter a correção editorial; nunca inventar uma substituição.
+5. Verificar se metadados continuam pequenos, estritamente documentais e sem credenciais, tokens, cookies ou dados sensíveis.
+
+### Catálogo público inicial
+
+A migration `20260717230000_verified_problem_catalog.sql` importa, de forma idempotente e sem imagens ou interações, os seguintes registros:
+
+- Risco recorrente de transbordamento de córregos no Itaim Paulista — CGE da Prefeitura de São Paulo (30/01/2025).
+- Vulnerabilidade a alagamentos durante chuvas intensas em São Paulo — Prefeitura de São Paulo/CGE (18/04/2025).
+- Descarte irregular de resíduos na região da Capela do Socorro — Subprefeitura da Capela do Socorro (14/10/2025).
+- Ponto recorrente de descarte irregular na Vila Pirajussara — Participe+ (15/05/2026), explicitamente qualificado como relato/proposta.
+- Descarte clandestino de entulho e contaminação do solo na Zona Sul — Secretaria Municipal de Segurança Urbana (13/02/2025).
+
+A identidade externa é a combinação de `source_url` com `source_metadata.external_source_key`. A migration usa IDs estáveis, `ON CONFLICT DO NOTHING` e não altera registros de usuários. Nenhuma linha persistida é apagada: o catálogo demonstrativo antigo existia somente nos arquivos do frontend.
