@@ -2,6 +2,7 @@ export const APP_CANONICAL_URL = 'https://www.bancodesolucoes.com.br/';
 export const APP_ORIGIN = 'https://www.bancodesolucoes.com.br';
 export const APP_BASE_PATH = '/';
 export const OAUTH_CALLBACK = `${APP_ORIGIN}/?oauth=callback`;
+export const PASSWORD_RECOVERY_CALLBACK = `${APP_ORIGIN}/?recovery=callback`;
 
 const LOCAL_HOSTNAME = 'localhost';
 const OFFICIAL_ORIGINS = new Set([APP_ORIGIN, 'https://bancodesolucoes.com.br']);
@@ -32,4 +33,9 @@ export const NORMALIZED_ORIGIN = getNormalizedOrigin();
 /** New OAuth attempts always use localhost or the official production callback. */
 export function getOAuthCallback(url = currentUrl()) {
   return isLocalOrigin(url) ? `${url.origin}/?oauth=callback` : OAUTH_CALLBACK;
+}
+
+/** Recovery parameters must reach the client before hash routing is restored. */
+export function getPasswordRecoveryCallback(url = currentUrl()) {
+  return isLocalOrigin(url) ? `${url.origin}/?recovery=callback` : PASSWORD_RECOVERY_CALLBACK;
 }

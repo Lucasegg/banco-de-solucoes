@@ -1,6 +1,7 @@
 import type { AuthChangeEvent, Session, SupabaseClient, User } from '@supabase/supabase-js';
 import type { RegisterUserInput } from '../../types/user';
 import { getOAuthRedirectUrl, saveOAuthReturnTo, SOCIAL_PROVIDER_SCOPES, toSupabaseProvider, type SocialAuthProvider } from './oauth';
+import { getPasswordRecoveryRedirectUrl } from './passwordRecoveryCallback';
 
 export type AuthSubscription = { unsubscribe: () => void };
 
@@ -31,14 +32,8 @@ export class SupabaseUserRepository {
   }
 
   requestPasswordRecovery(email: string) {
-    return this.client.auth.resetPasswordForEmail(email.trim().toLowerCase());
-  }
-
-  verifyPasswordRecoveryCode(email: string, code: string) {
-    return this.client.auth.verifyOtp({
-      email: email.trim().toLowerCase(),
-      token: code.replace(/\s+/g, ''),
-      type: 'recovery',
+    return this.client.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: getPasswordRecoveryRedirectUrl(),
     });
   }
 
@@ -60,6 +55,10 @@ export class SupabaseUserRepository {
   }
 
   handleOAuthCallback(code: string) {
+    return this.client.auth.exchangeCodeForSession(code);
+  }
+
+  handlePasswordRecoveryCallback(code: string) {
     return this.client.auth.exchangeCodeForSession(code);
   }
 

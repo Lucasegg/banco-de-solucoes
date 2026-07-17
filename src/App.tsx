@@ -18,6 +18,7 @@ import { Account } from './pages/Account';
 import { PasswordRecovery } from './pages/PasswordRecovery';
 import { MfaChallenge } from './pages/MfaChallenge';
 import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaReturnTo';
+import { isPasswordRecoveryCallbackUrl } from './repositories/users/passwordRecoveryCallback';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -76,7 +77,7 @@ function hashFromPage(page: string) {
 export function App() {
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
   const permissions = usePermissions(user);
-  const [page, setPageState] = useState(() => pageFromHash(window.location.hash));
+  const [page, setPageState] = useState(() => isPasswordRecoveryCallbackUrl() ? 'password-recovery' : pageFromHash(window.location.hash));
   const [kind, id] = page.split(':');
   const setPage = (nextPage: string) => {
     const nextHash = hashFromPage(nextPage);
