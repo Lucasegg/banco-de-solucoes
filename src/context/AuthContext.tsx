@@ -4,6 +4,10 @@ import { supabaseClient } from '../integrations/supabase/client';
 import { supabaseConfig } from '../integrations/supabase/config';
 import { ProfileRepository } from '../repositories/profiles';
 import { SupabaseUserRepository } from '../repositories/users/SupabaseUserRepository';
+import { MfaRepository } from '../repositories/users/MfaRepository';
+import type { AssuranceLevel, MfaEnrollment, MfaFactor, MfaStatus } from '../types/mfa';
+import { normalizeTotpCode, selectVerifiedFactor } from '../types/mfa';
+import { clearMfaReturnTo, setMfaReturnTo } from '../repositories/users/mfaReturnTo';
 import type { RegisterUserInput, UserProfile, UserSettings } from '../types/user';
 import { cleanOAuthCallbackUrl, consumeOAuthReturnTo, isOAuthCallbackUrl, readOAuthCallbackParams, translateOAuthError, type SocialAuthProvider } from '../repositories/users/oauth';
 
@@ -23,7 +27,7 @@ function setRecoveryMarker(active: boolean) {
   }
 }
 
-export type AuthStatus = 'supabase-unconfigured' | 'loading-session' | 'anonymous' | 'authenticated' | 'profile-missing' | 'email-confirmation-pending' | 'network-error' | 'session-expired';
+export type AuthStatus = 'supabase-unconfigured' | 'loading-session' | 'anonymous' | 'authenticated' | 'profile-missing' | 'email-confirmation-pending' | 'network-error' | 'session-expired' | 'mfa-required';
 export type RecoveryStatus = 'idle' | 'requesting-code' | 'code-sent' | 'verifying-code' | 'code-verified' | 'updating-password' | 'success' | 'error';
 
 export interface AuthContextValue {
@@ -49,6 +53,20 @@ export interface AuthContextValue {
   logout: () => Promise<{ ok: boolean; message?: string }>;
   updateSettings: (settings: Partial<UserSettings> & Partial<Pick<UserProfile, 'username' | 'name' | 'organization' | 'city' | 'state' | 'country' | 'bio' | 'website' | 'avatarUrl'>>) => Promise<{ ok: boolean; message?: string }>;
   isUsernameAvailable: (username: string, currentUserId?: string) => Promise<{ ok: boolean; available: boolean; message?: string }>;
+  mfaStatus: MfaStatus;
+  mfaError?: string;
+  mfaMessage?: string;
+  mfaFactors: MfaFactor[];
+  mfaEnrollment: MfaEnrollment | null;
+  mfaRequired: boolean;
+  currentAssuranceLevel: AssuranceLevel;
+  nextAssuranceLevel: AssuranceLevel;
+  refreshMfaStatus: () => Promise<{ ok: boolean; message?: string }>;
+  enrollTotp: () => Promise<{ ok: boolean; message?: string }>;
+  verifyTotpEnrollment: (code: string) => Promise<{ ok: boolean; message?: string }>;
+  cancelTotpEnrollment: () => Promise<{ ok: boolean; message?: string }>;
+  verifyMfaChallenge: (code: string) => Promise<{ ok: boolean; message?: string }>;
+  disableTotp: (code?: string) => Promise<{ ok: boolean; message?: string }>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -102,6 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [socialAuthError, setSocialAuthError] = useState<string | undefined>(undefined);
   const [recoveryStatus, setRecoveryStatus] = useState<RecoveryStatus>('idle');
   const [recoveryError, setRecoveryError] = useState<string | undefined>(undefined);
+  const [mfaStatus, setMfaStatus] = useState<MfaStatus>('unavailable');
+  const [mfaError, setMfaError] = useState<string | undefined>(undefined);
+  const [mfaMessage, setMfaMessage] = useState<string | undefined>(undefined);
+  const [mfaFactors, setMfaFactors] = useState<MfaFactor[]>([]);
+  const [mfaEnrollment, setMfaEnrollment] = useState<MfaEnrollment | null>(null);
+  const [currentAssuranceLevel, setCurrentAssuranceLevel] = useState<AssuranceLevel>(null);
+  const [nextAssuranceLevel, setNextAssuranceLevel] = useState<AssuranceLevel>(null);
+  const mfaBusy = useRef(false);
   const recoverySession = useRef(false);
   const socialAttemptInFlight = useRef(false);
   const socialAttemptTimeout = useRef<ReturnType<typeof window.setTimeout> | null>(null);
@@ -126,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const repositories = useMemo(() => {
     if (!supabaseClient) return null;
-    return { users: new SupabaseUserRepository(supabaseClient), profiles: new ProfileRepository(supabaseClient) };
+    return { users: new SupabaseUserRepository(supabaseClient), profiles: new ProfileRepository(supabaseClient), mfa: new MfaRepository(supabaseClient) };
   }, []);
 
   const loadProfile = async (nextSession: Session | null, mounted: () => boolean): Promise<{ ok: boolean; message?: string }> => {
@@ -158,6 +184,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthMessage(result.message);
       return { ok: false, message: result.message };
     }
+  };
+
+  const evaluateSession = async (nextSession: Session | null, mounted: () => boolean) => {
+    setSession(nextSession);
+    if (!nextSession) { setMfaStatus('unavailable'); setMfaFactors([]); return loadProfile(null, mounted); }
+    setMfaStatus('loading'); setMfaError(undefined);
+    const [assurance, listed] = await Promise.all([repositories!.mfa.getAssuranceLevel(), repositories!.mfa.listMfaFactors()]);
+    if (!mounted()) return { ok: false, message: 'Operação cancelada.' };
+    if (assurance.error || listed.error) {
+      const message = 'Não foi possível verificar a segurança da sessão. Tente novamente ou saia.';
+      setUser(null); setAuthStatus('mfa-required'); setMfaStatus('error'); setMfaError(message);
+      return { ok: false, message };
+    }
+    setMfaFactors(listed.factors); setCurrentAssuranceLevel(assurance.currentLevel); setNextAssuranceLevel(assurance.nextLevel);
+    const verified = selectVerifiedFactor(listed.factors);
+    if (verified && assurance.currentLevel === 'aal1' && assurance.nextLevel === 'aal2') {
+      setUser(null); setAuthStatus('mfa-required'); setMfaStatus('challenge-required');
+      return { ok: true, mfaRequired: true };
+    }
+    setMfaStatus(verified ? 'enabled' : 'disabled');
+    return loadProfile(nextSession, mounted);
   };
 
   useEffect(() => {
@@ -194,7 +241,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const target = consumeOAuthReturnTo();
       cleanOAuthCallbackUrl('#/profile');
-      const result = await loadProfile(data.session, mounted);
+      const result = await evaluateSession(data.session, mounted);
+      if ('mfaRequired' in result && result.mfaRequired) setMfaReturnTo(target);
       oauthCallbackInProgress.current = false;
       resetSocialAuthAttempt();
       if (!result.ok) {
@@ -224,7 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (!data.session && hasRecoveryMarker()) setRecoveryMarker(false);
-      void loadProfile(data.session, mounted);
+      void evaluateSession(data.session, mounted);
       });
     });
     const subscription = repositories.users.onAuthStateChange((event, nextSession) => {
@@ -246,7 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (event === 'SIGNED_IN') resetSocialAuthAttempt();
-      void loadProfile(nextSession, mounted);
+      void evaluateSession(nextSession, mounted);
     });
     return () => {
       active = false;
@@ -296,7 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthMessage(message);
       return { ok: false, message };
     }
-    return loadProfile(data.session, () => true);
+    return evaluateSession(data.session, () => true);
   };
 
   const register: AuthContextValue['register'] = async (input) => {
@@ -310,7 +358,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthMessage('Cadastro recebido. Confirme seu e-mail antes de entrar.');
       return { ok: true, message: 'Cadastro recebido. Confirme seu e-mail antes de entrar.' };
     }
-    return loadProfile(data.session, () => true);
+    return evaluateSession(data.session, () => true);
   };
 
   const signInWithProvider: AuthContextValue['signInWithProvider'] = async (provider) => {
@@ -345,7 +393,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setAuthStatus('anonymous');
-    setAuthMessage(undefined);
+    setAuthMessage(undefined); setMfaEnrollment(null); setMfaFactors([]); setMfaStatus('unavailable'); clearMfaReturnTo();
     return { ok: true };
   };
 
@@ -419,6 +467,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return repositories.profiles.isUsernameAvailable(username, currentUserId);
   };
 
+  const refreshMfaStatus: AuthContextValue['refreshMfaStatus'] = async () => {
+    if (!session) return { ok: false, message: 'Usuário não autenticado.' };
+    return evaluateSession(session, () => true);
+  };
+  const enrollTotp: AuthContextValue['enrollTotp'] = async () => {
+    if (mfaBusy.current || !repositories || !session) return { ok: false, message: 'Não foi possível iniciar a configuração.' };
+    if (selectVerifiedFactor(mfaFactors)) return { ok: false, message: 'Esta conta já possui autenticação em dois fatores configurada.' };
+    mfaBusy.current = true; setMfaStatus('loading'); setMfaError(undefined); setMfaMessage(undefined);
+    try {
+      for (const factor of mfaFactors.filter((item) => item.status === 'unverified')) await repositories.mfa.unenrollTotp(factor.id);
+      const result = await repositories.mfa.enrollTotp();
+      if (!result.enrollment) { const message = 'Não foi possível iniciar a configuração. Verifique sua conexão e tente novamente.'; setMfaStatus('error'); setMfaError(message); return { ok: false, message }; }
+      setMfaEnrollment(result.enrollment); setMfaStatus('enrollment-pending'); return { ok: true };
+    } finally { mfaBusy.current = false; }
+  };
+  const verifyTotpEnrollment: AuthContextValue['verifyTotpEnrollment'] = async (rawCode) => {
+    const code = normalizeTotpCode(rawCode);
+    if (mfaBusy.current || !repositories || !mfaEnrollment || code.length !== 6) return { ok: false, message: 'Código inválido ou expirado. Aguarde o próximo código e tente novamente.' };
+    mfaBusy.current = true; setMfaStatus('verifying'); setMfaError(undefined);
+    try {
+      const { error } = await repositories.mfa.challengeAndVerifyTotp(mfaEnrollment.factorId, code);
+      if (error) { const message = 'Código inválido ou expirado. Aguarde o próximo código e tente novamente.'; setMfaStatus('enrollment-pending'); setMfaError(message); return { ok: false, message }; }
+      setMfaEnrollment(null); setMfaMessage('Autenticação em dois fatores ativada com sucesso.'); await evaluateSession(session, () => true); return { ok: true };
+    } finally { mfaBusy.current = false; }
+  };
+  const cancelTotpEnrollment: AuthContextValue['cancelTotpEnrollment'] = async () => {
+    const pending = mfaEnrollment; setMfaEnrollment(null); setMfaError(undefined);
+    if (pending && repositories) await repositories.mfa.unenrollTotp(pending.factorId);
+    if (session) await evaluateSession(session, () => true);
+    return { ok: true };
+  };
+  const verifyMfaChallenge: AuthContextValue['verifyMfaChallenge'] = async (rawCode) => {
+    const code = normalizeTotpCode(rawCode); const factor = selectVerifiedFactor(mfaFactors);
+    if (mfaBusy.current || !factor || code.length !== 6) return { ok: false, message: 'Código inválido ou expirado. Tente novamente.' };
+    mfaBusy.current = true; setMfaStatus('verifying'); setMfaError(undefined);
+    try {
+      const { error } = await repositories!.mfa.challengeAndVerifyTotp(factor.id, code);
+      if (error) { const message = 'Código inválido ou expirado. Tente novamente.'; setMfaStatus('challenge-required'); setMfaError(message); return { ok: false, message }; }
+      return evaluateSession(session, () => true);
+    } finally { mfaBusy.current = false; }
+  };
+  const disableTotp: AuthContextValue['disableTotp'] = async (rawCode) => {
+    const factor = selectVerifiedFactor(mfaFactors); if (!factor || !repositories) return { ok: false, message: 'Fator não encontrado.' };
+    if (currentAssuranceLevel !== 'aal2') { const verified = await verifyMfaChallenge(rawCode ?? ''); if (!verified.ok) return verified; }
+    const { error } = await repositories.mfa.unenrollTotp(factor.id);
+    if (error) return { ok: false, message: 'Não foi possível desativar a autenticação em dois fatores.' };
+    setMfaMessage('Autenticação em dois fatores desativada.'); setMfaEnrollment(null); return evaluateSession(session, () => true);
+  };
+
   const value = useMemo<AuthContextValue>(() => ({
     user,
     session,
@@ -441,8 +538,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     updateSettings,
-    isUsernameAvailable,
-  }), [authMessage, authStatus, loading, resetSocialAuthAttempt, session, socialAuthError, socialAuthProvider, user]);
+    isUsernameAvailable, mfaStatus, mfaError, mfaMessage, mfaFactors, mfaEnrollment, mfaRequired: authStatus === 'mfa-required', currentAssuranceLevel, nextAssuranceLevel, refreshMfaStatus, enrollTotp, verifyTotpEnrollment, cancelTotpEnrollment, verifyMfaChallenge, disableTotp,
+  }), [authMessage, authStatus, loading, resetSocialAuthAttempt, session, socialAuthError, socialAuthProvider, user, mfaStatus, mfaError, mfaMessage, mfaFactors, mfaEnrollment, currentAssuranceLevel, nextAssuranceLevel]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
