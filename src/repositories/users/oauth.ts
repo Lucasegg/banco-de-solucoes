@@ -1,4 +1,5 @@
 import type { Provider } from '@supabase/supabase-js';
+import { APP_BASE_PATH, getNormalizedOrigin, getOAuthCallback, isSupportedOrigin } from '../../config/appUrls';
 
 export type SocialAuthProvider = 'google' | 'github' | 'azure';
 
@@ -18,18 +19,10 @@ export const SOCIAL_PROVIDER_SCOPES: Record<SocialAuthProvider, string> = {
 
 const OAUTH_RETURN_TO_KEY = 'banco-de-solucoes.oauth.returnTo';
 const CALLBACK_MARKER = 'oauth=callback';
-const PUBLIC_BASE_PATH = '/banco-de-solucoes/';
 const SAFE_HASH_PATH = /^#\/(?!\/)[a-z0-9/_?.=&:%@+\-.]*$/i;
 
-function normalizeBasePath(pathname: string) {
-  if (pathname.startsWith(PUBLIC_BASE_PATH)) return PUBLIC_BASE_PATH;
-  const viteBase = import.meta.env.BASE_URL || '/';
-  return viteBase.startsWith('/') && viteBase.endsWith('/') ? viteBase : '/';
-}
-
 export function getOAuthRedirectUrl() {
-  const basePath = normalizeBasePath(window.location.pathname);
-  return `${window.location.origin}${basePath}?${CALLBACK_MARKER}`;
+  return getOAuthCallback();
 }
 
 export function saveOAuthReturnTo(hash = window.location.hash) {
@@ -46,7 +39,7 @@ export function consumeOAuthReturnTo() {
 
 export function isOAuthCallbackUrl(url = window.location.href) {
   const parsed = new URL(url);
-  return parsed.searchParams.get('oauth') === 'callback' || parsed.searchParams.has('code') || parsed.searchParams.has('error');
+  return isSupportedOrigin(parsed) && (`oauth=${parsed.searchParams.get('oauth')}` === CALLBACK_MARKER || parsed.searchParams.has('code') || parsed.searchParams.has('error'));
 }
 
 export function readOAuthCallbackParams(url = window.location.href) {
@@ -58,8 +51,8 @@ export function readOAuthCallbackParams(url = window.location.href) {
 }
 
 export function cleanOAuthCallbackUrl(targetHash = '#/profile') {
-  const basePath = normalizeBasePath(window.location.pathname);
-  window.history.replaceState(null, '', `${window.location.origin}${basePath}${targetHash}`);
+  const origin = isSupportedOrigin() ? window.location.origin : getNormalizedOrigin();
+  window.history.replaceState(null, '', `${origin}${APP_BASE_PATH}${targetHash}`);
 }
 
 export function toSupabaseProvider(provider: SocialAuthProvider): Provider {

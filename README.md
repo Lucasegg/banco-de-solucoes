@@ -52,7 +52,9 @@ O artefato final é gerado em `dist/`.
 
 ## Deploy
 
-O projeto inclui workflow de GitHub Actions para build e publicação no GitHub Pages. O deploy é disparado em pushes para `main` e também pode ser iniciado manualmente pela aba Actions.
+O domínio oficial e canônico é **https://www.bancodesolucoes.com.br/**. O projeto continua usando GitHub Actions e GitHub Pages como infraestrutura de publicação; a antiga URL `lucasegg.github.io/banco-de-solucoes/` é somente uma compatibilidade técnica temporária e não deve ser divulgada aos usuários.
+
+O build usa a raiz `/`, copia `public/CNAME` para `dist/CNAME` e é publicado em pushes para `main`. No GitHub Pages, selecione **GitHub Actions** como origem, configure o domínio personalizado `www.bancodesolucoes.com.br` e habilite HTTPS. No Registro.br, aponte o DNS de `www` para o host do GitHub Pages conforme a documentação vigente do GitHub e redirecione o domínio sem `www` para o oficial. Não configure um path de projeto como base.
 
 ## Estrutura principal
 
@@ -100,12 +102,14 @@ A aplicação mantém e-mail/senha e adiciona login/cadastro social via Supabase
 
 ### URLs de callback e redirects
 
-A URL pública do GitHub Pages é `https://lucasegg.github.io/banco-de-solucoes/`. Como o app usa hash routing, o redirect OAuth é centralizado para a raiz física segura do Pages, preservando o base path e retornando ao hash após trocar uma única vez o parâmetro `code` por sessão e carregar o perfil:
+O OAuth é centralizado no domínio oficial, preserva o hash de retorno e troca uma única vez o parâmetro `code` por sessão antes de limpar todos os parâmetros do callback:
 
-- Site URL no Supabase: `https://lucasegg.github.io/banco-de-solucoes/`
-- Redirect URL permitida no Supabase: `https://lucasegg.github.io/banco-de-solucoes/`
-- Redirect URL permitida no Supabase para callback OAuth: `https://lucasegg.github.io/banco-de-solucoes/?oauth=callback`
+- Site URL no Supabase: `https://www.bancodesolucoes.com.br/`
+- Redirect URL permitida no Supabase: `https://www.bancodesolucoes.com.br/`
+- Redirect URL permitida no Supabase para callback OAuth: `https://www.bancodesolucoes.com.br/?oauth=callback`
 - Desenvolvimento local: cadastre também `http://localhost:5173/` e `http://localhost:5173/?oauth=callback`
+
+Durante a transição, mantenha temporariamente no allowlist do Supabase o callback legado já cadastrado, apenas para concluir tentativas iniciadas antes do deploy. O frontend nunca o gera para uma nova tentativa. Remova-o após a janela de transição. Origens diferentes de localhost, domínio oficial (com ou sem `www`) e host legado não são aceitas pelo consumidor de callback.
 
 Nos provedores externos, use a Callback URL do próprio Supabase Auth, no formato:
 
@@ -115,9 +119,9 @@ https://<PROJECT_REF>.supabase.co/auth/v1/callback
 
 ### Providers configurados
 
-- Google: habilite o provider Google no Supabase Auth e cadastre a callback do Supabase no OAuth Client do Google Cloud. Escopos solicitados: `openid email profile`.
-- GitHub: habilite o provider GitHub no Supabase Auth e cadastre a callback do Supabase no GitHub OAuth App. Escopos solicitados: `read:user user:email`; não há solicitação de acesso a repositórios.
-- Microsoft/Azure: habilite o provider `azure` no Supabase Auth e cadastre a callback do Supabase no Microsoft Entra ID. Escopos solicitados: `openid email profile`; não há solicitação de calendário, arquivos ou contatos.
+- Google: habilite o provider Google no Supabase Auth e cadastre a callback do Supabase no OAuth Client do Google Cloud. Configure as origens autorizadas com o domínio oficial. Escopos solicitados: `openid email profile`.
+- GitHub: habilite o provider GitHub no Supabase Auth e cadastre a callback do Supabase no GitHub OAuth App; use o domínio oficial na Homepage URL. Escopos solicitados: `read:user user:email`; não há solicitação de acesso a repositórios.
+- Microsoft/Azure: habilite o provider `azure` no Supabase Auth e cadastre a callback do Supabase no Microsoft Entra ID; use o domínio oficial nas configurações web aplicáveis. Escopos solicitados: `openid email profile`; não há solicitação de calendário, arquivos ou contatos.
 
 ### Migration de perfis
 
@@ -137,8 +141,8 @@ Por padrão, o template de recuperação pode enviar apenas um link. Em **Authen
 
 Em **Authentication → URL Configuration**, configure:
 
-- Site URL: `https://lucasegg.github.io/banco-de-solucoes/`;
-- Redirect URL de produção: `https://lucasegg.github.io/banco-de-solucoes/` (o hash `#/password-recovery` é navegação local e não deve ser usado como redirect do servidor);
+- Site URL: `https://www.bancodesolucoes.com.br/`;
+- Redirect URL de produção: `https://www.bancodesolucoes.com.br/` (a tela oficial é `https://www.bancodesolucoes.com.br/#/password-recovery`, mas o hash é navegação local e não deve ser usado como redirect do servidor);
 - desenvolvimento: `http://localhost:5173/` (e a porta efetivamente usada pelo Vite, se diferente).
 
 Em **Authentication → Rate Limits**, defina limites compatíveis com o produto para envio de e-mails e verificação de OTP. Em **Authentication → Settings**, escolha o tempo de expiração do OTP (o padrão/configuração exata deve ser conferido no projeto e comunicado ao usuário; recomenda-se um período curto). O cooldown de 60 segundos do navegador melhora a experiência, mas pode ser reiniciado por reload e não substitui esses controles do servidor.

@@ -1,0 +1,9 @@
+{
+  "name": "Banco de Soluções",
+  "short_name": "Banco de Soluções",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f766e"
+}
