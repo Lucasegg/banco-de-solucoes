@@ -16,6 +16,8 @@ import { ImageUploadField } from '../components/forms/ImageUploadField';
 import { ImageUploadRepository, type UploadProgress } from '../repositories/images';
 import { usePermissions } from '../hooks/usePermissions';
 import { ItemReactionBar } from '../components/discussions/ItemReactionBar';
+import { ProblemTimeline } from '../components/problems/ProblemTimeline';
+import { problemStatuses } from '../types/problemTimeline';
 
 
 function getShareMessage(status: ShareStatus, url: string) {
@@ -37,7 +39,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editSummary, setEditSummary] = useState('');
-  const [editStatus, setEditStatus] = useState<ProblemStatus>('Aberto');
+  const [editStatus, setEditStatus] = useState<ProblemStatus>('Reportado');
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImageRemoved, setEditImageRemoved] = useState(false);
   const [editImageProgress, setEditImageProgress] = useState<UploadProgress | null>(null);
@@ -165,13 +167,13 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
             {canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}
             {canManage && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteProblem} />}
           </div>
-          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><ImageUploadField label="Imagem do problema" currentUrl={problem.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem do problema ${problem.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}><option>Aberto</option><option>Em andamento</option><option>Resolvido</option></select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
+          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><ImageUploadField label="Imagem do problema" currentUrl={problem.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem do problema ${problem.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}>{problemStatuses.map((status) => <option key={status}>{status}</option>)}</select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
           <Feedback message={feedback} />
           {showContributionForm && <ContributionForm targetType="problem" targetId={problem.id} fields={problemFields} onClose={() => setShowContributionForm(false)} />}
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
-      <div className="lg:col-span-2 space-y-6"><ContributionHistory targetType="problem" targetId={problem.id} /><ItemReactionBar target={{ kind: 'problem', id: problem.id }} /><DiscussionList title="Discussão do problema" comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
+      <div className="lg:col-span-2 space-y-6"><ProblemTimeline problemId={problem.id} canPublish={permissions.canPublishOfficialUpdate} organization={user?.organization || user?.name || ''} onStatusChange={(status) => setProblem((current) => current ? { ...current, status } : current)} /><ContributionHistory targetType="problem" targetId={problem.id} /><ItemReactionBar target={{ kind: 'problem', id: problem.id }} /><DiscussionList title="Discussão do problema" comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
     </section>
   );
 }

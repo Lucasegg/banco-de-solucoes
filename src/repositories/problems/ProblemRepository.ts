@@ -15,7 +15,7 @@ export type ProblemInput = Pick<Problem, 'title' | 'summary' | 'description' | '
 export type RepositoryResult<T> = { ok: true; data: T } | { ok: false; message: string };
 
 const selectColumns = 'id,author_id,author_name,title,summary,description,category,city,state,country,image_url,status,views,likes,comments,impact_level,tags,created_at,updated_at,source_type,source_name,source_url,source_published_at,source_accessed_at,source_verified_at,source_metadata,imported_from_external_source';
-const problemStatuses: ProblemStatus[] = ['Aberto', 'Em andamento', 'Resolvido'];
+const problemStatuses: ProblemStatus[] = ['Reportado', 'Em análise', 'Em vistoria', 'Planejado', 'Licitado', 'Em execução', 'Parcialmente resolvido', 'Resolvido', 'Arquivado', 'Reaberto'];
 const categories: ProblemCategory[] = ['Infraestrutura', 'Educação', 'Saúde', 'Segurança', 'Tecnologia', 'Mobilidade', 'Meio Ambiente', 'Assistência Social', 'Empreendedorismo', 'Outros'];
 const impacts: ImpactLevel[] = ['local', 'regional', 'national', 'global'];
 const safe = <T extends string>(value: string, allowed: readonly T[], fallback: T) => allowed.includes(value as T) ? value as T : fallback;
@@ -52,7 +52,7 @@ export function mapProblemRowToDomain(row: ProblemRow): Problem {
     category: safe(row.category, categories, 'Outros'), city: row.city, state: row.state, country: row.country,
     image: row.image_url ?? undefined, createdAt: row.created_at,
     author: row.imported_from_external_source ? 'Registro criado a partir de informação pública' : (row.author_name || 'Usuário da plataforma'),
-    status: safe(row.status, problemStatuses, 'Aberto'), views: row.views, likes: row.likes, comments: row.comments,
+    status: safe(row.status, problemStatuses, 'Reportado'), views: row.views, likes: row.likes, comments: row.comments,
     impactLevel: safe(row.impact_level, impacts, 'local'), tags: row.tags,
     importedFromExternalSource: row.imported_from_external_source, sourceType: row.source_type ?? undefined,
     sourceName: row.source_name ?? undefined, sourceUrl: row.source_url ?? undefined,

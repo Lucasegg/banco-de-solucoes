@@ -8,11 +8,11 @@ import type { ImplementationDifficulty, ImpactLevel, Problem, ProblemCategory, P
 
 const inputClass = 'rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
 const categories: ProblemCategory[] = ['Infraestrutura', 'Educação', 'Saúde', 'Segurança', 'Tecnologia', 'Mobilidade', 'Meio Ambiente', 'Assistência Social', 'Empreendedorismo', 'Outros'];
-const problemStatuses: ProblemStatus[] = ['Aberto', 'Em andamento', 'Resolvido'];
+const problemStatuses: ProblemStatus[] = ['Reportado', 'Em análise', 'Em vistoria', 'Planejado', 'Licitado', 'Em execução', 'Parcialmente resolvido', 'Resolvido', 'Arquivado', 'Reaberto'];
 const solutionStatuses: SolutionStatus[] = ['Proposta', 'Em teste', 'Implementada', 'Validada', 'Arquivada'];
 const maturityLevels: SolutionMaturityLevel[] = ['Ideia', 'Protótipo', 'Piloto', 'Em operação', 'Escalável'];
 const difficulties: ImplementationDifficulty[] = ['Baixa', 'Média', 'Alta'];
-const initialProblem = { title: '', summary: '', description: '', category: '', city: '', state: '', country: 'Brasil', image: '', status: 'Aberto', impactLevel: 'local', tags: '' };
+const initialProblem = { title: '', summary: '', description: '', category: '', city: '', state: '', country: 'Brasil', image: '', status: 'Reportado', impactLevel: 'local', tags: '' };
 const initialSolution = { title: '', summary: '', description: '', category: '', image: '', organization: '', location: '', country: 'Brasil', status: 'Proposta', maturityLevel: 'Ideia', implementationDifficulty: 'Baixa', estimatedCost: '', implementationTime: '', impactMetric: '', tags: '', evidenceLinks: '', relatedProblemIds: [] as string[] };
 
 type TextChangeEvent = { target: { value: string } };
