@@ -48,7 +48,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   useEffect(() => {
     let active = true;
     async function loadProblem() {
-      if (!ProblemRepository || !SolutionRepository) { setLoadError('Supabase não configurado.'); return; }
+      if (!ProblemRepository || !SolutionRepository) { setLoadError('Não foi possível carregar este conteúdo no momento.'); return; }
       const problemResult = await ProblemRepository.findById(id);
       if (!active) return;
       if (!problemResult.ok || !problemResult.data) { setLoadError(problemResult.ok ? 'Problema não encontrado.' : problemResult.message); return; }
@@ -94,7 +94,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
       setEditImageError('');
       let nextImage = problem.image;
       if (editImageFile) {
-        if (!ImageUploadRepository || !user) { setEditImageError('Supabase Storage não configurado.'); return; }
+        if (!ImageUploadRepository || !user) { setEditImageError('Não foi possível enviar a imagem no momento.'); return; }
         const upload = await ImageUploadRepository.uploadImage('problem-images', user.id, editImageFile, setEditImageProgress);
         if (!upload.ok) { setEditImageError(upload.message); setEditImageProgress(null); return; }
         nextImage = upload.url;
@@ -131,7 +131,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
     if (result.ok) { setFeedback('Problema excluído.'); onNavigate('problemas'); } else setFeedback(result.message);
   };
 
-  if (!problem) return <EmptyDetail message={loadError || 'Carregando problema no Supabase.'} />;
+  if (!problem) return <EmptyDetail message={loadError || 'Carregando problema...'} />;
   const problemFields = [
     { field: 'title', label: 'Título', value: problem.title },
     { field: 'summary', label: 'Resumo', value: problem.summary },
@@ -199,7 +199,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   useEffect(() => {
     let active = true;
     async function loadSolution() {
-      if (!SolutionRepository || !ProblemRepository) { setLoadError('Supabase não configurado.'); return; }
+      if (!SolutionRepository || !ProblemRepository) { setLoadError('Não foi possível carregar este conteúdo no momento.'); return; }
       const solutionResult = await SolutionRepository.findById(id);
       if (!active) return;
       if (!solutionResult.ok || !solutionResult.data) { setLoadError(solutionResult.ok ? 'Solução não encontrada.' : solutionResult.message); return; }
@@ -245,7 +245,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
       setEditImageError('');
       let nextImage = solution.image;
       if (editImageFile) {
-        if (!ImageUploadRepository || !user) { setEditImageError('Supabase Storage não configurado.'); return; }
+        if (!ImageUploadRepository || !user) { setEditImageError('Não foi possível enviar a imagem no momento.'); return; }
         const upload = await ImageUploadRepository.uploadImage('solution-images', user.id, editImageFile, setEditImageProgress);
         if (!upload.ok) { setEditImageError(upload.message); setEditImageProgress(null); return; }
         nextImage = upload.url;
@@ -282,7 +282,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
     if (result.ok) { setFeedback('Solução excluída.'); onNavigate('solucoes'); } else setFeedback(result.message);
   };
 
-  if (!solution) return <EmptyDetail message={loadError || 'Carregando solução no Supabase.'} />;
+  if (!solution) return <EmptyDetail message={loadError || 'Carregando solução...'} />;
   const versions = solutionVersions.filter((version) => version.solutionId === solution.id);
   const references = evidences.filter((evidence) => evidence.solutionId === solution.id);
   const realCases = caseStudies.filter((caseStudy) => caseStudy.solutionId === solution.id);

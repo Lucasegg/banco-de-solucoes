@@ -91,7 +91,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
       <footer className="border-t border-line bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-8 text-sm text-muted md:flex-row md:items-center md:justify-between">
           <span>Open source, colaborativo e preparado para dados reais.</span>
-          <span>Fase 1 · React · TypeScript · Vite · TailwindCSS</span>
+          <span>Banco de Soluções · {new Date().getFullYear()}</span>
         </div>
       </footer>
     </div>

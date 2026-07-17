@@ -6,7 +6,6 @@ import { SOCIAL_AUTH_PROVIDERS, SOCIAL_PROVIDER_LABELS, type SocialAuthProvider 
 
 function ProviderIcon({ provider }: { provider: SocialAuthProvider }) {
   if (provider === 'github') return <GitBranch size={16} aria-hidden="true" />;
-  if (provider === 'azure') return <span aria-hidden="true" className="text-base font-bold text-blue-700">M</span>;
   return <span aria-hidden="true" className="text-base font-bold text-red-600">G</span>;
 }
 
@@ -63,12 +62,14 @@ export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
       <div className="rounded-[2rem] border border-line bg-white p-8 shadow-sm">
-        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700"><LockKeyhole size={16} /> Supabase Auth</span>
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight">Entre para acompanhar suas contribuições.</h1>
-        <p className="mt-4 leading-7 text-muted">Quando configurado, o acesso usa Supabase Auth. Sem credenciais públicas, a aplicação compila e informa que o provedor não está configurado.</p>
-        <div className="mt-8 rounded-3xl bg-slate-50 p-5 text-sm text-muted">
-          <strong className="text-slate-900">Credenciais reais:</strong>
-          <p className="mt-2">Use uma conta criada no projeto Supabase configurado. Tokens nunca são exibidos.</p>
+        <h1 className="text-4xl font-semibold tracking-tight">Entre para acompanhar suas contribuições.</h1>
+        <p className="mt-4 leading-7 text-muted">Acesse sua conta para publicar ideias, acompanhar problemas, compartilhar soluções e colaborar com a comunidade.</p>
+        <div className="mt-8 flex items-start gap-4 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+          <span className="rounded-2xl bg-white p-3 text-emerald-700 shadow-sm"><LockKeyhole size={22} aria-hidden="true" /></span>
+          <div>
+            <strong className="text-base text-slate-900">Conexão segura</strong>
+            <p className="mt-1 leading-6">Seus dados são protegidos por conexão HTTPS e autenticação segura.</p>
+          </div>
         </div>
       </div>
       <form onSubmit={submit} className="rounded-[2rem] border border-line bg-white p-8 shadow-soft">
@@ -140,9 +141,9 @@ export function Register({ onNavigate }: { onNavigate: (page: string) => void })
 
   return (
     <section className="mx-auto max-w-3xl rounded-[2rem] border border-line bg-white p-8 shadow-soft">
-      <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800"><UserPlus size={16} /> Cadastro Supabase</span>
+      <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800"><UserPlus size={16} aria-hidden="true" /> Cadastro</span>
       <h1 className="mt-5 text-4xl font-semibold tracking-tight">Crie seu perfil de colaborador.</h1>
-      <p className="mt-3 text-muted">O cadastro cria o usuário pelo Supabase Auth. O perfil público é criado automaticamente pela trigger no banco.</p>
+      <p className="mt-3 text-muted">Preencha seus dados para criar uma conta e começar a colaborar com a comunidade.</p>
       <SocialAuthButtons />
       <form onSubmit={submit} className="mt-8 grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">Nome de exibição *<input maxLength={100} className={inputClass} value={form.name} onChange={(event: ChangeEvent<HTMLInputElement>) => update('name', event.target.value)} required /></label>
@@ -155,7 +156,7 @@ export function Register({ onNavigate }: { onNavigate: (page: string) => void })
         <label className="grid gap-2 text-sm font-medium">Estado *<input maxLength={100} className={inputClass} value={form.state} onChange={(event: ChangeEvent<HTMLInputElement>) => update('state', event.target.value)} /></label>
         <label className="grid gap-2 text-sm font-medium">País *<input maxLength={100} className={inputClass} value={form.country} onChange={(event: ChangeEvent<HTMLInputElement>) => update('country', event.target.value)} required /></label>
         <label className="grid gap-2 text-sm font-medium md:col-span-2">Biografia curta *<textarea className={inputClass} value={form.bio} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => update('bio', event.target.value)} rows={4} maxLength={500} placeholder="Conte como você quer contribuir." required /><span className="text-xs text-muted">{form.bio.length}/500 caracteres</span></label>
-        <label className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-muted md:col-span-2"><input type="checkbox" checked={form.acceptedTerms} onChange={(event: ChangeEvent<HTMLInputElement>) => update('acceptedTerms', event.target.checked)} className="mt-1 h-4 w-4 accent-slate-950" required /><span>Aceito os termos de uso e entendo que o perfil será criado no banco após o cadastro, sem envio de role pelo formulário.</span></label>
+        <label className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-muted md:col-span-2"><input type="checkbox" checked={form.acceptedTerms} onChange={(event: ChangeEvent<HTMLInputElement>) => update('acceptedTerms', event.target.checked)} className="mt-1 h-4 w-4 accent-slate-950" required /><span>Aceito os termos de uso e autorizo a criação do meu perfil.</span></label>
         {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 md:col-span-2">{error}</p>}
         {success && <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 md:col-span-2">{success}</p>}
         <div className="flex flex-wrap gap-3 md:col-span-2"><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" type="submit" disabled={submitting}>{submitting ? 'Cadastrando...' : 'Cadastrar'}</button><button className="rounded-full border border-line px-5 py-3 text-sm font-semibold" type="button" onClick={() => onNavigate('login')}>Já tenho conta</button></div>

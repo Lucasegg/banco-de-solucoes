@@ -55,7 +55,6 @@ export class SupabaseUserRepository {
       options: {
         redirectTo: getOAuthRedirectUrl(),
         scopes: SOCIAL_PROVIDER_SCOPES[provider],
-        queryParams: provider === 'azure' ? { prompt: 'select_account' } : undefined,
       },
     });
   }
