@@ -153,3 +153,13 @@ Em **Authentication → Rate Limits**, defina limites compatíveis com o produto
 - Ao concluir, a sessão temporária é encerrada antes do retorno a `#/login`; não há login automático. Ao cancelar, somente uma sessão marcada em memória como recuperação é encerrada, preservando sessões normais.
 - Um reload antes da verificação descarta e-mail e código, exigindo reiniciar o fluxo. Depois da verificação, um marcador booleano não sensível em `sessionStorage` permite restaurar diretamente a etapa de nova senha enquanto a sessão oficial do Supabase continua válida. OTP, senha, access token, refresh token e recovery token nunca são armazenados nesse marcador, que é removido ao concluir, cancelar ou receber `SIGNED_OUT`.
 - A confirmação de que a senha antiga deixou de funcionar e a nova funciona exige teste integrado contra um projeto Supabase configurado e uma caixa de e-mail real.
+
+## Sprint 19 — Autenticação multifator TOTP
+
+A autenticação em dois fatores é opcional e usa exclusivamente os fatores TOTP do Supabase Auth. A UI chama o `AuthContext`, que centraliza estado e proteção de acesso; o contexto chama `MfaRepository`, e somente o repositório usa `auth.mfa.listFactors`, `enroll`, `challengeAndVerify`, `unenroll` e `getAuthenticatorAssuranceLevel`. Nenhum secret, código, desafio ou token é gravado pela aplicação, e não existe migration: fatores pertencem ao Supabase Auth.
+
+### Configuração manual no Supabase
+
+No Dashboard do projeto, acesse **Authentication → Multi-Factor Authentication** e habilite enrollment e verification de **TOTP**. Confira no Dashboard os limites de MFA do plano contratado, pois eles podem mudar. A sessão persistida pelo SDK volta inicialmente no nível primário; quando há fator TOTP verificado e o próximo nível é o reforçado, a aplicação bloqueia perfil e demais rotas protegidas até o desafio. Enrollment cria o fator e entrega QR/secret; challenge confirma a posse do autenticador e eleva a sessão. Fatores incompletos não bloqueiam login e são removidos antes de uma nova configuração; fatores verificados nunca são removidos automaticamente. Se existirem vários, a interface seleciona deterministicamente o TOTP verificado mais antigo e gerencia apenas esse fator nesta sprint.
+
+Recuperação de senha e MFA são proteções diferentes: redefinir a senha pode não remover fatores MFA. Em caso de perda do autenticador, a remoção administrativa deve seguir um procedimento de suporte seguro, com verificação de identidade e API administrativa executada somente em backend confiável. Nunca exponha a `service_role` no frontend. A disponibilidade, os limites e as políticas definitivas devem ser validados no projeto Supabase antes da publicação.

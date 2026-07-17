@@ -16,6 +16,7 @@ import { AdminPanel } from './pages/Admin';
 import { SupabaseStatus } from './integrations/supabase/SupabaseStatus';
 import { Account } from './pages/Account';
 import { PasswordRecovery } from './pages/PasswordRecovery';
+import { MfaChallenge } from './pages/MfaChallenge';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -32,6 +33,7 @@ const pageToHashPath: Record<string, string> = {
   favorites: '/favorites',
   diagnostics: '/diagnostics',
   account: '/account',
+  'mfa-challenge': '/mfa-challenge',
   admin: '/admin',
 };
 
@@ -54,6 +56,7 @@ function pageFromHash(hash: string) {
   if (path === '/password-recovery') return 'password-recovery';
   if (path === '/profile') return 'profile';
   if (path === '/account') return 'account';
+  if (path === '/mfa-challenge') return 'mfa-challenge';
   if (path === '/admin') return 'admin';
   if (path === '/contributions') return 'contributions';
   if (path === '/favorites') return 'favorites';
@@ -70,7 +73,7 @@ function hashFromPage(page: string) {
 }
 
 export function App() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
   const permissions = usePermissions(user);
   const [page, setPageState] = useState(() => pageFromHash(window.location.hash));
   const [kind, id] = page.split(':');
@@ -92,13 +95,15 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (mfaRequired && page !== 'mfa-challenge') { setPage('mfa-challenge'); return; }
+    if (!mfaRequired && page === 'mfa-challenge' && isAuthenticated) { setPage('profile'); return; }
     if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'admin' || kind === 'contribution') && !isAuthenticated) {
       setPage('login');
     }
     if (!isLoading && page === 'admin' && isAuthenticated && !permissions.canAccessAdmin) {
       setPage('profile');
     }
-  }, [isAuthenticated, isLoading, page, permissions.canAccessAdmin]);
+  }, [isAuthenticated, isLoading, mfaRequired, page, permissions.canAccessAdmin]);
 
   return (
     <Layout currentPage={kind} onNavigate={setPage}>
@@ -112,6 +117,7 @@ export function App() {
       {page === 'sobre' && <About />}
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
+      {page === 'mfa-challenge' && mfaRequired && <MfaChallenge onNavigate={setPage} />}
       {page === 'password-recovery' && <PasswordRecovery onNavigate={setPage} />}
       {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
       {page === 'account' && isAuthenticated && <Account onNavigate={setPage} />}
