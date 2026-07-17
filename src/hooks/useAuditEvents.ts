@@ -1,0 +1,5 @@
+import { useCallback, useEffect, useState } from 'react';
+import { AuditRepository } from '../repositories/audit';
+import type { AdminUser, AuditEvent, AuditFilters } from '../types/audit';
+const initial:AuditFilters={eventType:'',targetType:'',actorId:'',from:'',to:'',search:'',ascending:false,page:0};
+export function useAuditEvents(enabled:boolean){const[filters,setFilters]=useState(initial);const[events,setEvents]=useState<AuditEvent[]>([]);const[users,setUsers]=useState<AdminUser[]>([]);const[loading,setLoading]=useState(false);const[error,setError]=useState('');const load=useCallback(async()=>{if(!enabled||!AuditRepository)return;setLoading(true);setError('');const[a,u]=await Promise.all([AuditRepository.list(filters),AuditRepository.listUsers()]);if(a.ok)setEvents(a.data);else setError(a.message);if(u.ok)setUsers(u.data);setLoading(false);},[enabled,filters]);useEffect(()=>{void load();},[load]);const updateRole=async(id:string,role:AdminUser['role'])=>{if(!AuditRepository)return;const r=await AuditRepository.updateRole(id,role);if(!r.ok){setError(r.message);return;}await load();};return{events,users,filters,setFilters,loading,error,updateRole};}
