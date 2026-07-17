@@ -23,7 +23,7 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
           [Globe2, `${problems.length} problemas`, 'Desafios descritos com contexto, categoria e impacto.'],
           [Network, `${solutions.length} soluções`, 'Propostas conectadas a problemas e maturidade.'],
           [CheckCircle2, `${implemented} implementadas`, 'Soluções com execução registrada na plataforma.'],
-          [UsersRound, '128 colaboradores', 'Pessoas e organizações colaborando em rede.'],
+          [UsersRound, 'Comunidade colaborativa', 'Pessoas e organizações compartilhando conhecimento e experiências.'],
         ].map(([Icon, title, text]) => (
           <div key={String(title)} className="rounded-3xl border border-line bg-white p-6">
             <Icon className="mb-4 text-slate-700" />
