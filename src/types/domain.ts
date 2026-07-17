@@ -45,6 +45,12 @@ export interface Problem {
   sourceAccessedAt?: string;
   sourceVerifiedAt?: string;
   sourceMetadata?: Record<string, unknown>;
+  latitude?: number;
+  longitude?: number;
+  geolocationPrecision?: 'exact' | 'street' | 'neighborhood' | 'city' | 'state';
+  geolocationSource?: string;
+  geocodedAt?: string;
+  neighborhood?: string;
 }
 
 export interface SolutionVersion {

@@ -80,6 +80,7 @@ declare interface ImportMeta {
 }
 
 declare const process: { env: Record<string, string | undefined> };
+declare const L: any;
 
 declare module 'vite' {
   export function defineConfig(config: unknown): unknown;
