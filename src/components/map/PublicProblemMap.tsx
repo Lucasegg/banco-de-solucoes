@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import L, { type LayerGroup, type Map as LeafletMap } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import type { MapBounds, MapProblem } from '../../types/map';
+
+L.Icon.Default.mergeOptions({ iconUrl: markerIcon, iconRetinaUrl: markerIcon2x, shadowUrl: markerShadow });
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]!);
 
@@ -11,9 +18,9 @@ export function PublicProblemMap({ problems, bounds, onBoundsChange, onOpen, com
   compact?: boolean;
   loading?: boolean;
 }) {
-  const containerRef = useRef<HTMLElement | null>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const markersRef = useRef<LayerGroup | null>(null);
   const [mapRevision, setMapRevision] = useState(0);
   const onBoundsChangeRef = useRef(onBoundsChange);
   const onOpenRef = useRef(onOpen);
@@ -21,7 +28,7 @@ export function PublicProblemMap({ problems, bounds, onBoundsChange, onOpen, com
   onOpenRef.current = onOpen;
 
   useEffect(() => {
-    if (!containerRef.current || typeof L === 'undefined') return;
+    if (!containerRef.current) return;
     const map = L.map(containerRef.current, {
       keyboard: true,
       scrollWheelZoom: !compact,
