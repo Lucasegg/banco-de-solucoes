@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Badge, Comment, CommentReport, DiscussionTargetType, Reaction, ReactionType, UserReputation } from '../types/discussion';
+import type { Badge, Comment, CommentReport, DiscussionTargetType, CommentReaction, CommentReactionType, UserReputation } from '../types/discussion';
 import type { UserProfile } from '../types/user';
 import { useAuth } from './useAuth';
 import { useLocalStorageState } from './useLocalStorageState';
@@ -46,7 +46,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
   const [remoteComments, setRemoteComments] = useState<Comment[]>([]);
   const [remoteError, setRemoteError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reactions, setReactions, reactionsStorageError] = useLocalStorageState<Reaction[]>(REACTIONS_KEY, [], isReactionArray);
+  const [reactions, setReactions, reactionsStorageError] = useLocalStorageState<CommentReaction[]>(REACTIONS_KEY, [], isReactionArray);
   const canMarkBestAnswer = canManageTarget(user, targetOwnerNames);
 
   const comments = CommentRepository ? remoteComments : localComments;
@@ -78,7 +78,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
       return result.ok ? { ok: true } : result;
     }
     const now = new Date().toISOString();
-    const comment: Comment = { id: createId('comment'), parentId, targetType, targetId, authorId: user.id, authorName: user.name, content: content.trim(), createdAt: now, updatedAt: now, edited: false, deleted: false, visibility: 'visible', bestAnswer: false, reports: [] };
+    const comment: Comment = { id: createId('comment'), parentId, targetType, targetId, authorId: user.id, authorName: user.name, authorAvatarUrl: user.avatarUrl ?? null, content: content.trim(), createdAt: now, updatedAt: now, edited: false, deleted: false, visibility: 'visible', bestAnswer: false, reports: [] };
     setLocalComments((current) => [comment, ...current]);
     return { ok: true };
   };
@@ -127,7 +127,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     return { ok: true, message: 'Comentário reportado para moderação.' };
   };
 
-  const toggleReaction = (commentId: string, type: ReactionType) => {
+  const toggleReaction = (commentId: string, type: CommentReactionType) => {
     if (!user) return;
     setReactions((current) => {
       const existing = current.find((reaction) => reaction.commentId === commentId && reaction.userId === user.id && reaction.type === type);

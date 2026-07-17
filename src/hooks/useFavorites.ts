@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FavoriteRepository, type Favorite, type FavoriteKind } from '../repositories/favorites';
 import { useAuth } from './useAuth';
 
@@ -13,6 +13,7 @@ export function useFavorites(kind?: FavoriteKind) {
   const [favorites, setFavorites] = useState<FavoriteState>(emptyFavorites);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const pending = useRef(new Set<string>());
 
   const reload = useCallback(async () => {
     if (!user || !isAuthenticated || !FavoriteRepository) {
@@ -81,9 +82,14 @@ export function useFavorites(kind?: FavoriteKind) {
 
   const toggleFavorite = useCallback(async (id: string, targetKind: FavoriteKind | undefined = kind) => {
     if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
-    return favorites[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id))
-      ? removeFavorite(id, targetKind)
-      : addFavorite(id, targetKind);
+    const key = `${targetKind}:${id}`;
+    if (pending.current.has(key)) return { ok: false, message: 'Aguarde a alteração anterior.' };
+    pending.current.add(key);
+    const result = favorites[targetKind].some((item) => matchesFavoriteTarget(item, targetKind, id))
+      ? await removeFavorite(id, targetKind)
+      : await addFavorite(id, targetKind);
+    pending.current.delete(key);
+    return result;
   }, [addFavorite, favorites, kind, removeFavorite]);
 
   return { favorites, favoriteIds, isFavorite, addFavorite, removeFavorite, toggleFavorite, reload, isLoading, error };

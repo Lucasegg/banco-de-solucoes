@@ -171,3 +171,38 @@ A autenticação em dois fatores é opcional e usa exclusivamente os fatores TOT
 No Dashboard do projeto, acesse **Authentication → Multi-Factor Authentication** e habilite enrollment e verification de **TOTP**. Confira no Dashboard os limites de MFA do plano contratado, pois eles podem mudar. A sessão persistida pelo SDK volta inicialmente no nível primário; quando há fator TOTP verificado e o próximo nível é o reforçado, a aplicação bloqueia perfil e demais rotas protegidas até o desafio. Enrollment cria o fator e entrega QR/secret; challenge confirma a posse do autenticador e eleva a sessão. Fatores incompletos não bloqueiam login e são removidos antes de uma nova configuração; fatores verificados nunca são removidos automaticamente. Se existirem vários, a interface seleciona deterministicamente o TOTP verificado mais antigo e gerencia apenas esse fator nesta sprint.
 
 Recuperação de senha e MFA são proteções diferentes: redefinir a senha pode não remover fatores MFA. Em caso de perda do autenticador, a remoção administrativa deve seguir um procedimento de suporte seguro, com verificação de identidade e API administrativa executada somente em backend confiável. Nunca exponha a `service_role` no frontend. A disponibilidade, os limites e as políticas definitivas devem ser validados no projeto Supabase antes da publicação.
+
+## Sprint 20 — Comentários, reações e favoritos
+
+A Sprint 20 leva as interações de problemas e soluções ao Supabase, preservando o fluxo **UI → hooks → repositories → Supabase**. Componentes não importam o cliente de banco. A migration versionada `20260717120000_sprint20_interactions.sql` complementa as entregas parciais anteriores de comentários e favoritos e cria as reações.
+
+### Banco de dados e segurança
+
+- `comments`: autoria vinculada diretamente a `auth.users`, alvo exclusivo entre problema e solução, texto com 1 a 2.000 caracteres após `trim` e timestamps. A leitura é pública; INSERT exige `user_id = auth.uid()` e somente o autor pode atualizar ou excluir. Um segundo vínculo com `profiles` permite obter nome e avatar na mesma consulta, sem N+1.
+- `reactions`: aceita somente `useful`, `liked` e `interesting`, com exatamente um alvo. Índices únicos parciais impedem que o mesmo usuário repita uma reação no mesmo item. O `user_id` possui default `auth.uid()` e as policies permitem ao usuário autenticado ler, criar e excluir somente as próprias linhas; UPDATE não é permitido.
+- `get_reaction_summary`: RPC pública que retorna apenas contagens agregadas e, quando há sessão, os tipos selecionados pelo usuário atual. Ela não expõe a lista de usuários que reagiram.
+- `favorites`: alvo exclusivo, chaves únicas parciais e vínculo direto a `auth.users`. SELECT, INSERT e DELETE são restritos ao proprietário; favoritos são imutáveis e não possuem policy UPDATE.
+- As três tabelas usam RLS. Exclusões de usuário, problema ou solução usam `ON DELETE CASCADE`, evitando interações órfãs.
+
+### Interface
+
+Comentários aparecem nos detalhes de problemas e soluções com nome, avatar disponível, data, conteúdo e indicação de edição. Usuários autenticados podem criar, editar e excluir apenas os próprios comentários; envios vazios e acima de 2.000 caracteres são bloqueados, assim como cliques concorrentes. Não há respostas encadeadas nesta sprint.
+
+Os detalhes exibem **Útil**, **Gostei** e **Interessante**, com contagem pública e estado individual imediato. O toggle usa atualização otimista com rollback em erro. Favoritos estão nos cards e detalhes e são separados em problemas e soluções na área privada **Meus Favoritos**, onde também podem ser removidos.
+
+Visitantes podem ler comentários e contagens. Tentativas de comentar, reagir ou favoritar exibem uma mensagem simples solicitando login e não enviam escrita anônima.
+
+### Limitações conhecidas
+
+- A validação integrada de RLS e persistência requer um projeto Supabase com todas as migrations aplicadas e ao menos duas contas de teste.
+- Contagens mudadas por outra sessão aparecem após recarregar a página; realtime não faz parte desta sprint.
+- Comentários não possuem respostas, moderação ou denúncias nesta entrega. Funcionalidades da Sprint 21 não estão incluídas.
+
+### Roteiro de teste manual
+
+1. Aplique as migrations em um projeto Supabase e abra um problema e uma solução sem sessão; confirme comentários e contagens visíveis e mensagens de login nas ações.
+2. Entre com a conta A, crie um comentário com espaços nas extremidades, edite-o, recarregue e depois exclua-o. Confirme nome, avatar, data e marcador `editado`.
+3. Com a conta B, confirme que as ações de editar/excluir do comentário da conta A não aparecem e que uma alteração direta é recusada pela RLS.
+4. Na conta A, adicione e remova cada reação; clique duas vezes rapidamente, recarregue e confirme contagens, seleção persistida e ausência de duplicatas.
+5. Favorite e desfavorite cards e detalhes de problemas e soluções. Confira as duas seções em **Meus Favoritos** e remova itens diretamente nessa tela.
+6. Entre com a conta B e confirme que os favoritos da conta A não aparecem nem podem ser consultados; volte à conta A e confirme persistência após reload.

@@ -1,5 +1,5 @@
 export type DiscussionTargetType = 'problem' | 'solution';
-export type ReactionType = 'like' | 'support' | 'interesting' | 'needsEvidence';
+export type ReactionType = 'useful' | 'liked' | 'interesting';
 export type BadgeLevel = 'bronze' | 'silver' | 'gold';
 import type { ContentVisibility } from './moderation';
 
@@ -16,6 +16,7 @@ export interface Comment {
   targetId: string;
   authorId: string;
   authorName: string;
+  authorAvatarUrl: string | null;
   content: string;
   createdAt: string;
   updatedAt: string;
@@ -28,11 +29,19 @@ export interface Comment {
 
 export interface Reaction {
   id: string;
-  commentId: string;
   userId: string;
-  type: ReactionType;
+  problemId: string | null;
+  solutionId: string | null;
+  reactionType: ReactionType;
   createdAt: string;
 }
+
+/** Dados locais legados de reações a comentários; a Sprint 20 reage ao item. */
+export interface CommentReaction { id: string; commentId: string; userId: string; type: 'like' | 'support' | 'interesting' | 'needsEvidence'; createdAt: string; }
+export type CommentReactionType = CommentReaction['type'];
+
+export type ReactionCounts = Record<ReactionType, number>;
+export interface ReactionState { counts: ReactionCounts; selected: ReactionType[]; }
 
 export interface Badge {
   id: string;

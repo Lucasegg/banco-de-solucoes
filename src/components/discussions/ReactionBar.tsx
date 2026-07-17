@@ -1,14 +1,14 @@
 import { Eye, Heart, Lightbulb, MessageCircle } from 'lucide-react';
-import type { Reaction, ReactionType } from '../../types/discussion';
+import type { CommentReaction, CommentReactionType } from '../../types/discussion';
 
-const reactionOptions: { type: ReactionType; label: string; icon: JSX.Element }[] = [
+const reactionOptions: { type: CommentReactionType; label: string; icon: JSX.Element }[] = [
   { type: 'like', label: 'Curtir', icon: <Heart size={15} /> },
   { type: 'support', label: 'Apoiar', icon: <MessageCircle size={15} /> },
   { type: 'interesting', label: 'Interessante', icon: <Lightbulb size={15} /> },
   { type: 'needsEvidence', label: 'Precisa de evidências', icon: <Eye size={15} /> },
 ];
 
-export function ReactionBar({ commentId, reactions, currentUserId, onToggle }: { commentId: string; reactions: Reaction[]; currentUserId: string | null; onToggle: (type: ReactionType) => void }) {
+export function ReactionBar({ commentId, reactions, currentUserId, onToggle }: { commentId: string; reactions: CommentReaction[]; currentUserId: string | null; onToggle: (type: CommentReactionType) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
       {reactionOptions.map((option) => {
