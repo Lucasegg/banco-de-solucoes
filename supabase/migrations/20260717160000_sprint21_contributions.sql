@@ -44,8 +44,7 @@ grant execute on function public.is_contribution_moderator() to authenticated;
 
 alter table public.contributions enable row level security;
 alter table public.contribution_audit enable row level security;
-create policy "Public reads reviewed contributions" on public.contributions for select to anon using (status in ('approved', 'rejected'));
-create policy "Users read visible contributions" on public.contributions for select to authenticated using (status in ('approved', 'rejected') or user_id = auth.uid() or public.is_contribution_moderator());
+create policy "Users read own contributions and moderators read all" on public.contributions for select to authenticated using (user_id = auth.uid() or public.is_contribution_moderator());
 create policy "Users create own contributions" on public.contributions for insert to authenticated with check (user_id = auth.uid() and status = 'pending' and moderator_id is null and reviewed_at is null and rejection_reason is null);
 create policy "Moderators read contribution audit" on public.contribution_audit for select to authenticated using (public.is_contribution_moderator());
 -- Escritas de moderação passam exclusivamente pela função transacional abaixo.
