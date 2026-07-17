@@ -18,6 +18,7 @@ import { Account } from './pages/Account';
 import { PasswordRecovery } from './pages/PasswordRecovery';
 import { MfaChallenge } from './pages/MfaChallenge';
 import { Notifications } from './pages/Notifications';
+import { PublicMap } from './pages/PublicMap';
 import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaReturnTo';
 import { isPasswordRecoveryCallbackUrl } from './repositories/users/passwordRecoveryCallback';
 
@@ -39,6 +40,7 @@ const pageToHashPath: Record<string, string> = {
   'mfa-challenge': '/mfa-challenge',
   admin: '/admin',
   notifications: '/notificacoes',
+  mapa: '/mapa',
 };
 
 function normalizeHash(hash: string) {
@@ -63,6 +65,7 @@ function pageFromHash(hash: string) {
   if (path === '/mfa-challenge') return 'mfa-challenge';
   if (path === '/admin') return 'admin';
   if (path === '/notificacoes') return 'notifications';
+  if (path === '/mapa') return 'mapa';
   if (path === '/contributions') return 'contributions';
   if (path === '/favorites') return 'favorites';
   if (path === '/diagnostics') return 'diagnostics';
@@ -119,6 +122,7 @@ export function App() {
     <Layout currentPage={kind} onNavigate={setPage}>
       {page === 'home' && <Home onNavigate={setPage} />}
       {page === 'problemas' && <ExploreProblems onNavigate={setPage} onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
+      {page === 'mapa' && <PublicMap onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
       {page === 'solucoes' && <ExploreSolutions onNavigate={setPage} onOpen={(solutionId) => setPage(`solucao:${solutionId}`)} />}
       {kind === 'problema' && <ProblemDetails id={id} onNavigate={setPage} />}
       {kind === 'solucao' && <SolutionDetails id={id} onNavigate={setPage} />}

@@ -1,0 +1,5 @@
+import { useEffect, useState } from 'react';
+import { mapRepository } from '../../repositories/map';
+import type { MapProblem } from '../../types/map';
+import { PublicProblemMap } from './PublicProblemMap';
+export function ProblemLocationMap({problemId,onOpen}:{problemId:string;onOpen:(id:string)=>void}){const [problem,setProblem]=useState<MapProblem|null>(null);useEffect(()=>{let active=true;void mapRepository.getProblemLocation(problemId).then(result=>{if(active&&result.ok)setProblem(result.data)});return()=>{active=false}},[problemId]);if(!problem)return null;const lat=problem.location.latitude,lon=problem.location.longitude;return <section className="mt-8" aria-label="Localização do problema"><h2 className="mb-3 text-xl font-semibold">Localização</h2>{problem.location.precision!=='exact'&&<p className="mb-3 text-sm font-semibold text-amber-800">Localização aproximada</p>}<PublicProblemMap compact problems={[problem]} bounds={{north:lat+2,south:lat-2,east:lon+2,west:lon-2}} onOpen={onOpen}/></section>}

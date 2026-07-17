@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+.problem-map-shell { border: 1px solid #e2e8f0; border-radius: 2rem; height: clamp(600px, 68vh, 700px); min-height: 600px; overflow: hidden; position: relative; width: 100%; }
+.problem-map-shell--compact { height: 16rem; min-height: 16rem; }
+.problem-map-canvas { height: 100%; min-height: inherit; width: 100%; }
+.problem-map-loading { align-items: center; background: rgb(248 250 252 / 82%); display: flex; inset: 0; justify-content: center; position: absolute; z-index: 1000; }
+.problem-map-skeleton { animation: map-pulse 1.3s ease-in-out infinite; background: linear-gradient(90deg, #e2e8f0, #f8fafc, #e2e8f0); background-size: 200% 100%; border-radius: 1.5rem; height: calc(100% - 2rem); width: calc(100% - 2rem); }
+.map-cluster { align-items: center; animation: map-cluster-in .18s ease-out; background: #0f766e; border: 3px solid white; border-radius: 9999px; color: white; display: flex; font-size: .875rem; font-weight: 700; justify-content: center; box-shadow: 0 4px 14px #0f172a55; transition: transform .16s ease, background-color .16s ease, box-shadow .16s ease; }
+.map-cluster:hover, .map-cluster:focus { background: #115e59; box-shadow: 0 6px 18px #0f172a70; transform: scale(1.1); }
+.map-cluster span { line-height: 42px; text-align: center; width: 42px; }
+.map-popup-content { min-width: 220px; padding: .35rem; }
+.map-popup-title { color: #0f172a; display: block; font-size: 1rem; line-height: 1.35; margin-bottom: .65rem; }
+.map-popup-meta, .map-popup-location, .map-popup-date { color: #475569; line-height: 1.45; margin: .3rem 0; }
+.map-popup-date { font-size: .75rem; margin-top: .65rem; }
+.map-popup-date b { color: #0f766e; }
+.map-popup-button { background: #020617; border-radius: 9999px; color: white; cursor: pointer; font-weight: 600; margin-top: .75rem; padding: .65rem 1rem; transition: background-color .15s ease, transform .15s ease; width: 100%; }
+.map-popup-button:hover, .map-popup-button:focus { background: #1e293b; transform: translateY(-1px); }
+@keyframes map-pulse { 0%, 100% { background-position: 0 0; opacity: .7; } 50% { background-position: 100% 0; opacity: 1; } }
+@keyframes map-cluster-in { from { opacity: 0; transform: scale(.75); } to { opacity: 1; transform: scale(1); } }
+@media (max-width: 1023px) { .problem-map-shell { height: 500px; min-height: 500px; } }
+@media (max-width: 639px) { .problem-map-shell { border-radius: 1.5rem; height: 400px; min-height: 380px; } .problem-map-shell--compact { height: 16rem; min-height: 16rem; } }
+@media (prefers-reduced-motion: reduce) { .map-cluster, .problem-map-skeleton { animation: none; transition: none; } }
+
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #0f172a;
