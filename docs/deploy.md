@@ -33,9 +33,10 @@ O job `verify` executa `npm ci`, typecheck, testes da Sprint 26, `git diff --che
 Após `verify` ficar verde, o job `migrate-and-health`:
 
 1. conecta a Supabase CLI ao projeto usando uma versão fixa;
-2. executa `supabase db push`;
-3. executa `npm run check:database` usando a service role;
-4. configura Pages e envia o artifact já verificado.
+2. executa `npm run check:migration-baseline`, sem modificar o banco;
+3. executa `supabase db push`;
+4. executa `npm run check:database` usando a service role;
+5. configura Pages e envia o artifact já verificado.
 
 O job `deploy` depende de `migrate-and-health`. Falha de migration, schema incompatível, RPC/assinatura/coluna ausente ou indisponibilidade de Auth/Storage impede tanto o artifact de Pages quanto o deploy.
 
