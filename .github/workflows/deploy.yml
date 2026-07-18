@@ -51,6 +51,12 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: verify
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,27 +70,30 @@ jobs:
         with:
           name: pages-dist
           path: dist
+      - name: Validate required Supabase secrets
+        shell: bash
+        run: |
+          set +x
+          for secret_name in \
+            SUPABASE_PROJECT_REF \
+            SUPABASE_ACCESS_TOKEN \
+            SUPABASE_DB_PASSWORD \
+            SUPABASE_URL \
+            SUPABASE_SERVICE_ROLE_KEY
+          do
+            if [[ -z "${!secret_name:-}" ]]; then
+              echo "Missing required secret: ${secret_name}" >&2
+              exit 1
+            fi
+          done
       - name: Link Supabase project
         run: npx --yes supabase@2.39.2 link --project-ref "$SUPABASE_PROJECT_REF"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       - name: Check migration baseline
         run: npm run check:migration-baseline
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       - name: Apply database migrations
         run: npx --yes supabase@2.39.2 db push
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       - name: Validate production database health
         run: npm run check:database
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

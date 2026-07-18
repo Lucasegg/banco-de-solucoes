@@ -2,20 +2,39 @@
 
 ## Categorias de secrets
 
+Cadastre todos os secrets em **Settings → Secrets and variables → Actions → New
+repository secret** no repositório do GitHub. Use exatamente os nomes abaixo e
+copie os valores das áreas indicadas no dashboard da Supabase:
+
 ### Supabase CLI — migrations
 
-- `SUPABASE_ACCESS_TOKEN`: token de gerenciamento consumido exclusivamente pela CLI;
-- `SUPABASE_PROJECT_REF`: referência do projeto;
-- `SUPABASE_DB_PASSWORD`: senha do banco remoto.
+- `SUPABASE_ACCESS_TOKEN`: crie um token pessoal em **Account Settings → Access
+  Tokens**. Ele fica disponível no ambiente do job com esse nome, que é o nome
+  reconhecido pela Supabase CLI;
+- `SUPABASE_PROJECT_REF`: copie o **Reference ID** em **Project Settings →
+  General**. O valor deve conter **somente o Reference ID** (por exemplo,
+  `abcdefghijklmnopqrst`), nunca a URL completa do projeto, e é passado a
+  `supabase link --project-ref`;
+- `SUPABASE_DB_PASSWORD`: use a senha definida na criação do projeto. Se ela não
+  estiver disponível no gerenciador de senhas da equipe, redefina-a em **Project
+  Settings → Database** antes de atualizar o secret.
 
 O access token de gerenciamento **não é um JWT do projeto** e nunca é enviado a `/rest`, `/auth` ou `/storage`.
 
 ### Health check server-side
 
-- `SUPABASE_URL`: URL do projeto;
-- `SUPABASE_SERVICE_ROLE_KEY`: credencial estável usada pela RPC e pelos checks somente leitura de Auth e Storage.
+- `SUPABASE_URL`: copie a **Project URL** exibida em **Project Settings → API**;
+- `SUPABASE_SERVICE_ROLE_KEY`: copie a chave `service_role` em **Project Settings
+  → API → Project API keys**. Essa é a credencial server-side usada pela RPC e
+  pelos checks somente leitura de Auth e Storage.
 
 A service role existe somente nos secrets protegidos do GitHub Actions. Ela nunca recebe prefixo `VITE_`, nunca vai para o frontend, artefatos ou logs e deve ser rotacionada se houver suspeita de exposição.
+
+O job valida os cinco nomes obrigatórios antes de executar a CLI e informa apenas
+o nome que estiver ausente. A validação não imprime, não mascara parcialmente e
+não registra os valores. O health check server-side usa exclusivamente
+`SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`; `VITE_SUPABASE_ANON_KEY` não é uma
+credencial válida para essa etapa.
 
 ### Build público
 
