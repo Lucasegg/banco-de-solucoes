@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "tsc --noEmit",
     "test:sprint26": "node --experimental-strip-types --test src/services/systemHealth.test.ts",
+    "check:migration-baseline": "node --experimental-strip-types scripts/checkMigrationBaseline.ts",
     "check:database": "node --experimental-strip-types scripts/checkDatabase.ts"
   },
   "dependencies": {
