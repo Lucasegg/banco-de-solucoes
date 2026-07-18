@@ -321,4 +321,4 @@ Sem Supabase, o `MapRepository` lê a coleção `problems` já usada pelo armaze
 
 ## Sprint 26 — Confiabilidade e observabilidade
 
-Administradores podem acessar `#/admin/system` para validar banco, RPCs, colunas obrigatórias e a versão registrada em `app_schema_version`. A mesma validação pode integrar o deploy com `npm run check:database`; consulte [`docs/deploy.md`](docs/deploy.md) para promoção e rollback. Erros operacionais novos usam o logger estruturado central e o mapa apresenta uma mensagem recuperável sem expor detalhes internos.
+Administradores podem acessar `#/admin/system` para validar banco, versão, assinaturas das RPCs, colunas obrigatórias, Auth, Storage e latência. A mesma validação bloqueia o deploy com `npm run check:database`; consulte [`docs/deploy.md`](docs/deploy.md) para secrets, promoção e rollback. Erros operacionais usam o logger central com sanitização de segredos, e a interface apresenta mensagens recuperáveis sem expor detalhes internos.
