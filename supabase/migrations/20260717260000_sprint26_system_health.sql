@@ -24,7 +24,7 @@ declare
   missing_columns text[];
   checks jsonb;
 begin
-  if not public.is_admin() then
+  if auth.role() is distinct from 'service_role' and not coalesce(public.is_admin(), false) then
     raise exception 'Not authorized' using errcode = '42501';
   end if;
 
@@ -79,4 +79,5 @@ $$;
 
 revoke all on function public.get_system_health() from public;
 grant execute on function public.get_system_health() to authenticated;
+grant execute on function public.get_system_health() to service_role;
 notify pgrst, 'reload schema';

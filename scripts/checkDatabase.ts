@@ -24,16 +24,15 @@ async function readonlyServiceCheck(name: 'auth' | 'storage', endpoint: string, 
 
 export async function runDatabaseCheck(env: Environment = process.env): Promise<number> {
   const url = env.SUPABASE_URL;
-  const key = env.SUPABASE_ANON_KEY;
-  const token = env.SUPABASE_ACCESS_TOKEN;
-  if (!url || !key || !token) { console.error('Configuração incompleta: defina SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_ACCESS_TOKEN.'); return 1; }
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRoleKey) { console.error('Configuração incompleta: defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.'); return 1; }
   const base = url.replace(/\/$/, '');
-  const headers = { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const headers = { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json' };
   try {
     const started = performance.now();
     const [rpcResponse, auth, storage] = await Promise.all([
       fetch(`${base}/rest/v1/rpc/get_system_health`, { method: 'POST', headers, body: '{}' }),
-      readonlyServiceCheck('auth', `${base}/auth/v1/user`, headers),
+      readonlyServiceCheck('auth', `${base}/auth/v1/settings`, headers),
       readonlyServiceCheck('storage', `${base}/storage/v1/bucket`, headers),
     ]);
     if (!rpcResponse.ok) { console.error(`✗ database — diagnóstico indisponível (HTTP ${rpcResponse.status})`); return 1; }

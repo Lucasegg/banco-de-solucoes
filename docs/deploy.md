@@ -1,36 +1,46 @@
-# Deploy, health check e rollback
+# CI, deploy e diagnóstico
 
-## Secrets obrigatórios
+## Categorias de secrets
 
-Configure no ambiente protegido do GitHub Actions:
+### Supabase CLI — migrations
+
+- `SUPABASE_ACCESS_TOKEN`: token de gerenciamento consumido exclusivamente pela CLI;
+- `SUPABASE_PROJECT_REF`: referência do projeto;
+- `SUPABASE_DB_PASSWORD`: senha do banco remoto.
+
+O access token de gerenciamento **não é um JWT do projeto** e nunca é enviado a `/rest`, `/auth` ou `/storage`.
+
+### Health check server-side
 
 - `SUPABASE_URL`: URL do projeto;
-- `SUPABASE_ANON_KEY`: chave pública usada como `apikey` nas chamadas server-side;
-- `SUPABASE_ACCESS_TOKEN`: token de sessão de uma conta `admin`, usado somente no CI;
-- `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`: configuração pública do build do frontend.
+- `SUPABASE_SERVICE_ROLE_KEY`: credencial estável usada pela RPC e pelos checks somente leitura de Auth e Storage.
 
-`SUPABASE_ACCESS_TOKEN` não pode usar prefixo `VITE_`, ser gravado em logs, incluído em artefatos ou disponibilizado ao navegador. O script não possui fallback para variáveis do Vite. Renove ou revogue o token conforme a política operacional do projeto.
+A service role existe somente nos secrets protegidos do GitHub Actions. Ela nunca recebe prefixo `VITE_`, nunca vai para o frontend, artefatos ou logs e deve ser rotacionada se houver suspeita de exposição.
 
-## Ordem do deploy
+### Build público
 
-1. Faça backup e aplique migrations com `supabase db push` antes de promover o frontend.
-2. Execute `npm ci`.
-3. Execute `npm test` e `npm run test:sprint26`.
-4. Execute `npm run build`.
-5. Execute `npm run check:database` com os três secrets server-side configurados.
-6. Publique somente quando todos os comandos terminarem com exit code zero.
+- `VITE_SUPABASE_URL`;
+- `VITE_SUPABASE_ANON_KEY`.
 
-O workflow executa o health check antes do build e bloqueia o deploy quando a migration, versão, coluna ou assinatura de RPC estiver incompatível, ou quando Auth/Storage não responderem. O check é somente leitura: consulta a sessão atual e a lista de buckets, sem upload ou modificação de arquivos.
+Somente essas configurações públicas são incorporadas pelo Vite.
 
-## Validação pós-deploy
+## Pull requests
 
-1. Acesse `#/admin/system` com uma conta administradora.
-2. Confirme os checks `database`, `schema_version`, `required_rpcs`, `required_columns`, `auth`, `storage` e `response_time`.
-3. Confirme a versão esperada e encontrada, latências e timestamp.
-4. Consulte logs estruturados com o prefixo `BancoDeSolucoes` e os logs do PostgREST sem copiar credenciais.
+O job `verify` executa `npm ci`, typecheck, testes da Sprint 26, `git diff --check` e build. Pull requests não aplicam migrations, não consultam produção, não usam credenciais server-side e não fazem deploy. Assim, a validação de uma PR não depende da disponibilidade do projeto Supabase.
 
-## Migrations e rollback
+## Push para `main`
 
-Migrations futuras devem ser incrementais e idempotentes: use `CREATE TABLE IF NOT EXISTS`, `INSERT ... ON CONFLICT` e `CREATE OR REPLACE FUNCTION`. Não apague nem edite uma migration já aplicada e não use SQL destrutivo para corrigir um deploy.
+Após `verify` ficar verde, o job `migrate-and-health`:
 
-Em caso de falha, reverta primeiro o frontend. Para o banco, crie uma migration compensatória idempotente, registre uma nova versão em `app_schema_version`, aplique-a e repita toda a validação. O deploy deve permanecer bloqueado enquanto `health.ok` não for `true`.
+1. conecta a Supabase CLI ao projeto usando uma versão fixa;
+2. executa `supabase db push`;
+3. executa `npm run check:database` usando a service role;
+4. configura Pages e envia o artifact já verificado.
+
+O job `deploy` depende de `migrate-and-health`. Falha de migration, schema incompatível, RPC/assinatura/coluna ausente ou indisponibilidade de Auth/Storage impede tanto o artifact de Pages quanto o deploy.
+
+## Validação pós-deploy e rollback
+
+Após publicar, acesse `#/admin/system` como administrador e confirme `database`, `schema_version`, `required_rpcs`, `required_columns`, `auth`, `storage` e `response_time`, incluindo versão, latências e timestamp.
+
+Nunca apague ou edite uma migration aplicada. Em caso de falha, reverta primeiro o frontend e crie uma migration compensatória idempotente usando `IF NOT EXISTS`, `ON CONFLICT` e `CREATE OR REPLACE FUNCTION`; depois repita migrations, health check e deploy.
