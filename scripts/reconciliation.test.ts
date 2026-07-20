@@ -46,3 +46,9 @@ test('report_comment is RPC-mediated, normalized, and returns the comment id', (
  const report = migration.slice(migration.lastIndexOf('create or replace function public.report_comment'));
  assert.match(report, /user_id<>reporter_id/); assert.match(report, /btrim\(p_reason\)/); assert.match(report, /return p_comment_id/); assert.doesNotMatch(report, /return v_id/);
 });
+test('comment count trigger branches by TG_OP without invalid transition-record access', () => {
+ const sync = migration.slice(migration.lastIndexOf('create or replace function public.sync_comment_count'), migration.lastIndexOf('drop trigger if exists sync_comment_count_after_insert'));
+ assert.match(sync, /tg_op='INSERT'/); assert.match(sync, /tg_op='UPDATE'/); assert.match(sync, /tg_op='DELETE'/);
+ assert.match(migration, /deleted=false and visibility<>'removed'/);
+ assert.match(sync, /return new;elsif tg_op='DELETE'.*return old;/s);
+});
