@@ -92,7 +92,11 @@ jobs:
         run: npx --yes supabase@2.39.2 link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Check migration baseline
         run: npm run check:migration-baseline
-      # Reconciliação de histórico é uma operação manual, auditada e documentada.
+      # Legacy recovery remains manual. After its baseline is recorded, normal deployments push new migrations.
+      - name: Check normal deployment baseline
+        run: npm run check:migration-baseline
+      - name: Apply database migrations after baseline
+        run: npx --yes supabase@2.39.2 db push
       - name: Audit production schema (read only)
         run: npm run audit:legacy-schema
       - name: Validate production database health
