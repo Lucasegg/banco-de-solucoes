@@ -30,5 +30,8 @@ test('migration order and exact Sprint 22–24 contracts are explicit', () => {
  assert.equal((workflow.match(/name: Check migration baseline/g) ?? []).length, 1);
 });
 test('audit trail and comment preservation contracts are present', () => {
- for (const invariant of ["auth.uid() is null", "jsonb_typeof(coalesce(p_metadata", 'pg_column_size(coalesce(p_metadata', "nullif(trim(p_target_type),'')", 'Admins read audit events', 'revoke insert,update,delete on public.audit_events', 'audit_domain_change', 'audit_problems_change', 'audit_solutions_change', 'author_id and user_id diverge', 'set user_id=coalesce(user_id,author_id)', 'comment_reports_reason_check', 'sprint20_protect_comment_fields']) assert.ok(migration.includes(invariant));
+ for (const invariant of ["auth.uid() is null", "jsonb_typeof(coalesce(p_metadata", 'pg_column_size(coalesce(p_metadata', "nullif(trim(p_target_type),'')", 'Admins read audit events', 'revoke insert,update,delete on public.audit_events', 'audit_domain_change', 'audit_problems_change', 'audit_solutions_change', 'author_id and user_id diverge', 'set user_id=author_id', 'comment_reports_reason_check', 'sprint20_protect_comment_fields']) assert.ok(migration.includes(invariant));
+});
+test('comments reconciliation covers all legacy ownership states and final catalog audit', () => {
+ for (const fragment of ['has_author and not has_user', 'not has_author and not has_user', 'has_author and has_user', 'author_id and user_id diverge', 'alter column user_id set not null', 'comments_user_id_fkey', 'comments_user_profile_fkey', 'comments_user_id_idx', 'comment_reports_comment_id_idx', 'pg_get_constraintdef', 'invalid existing role values', 'invalid existing status values', 'required_tables', 'required_columns', 'required_indexes', 'required_policies', 'required_triggers']) assert.ok(migration.includes(fragment));
 });
