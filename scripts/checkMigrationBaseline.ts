@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process';
 
 export const REQUIRED_BASELINE = ['20260717250000', '20260717251000'] as const;
+export const RECONCILIATION_MIGRATION = '20260717262000' as const;
 export const SPRINT_26_MIGRATION = '20260717260000' as const;
+export const LEGACY_VERSIONS = ['20260715130000', '20260715150000', '20260715170000', '20260716120000', '20260716150000', '20260716160000', '20260716170000', '20260717120000', '20260717160000', '20260717190000', '20260717210000', '20260717230000', '20260717240000'] as const;
 export type MigrationState = { local: Set<string>; remote: Set<string> };
 type CommandResult = { status: number | null; stdout: string };
 
@@ -24,19 +26,21 @@ export function validateMigrationBaseline(state: MigrationState): string[] {
     if (!state.local.has(version)) errors.push(`Migration local obrigatória ausente: ${version}.`);
     if (!state.remote.has(version)) errors.push(`Migration aplicada manualmente ainda não registrada: ${version}.`);
   }
-  if (!state.local.has(SPRINT_26_MIGRATION)) errors.push(`Migration local da Sprint 26 ausente: ${SPRINT_26_MIGRATION}.`);
+  if (!state.local.has(RECONCILIATION_MIGRATION)) errors.push(`Migration local de reconciliação ausente: ${RECONCILIATION_MIGRATION}.`);
+  // Production's documented legacy state has only map migrations recorded. Never
+  // accept superficial table presence as a baseline: reconciliation must be recorded.
+  const legacyScenario = REQUIRED_BASELINE.every((version) => state.remote.has(version)) && LEGACY_VERSIONS.every((version) => !state.remote.has(version));
+  if (legacyScenario && !state.remote.has(RECONCILIATION_MIGRATION)) errors.push(`Cenário legado detectado: execute e registre a reconciliação ${RECONCILIATION_MIGRATION} antes do baseline manual.`);
   for (const version of state.remote) if (!state.local.has(version)) errors.push(`Migration remota sem correspondente local: ${version}.`);
-  for (const version of state.local) if (version < SPRINT_26_MIGRATION && !state.remote.has(version)) errors.push(`Migration anterior à Sprint 26 ainda pendente: ${version}.`);
   return [...new Set(errors)];
 }
-
 export function baselineSummary(state: MigrationState, errors: string[]): string {
   if (errors.length === 0) {
     const sprint26 = state.remote.has(SPRINT_26_MIGRATION) ? 'aplicada' : 'pendente';
-    return `✓ Histórico de migrations alinhado.\nSprint 26: ${sprint26}.`;
+    return `✓ Histórico de migrations alinhado.\nReconciliação: aplicada.\nSprint 26: ${sprint26}.`;
   }
   const missing = REQUIRED_BASELINE.filter((version) => !state.remote.has(version));
-  return ['✗ Histórico de migrations não está alinhado.', ...errors.map((error) => `- ${error}`), ...(missing.length ? ['', 'Migrations aplicadas manualmente que precisam ser registradas:', ...missing.map((version) => `- ${version}`)] : []), '', 'Execute o procedimento documentado de baseline antes de habilitar o deploy automático.'].join('\n');
+  return ['✗ Histórico de migrations não está alinhado.', ...errors.map((error) => `- ${error}`), ...(missing.length ? ['', 'Migrations aplicadas manualmente que precisam ser registradas:', ...missing.map((version) => `- ${version}`)] : []), '', 'Não execute --include-all nem repair automaticamente. Siga o procedimento manual de reconciliação e baseline em docs/deploy.md.'].join('\n');
 }
 
 export function runMigrationBaselineCheck(run: () => CommandResult = () => {

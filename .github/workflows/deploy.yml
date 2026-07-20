@@ -32,6 +32,8 @@ jobs:
         run: npm test
       - name: Sprint 26 tests
         run: npm run test:sprint26
+      - name: Reconciliation safety tests
+        run: npm run test:reconciliation
       - name: Check patch formatting
         run: git diff --check
       - name: Build
@@ -90,8 +92,9 @@ jobs:
         run: npx --yes supabase@2.39.2 link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Check migration baseline
         run: npm run check:migration-baseline
-      - name: Apply database migrations
-        run: npx --yes supabase@2.39.2 db push
+      # Reconciliação de histórico é uma operação manual, auditada e documentada.
+      - name: Audit production schema (read only)
+        run: npm run audit:legacy-schema
       - name: Validate production database health
         run: npm run check:database
       - name: Configure Pages

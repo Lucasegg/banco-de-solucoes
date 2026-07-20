@@ -10,7 +10,9 @@
     "test": "tsc --noEmit",
     "test:sprint26": "node --experimental-strip-types --test src/services/systemHealth.test.ts",
     "check:migration-baseline": "node --experimental-strip-types scripts/checkMigrationBaseline.ts",
-    "check:database": "node --experimental-strip-types scripts/checkDatabase.ts"
+    "check:database": "node --experimental-strip-types scripts/checkDatabase.ts",
+    "audit:legacy-schema": "node --experimental-strip-types scripts/auditLegacySchema.ts",
+    "test:reconciliation": "node --experimental-strip-types --test scripts/reconciliation.test.ts"
   },
   "dependencies": {
     "vite": "latest",
