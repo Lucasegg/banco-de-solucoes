@@ -125,7 +125,7 @@ colunas, constraints, índices, funções, triggers, RLS, grants ou Storage poli
 aplicados. Portanto, não use `supabase db push --include-all` e não marque todo o
 histórico como aplicado antes da reconciliação.
 
-A migration `20260717262000_hotfix26_2_reconcile_legacy_schema.sql` é aditiva e
+A migration `20260717259000_hotfix26_2_reconcile_legacy_schema.sql` é aditiva e
 idempotente: ela preserva linhas/IDs, não executa seeds ou imports e não contém
 `DROP TABLE`/`TRUNCATE`. O workflow não chama `db push`, `--include-all` nem
 `migration repair`; nenhuma service role é entregue ao frontend.
@@ -150,7 +150,7 @@ Faça backup e aplique **somente** a migration auditável, sem reaplicar legadas
 
 ```bash
 npx --yes supabase@2.39.2 link --project-ref "$SUPABASE_PROJECT_REF"
-npx --yes supabase@2.39.2 db execute --linked --file supabase/migrations/20260717262000_hotfix26_2_reconcile_legacy_schema.sql
+npx --yes supabase@2.39.2 db execute --linked --file supabase/migrations/20260717259000_hotfix26_2_reconcile_legacy_schema.sql
 npm run audit:legacy-schema
 ```
 
@@ -171,7 +171,7 @@ a migration uma vez em staging para confirmar idempotência.
 manual e nunca GitHub Actions):
 
 ```bash
-for version in 20260715130000 20260715150000 20260715170000 20260716120000 20260716150000 20260716160000 20260716170000 20260717120000 20260717160000 20260717190000 20260717210000 20260717230000 20260717240000 20260717262000; do
+for version in 20260715130000 20260715150000 20260715170000 20260716120000 20260716150000 20260716160000 20260716170000 20260717120000 20260717160000 20260717190000 20260717210000 20260717230000 20260717240000 20260717259000; do
   npx --yes supabase@2.39.2 migration repair --linked --status applied "$version"
 done
 npx --yes supabase@2.39.2 migration list --linked
