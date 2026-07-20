@@ -111,3 +111,92 @@ A PR só deve ser mergeada depois de configurar os secrets, concluir esse baseli
 Após publicar, acesse `#/admin/system` como administrador e confirme `database`, `schema_version`, `required_rpcs`, `required_columns`, `auth`, `storage` e `response_time`, incluindo versão, latências e timestamp.
 
 Nunca apague ou edite uma migration aplicada. Em caso de falha, reverta primeiro o frontend e crie uma migration compensatória idempotente usando `IF NOT EXISTS`, `ON CONFLICT` e `CREATE OR REPLACE FUNCTION`; depois repita migrations, health check e deploy.
+
+## Hotfix 26.2 — recuperação de histórico legado do Supabase
+
+### Diagnóstico confirmado
+
+A produção tem somente `20260717250000` (`public_problem_map`) e
+`20260717251000` (`hotfix_map_rpc_cache`) em `supabase_migrations.schema_migrations`.
+Os objetos `profiles`, `problems`, `solutions`, `comments` e `favorites` existem, mas
+`reactions`, `contributions`, `contribution_audit`, `audit_events`, `notifications` e
+`problem_timeline` não existem. A existência de uma tabela **não** prova que suas
+colunas, constraints, índices, funções, triggers, RLS, grants ou Storage policies foram
+aplicados. Portanto, não use `supabase db push --include-all` e não marque todo o
+histórico como aplicado antes da reconciliação.
+
+A migration `20260717259000_hotfix26_2_reconcile_legacy_schema.sql` é aditiva e
+idempotente: ela preserva linhas/IDs, não executa seeds ou imports e não contém
+`DROP TABLE`/`TRUNCATE`. O workflow não chama `db push`, `--include-all` nem
+`migration repair`; nenhuma service role é entregue ao frontend.
+
+### Fase A — auditoria (somente leitura)
+
+No ambiente administrativo seguro (nunca no browser), configure `SUPABASE_URL` e
+`SUPABASE_SERVICE_ROLE_KEY` e execute:
+
+```bash
+npm ci
+npm run audit:legacy-schema
+npx --yes supabase@2.39.2 migration list --linked
+```
+
+Guarde a saída da auditoria e confirme o histórico de duas versões antes de seguir.
+O script não imprime credenciais e retorna erro quando detecta divergências.
+
+### Fase B — reconciliação do schema
+
+Faça backup e aplique **somente** a migration auditável, sem reaplicar legadas:
+
+```bash
+npx --yes supabase@2.39.2 link --project-ref "$SUPABASE_PROJECT_REF"
+npx --yes supabase@2.39.2 db execute --linked --file supabase/migrations/20260717259000_hotfix26_2_reconcile_legacy_schema.sql
+npm run audit:legacy-schema
+```
+
+Se a versão instalada da CLI não disponibilizar `db execute --file`, execute o mesmo
+arquivo pelo SQL Editor administrativo do Supabase, registre a evidência e **não**
+insira linhas em `supabase_migrations.schema_migrations` por SQL da aplicação.
+
+### Fase C — validação
+
+Revise a saída da auditoria e valide manualmente colunas de perfis/sociais, proveniência
+do catálogo, comentários, favoritos, reações, contribuições/auditoria, notificações,
+timeline, RPCs/triggers de Sprints 20–24, e grants das RPCs do mapa 25/25.1. Reexecute
+a migration uma vez em staging para confirmar idempotência.
+
+### Fase D — baseline manual do histórico
+
+**Somente após a Fase C**, use a CLI oficial para registrar o baseline (nunca SQL
+manual e nunca GitHub Actions):
+
+```bash
+for version in 20260715130000 20260715150000 20260715170000 20260716120000 20260716150000 20260716160000 20260716170000 20260717120000 20260717160000 20260717190000 20260717210000 20260717230000 20260717240000 20260717259000; do
+  npx --yes supabase@2.39.2 migration repair --linked --status applied "$version"
+done
+npx --yes supabase@2.39.2 migration list --linked
+npm run check:migration-baseline
+```
+
+`repair` é uma ação humana explícita, registrada no change ticket; ela nunca é
+automatizada. Não marque uma versão se a auditoria ainda reportar seu objeto completo
+como divergente.
+
+### Fase E — aplicação da Sprint 26
+
+Com o baseline validado, aplique a migration normal da Sprint 26 (sem `--include-all`):
+
+```bash
+npx --yes supabase@2.39.2 db push
+```
+
+### Fase F — health check e deploy
+
+```bash
+npm run check:database
+npm run audit:legacy-schema
+npm run build
+```
+
+Somente depois dos checks verdes, habilite o deploy. O pipeline apenas verifica e faz
+auditoria; ele não tenta corrigir histórico nem schema de produção automaticamente.
