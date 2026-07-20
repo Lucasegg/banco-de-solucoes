@@ -35,3 +35,10 @@ test('audit trail and comment preservation contracts are present', () => {
 test('comments reconciliation covers all legacy ownership states and final catalog audit', () => {
  for (const fragment of ['has_author and not has_user', 'not has_author and not has_user', 'has_author and has_user', 'author_id and user_id diverge', 'alter column user_id set not null', 'comments_user_id_fkey', 'comments_user_profile_fkey', 'comments_user_id_idx', 'comment_reports_comment_id_idx', 'pg_get_constraintdef', 'invalid existing role values', 'invalid existing status values', 'required_tables', 'required_columns', 'required_indexes', 'required_policies', 'required_triggers']) assert.ok(migration.includes(fragment));
 });
+test('catalog audit never statically references removed comments.author_id', () => {
+ const auditSql = migration.slice(migration.lastIndexOf('create or replace function public.audit_legacy_schema'));
+ assert.doesNotMatch(auditSql, /from public\.comments where author_id/i);
+ assert.match(auditSql, /comments:author-id-still-present/);
+ assert.match(migration, /Moderators can read comment reports/);
+ assert.match(migration, /report_comment\(p_comment_id uuid,p_reason text\)/);
+});
