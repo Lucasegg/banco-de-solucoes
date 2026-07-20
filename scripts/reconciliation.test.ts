@@ -42,3 +42,7 @@ test('catalog audit never statically references removed comments.author_id', () 
  assert.match(migration, /Moderators can read comment reports/);
  assert.match(migration, /report_comment\(p_comment_id uuid,p_reason text\)/);
 });
+test('report_comment is RPC-mediated, normalized, and returns the comment id', () => {
+ const report = migration.slice(migration.lastIndexOf('create or replace function public.report_comment'));
+ assert.match(report, /user_id<>reporter_id/); assert.match(report, /btrim\(p_reason\)/); assert.match(report, /return p_comment_id/); assert.doesNotMatch(report, /return v_id/);
+});
