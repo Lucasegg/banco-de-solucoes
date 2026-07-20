@@ -52,3 +52,7 @@ test('comment count trigger branches by TG_OP without invalid transition-record 
  assert.match(migration, /deleted=false and visibility<>'removed'/);
  assert.match(sync, /return new;elsif tg_op='DELETE'.*return old;/s);
 });
+test('audit requires public comment policy and mediated comment report privileges', () => {
+ const auditSql = migration.slice(migration.lastIndexOf('create or replace function public.audit_legacy_schema'));
+ for (const contract of ['Public can read comments','has_function_privilege','has_table_privilege','public.set_domain_updated_at()']) assert.ok(auditSql.includes(contract) || migration.includes(contract));
+});
