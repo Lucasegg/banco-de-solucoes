@@ -29,3 +29,6 @@ test('migration order and exact Sprint 22–24 contracts are explicit', () => {
  assert.ok(migration.includes("'verified_organization'")); assert.ok(migration.includes("'Reportado','Em análise','Em vistoria','Planejado','Licitado','Em execução','Parcialmente resolvido','Resolvido','Arquivado','Reaberto'"));
  assert.equal((workflow.match(/name: Check migration baseline/g) ?? []).length, 1);
 });
+test('audit trail and comment preservation contracts are present', () => {
+ for (const invariant of ["auth.uid() is null", "jsonb_typeof(coalesce(p_metadata", 'pg_column_size(coalesce(p_metadata', "nullif(trim(p_target_type),'')", 'Admins read audit events', 'revoke insert,update,delete on public.audit_events', 'audit_domain_change', 'audit_problems_change', 'audit_solutions_change', 'author_id and user_id diverge', 'set user_id=coalesce(user_id,author_id)', 'comment_reports_reason_check', 'sprint20_protect_comment_fields']) assert.ok(migration.includes(invariant));
+});
