@@ -55,7 +55,28 @@ do $$ begin
  if to_regclass('public.problems') is not null and not exists(select 1 from pg_constraint where conrelid='public.problems'::regclass and conname='problems_geolocation_pair_check') then alter table public.problems add constraint problems_geolocation_pair_check check ((latitude is null) = (longitude is null)) not valid; end if;
  if to_regclass('public.problems') is not null and not exists(select 1 from pg_constraint where conrelid='public.problems'::regclass and conname='problems_latitude_check') then alter table public.problems add constraint problems_latitude_check check (latitude is null or latitude between -90 and 90) not valid; end if;
  if to_regclass('public.problems') is not null and not exists(select 1 from pg_constraint where conrelid='public.problems'::regclass and conname='problems_longitude_check') then alter table public.problems add constraint problems_longitude_check check (longitude is null or longitude between -180 and 180) not valid; end if;
- if to_regclass('public.comments') is not null and not exists(select 1 from pg_constraint where conrelid='public.comments'::regclass and conname='comments_user_profile_fkey') then alter table public.comments add constraint comments_user_profile_fkey foreign key(user_id) references public.profiles(id) on delete cascade not valid; end if;
+ if to_regclass('public.comments') is not null
+    and exists(
+      select 1
+      from information_schema.columns
+      where table_schema='public'
+        and table_name='comments'
+        and column_name='user_id'
+    )
+    and not exists(
+      select 1
+      from pg_constraint
+      where conrelid='public.comments'::regclass
+        and conname='comments_user_profile_fkey'
+    )
+  then
+    alter table public.comments
+      add constraint comments_user_profile_fkey
+      foreign key(user_id)
+      references public.profiles(id)
+      on delete cascade
+      not valid;
+  end if;
 end $$;
 
 create unique index if not exists reactions_user_problem_type_unique on public.reactions(user_id,problem_id,reaction_type) where problem_id is not null;
