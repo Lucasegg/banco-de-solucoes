@@ -9,7 +9,7 @@ export function hasRole(user: UserProfile | null | undefined, roles: UserRole[])
 export function getPermissions(user: UserProfile | null | undefined) {
   const isAdmin = hasRole(user, ['admin']);
   return {
-    canAccessAdmin: isAdmin || hasRole(user, ['curator', 'moderator']),
+    canAccessAdmin: isAdmin,
     canReviewContributions: isAdmin || hasRole(user, ['curator']),
     canModerateComments: isAdmin || hasRole(user, ['moderator']),
     canViewAudit: isAdmin,

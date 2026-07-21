@@ -71,6 +71,13 @@ declare module 'lucide-react' {
   export const LogOut: any;
   export const Mail: any;
   export const ShieldCheck: any;
+  export const Activity: any;
+  export const AlertTriangle: any;
+  export const ClipboardList: any;
+  export const FileWarning: any;
+  export const MessageSquare: any;
+  export const Settings: any;
+  export const Users: any;
 }
 
 declare module '*.css';

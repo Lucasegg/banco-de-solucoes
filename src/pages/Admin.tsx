@@ -1,70 +1,73 @@
-import { useEffect, useState } from 'react';
-import type { ChangeEvent } from 'react';
-import { ContributionDiff } from '../components/contributions/ContributionDiff';
-import { useAuth } from '../hooks/useAuth';
-import { useContributions } from '../hooks/useContributions';
-import { useDiscussions } from '../hooks/useDiscussions';
-import { useModeration } from '../hooks/useModeration';
-import { CommentRepository } from '../repositories/comments';
-import { usePermissions } from '../hooks/usePermissions';
-import type { ModerationActionType, ModerationTargetType } from '../types/moderation';
-import type { Comment } from '../types/discussion';
-import { AuditPanel, RoleManager } from '../components/admin/AuditPanel';
+import { useEffect, type ReactNode } from 'react';
+import { Activity, AlertTriangle, ClipboardList, FileWarning, MessageSquare, Settings, ShieldCheck, Users } from 'lucide-react';
 
-const tabs = ['overview', 'contributions', 'comments', 'history', 'audit', 'roles'] as const;
-type Tab = typeof tabs[number];
+type AdminDestination = 'admin-users' | 'admin-problems' | 'admin-solutions' | 'admin-comments' | 'admin-reports' | 'admin-audit' | 'admin-system';
 
-export function AdminPanel() {
-  const { user } = useAuth();
-  const permissions = usePermissions(user);
-  const contributionsHook = useContributions(user);
-  const discussions = useDiscussions();
-  const moderation = useModeration(user);
-  const [tab, setTab] = useState<Tab>('overview');
-  const [feedback, setFeedback] = useState('');
-  const [reason, setReason] = useState('');
-  const [targetFilter, setTargetFilter] = useState<ModerationTargetType | 'all'>('all');
-  const [actionFilter, setActionFilter] = useState<ModerationActionType | 'all'>('all');
-  const [moderatorFilter, setModeratorFilter] = useState('');
-  const [contributionSearch, setContributionSearch] = useState('');
-  const [contributionStatus, setContributionStatus] = useState<'all' | 'pending' | 'reviewing' | 'approved' | 'rejected'>('all');
-  const [order, setOrder] = useState<'newest' | 'oldest'>('newest');
-  const [remoteReportedComments, setRemoteReportedComments] = useState<Comment[]>([]);
+interface AdminDashboardProps {
+  onNavigate: (page: AdminDestination) => void;
+}
 
-  useEffect(() => { moderation.hydrateCases(); }, []);
-  async function loadRemoteReportedComments() {
-    if (!CommentRepository) return;
-    const result = await CommentRepository.listReported();
-    if (result.ok) setRemoteReportedComments(result.data);
-    else setFeedback(result.message);
-  }
+interface AdminRouteProps {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isAdmin: boolean;
+  onLoginRequired: () => void;
+  children: ReactNode;
+}
+
+const adminSections: Array<{ destination: AdminDestination; title: string; description: string; icon: typeof Users }> = [
+  { destination: 'admin-users', title: 'Usuários', description: 'Gerencie perfis, papéis e acessos da comunidade.', icon: Users },
+  { destination: 'admin-problems', title: 'Problemas', description: 'Acompanhe os registros de problemas publicados.', icon: ClipboardList },
+  { destination: 'admin-solutions', title: 'Soluções', description: 'Revise as soluções catalogadas na plataforma.', icon: ShieldCheck },
+  { destination: 'admin-comments', title: 'Comentários', description: 'Consulte as discussões e interações da comunidade.', icon: MessageSquare },
+  { destination: 'admin-reports', title: 'Denúncias', description: 'Acompanhe conteúdos sinalizados para análise.', icon: FileWarning },
+  { destination: 'admin-audit', title: 'Auditoria', description: 'Consulte os registros de ações administrativas.', icon: Activity },
+  { destination: 'admin-system', title: 'Sistema', description: 'Verifique a saúde e os diagnósticos do sistema.', icon: Settings },
+];
+
+export function AdminRoute({ isAuthenticated, isLoading, isAdmin, onLoginRequired, children }: AdminRouteProps) {
   useEffect(() => {
-    let active = true;
-    async function load() {
-      if (!active) return;
-      await loadRemoteReportedComments();
-    }
-    void load();
-    return () => { active = false; };
-  }, []);
-  if (!user || !permissions.canAccessAdmin) return <p className="rounded-3xl border border-amber-200 bg-amber-50 p-6 font-semibold text-amber-900">Você não tem permissão para acessar o painel administrativo.</p>;
+    if (!isLoading && !isAuthenticated) onLoginRequired();
+  }, [isAuthenticated, isLoading, onLoginRequired]);
 
-  const pending = contributionsHook.contributions.filter((item) => item.status === 'pending');
-  const reviewing = contributionsHook.contributions.filter((item) => item.status === 'reviewing');
-  const contributionItems = contributionsHook.contributions.filter((item) => contributionStatus === 'all' || item.status === contributionStatus).filter((item) => !contributionSearch.trim() || `${item.targetTitle} ${item.payload.title ?? ''} ${item.payload.summary}`.toLowerCase().includes(contributionSearch.trim().toLowerCase()));
-  const commentLookup = new Map([...discussions.allComments, ...remoteReportedComments].map((comment) => [comment.id, comment]));
-  const reportedComments = moderation.cases.map((caseItem) => ({ caseItem, comment: commentLookup.get(caseItem.targetId) })).filter((item) => item.comment);
-  const history = moderation.actions.filter((item) => targetFilter === 'all' || item.targetType === targetFilter).filter((item) => actionFilter === 'all' || item.action === actionFilter).filter((item) => !moderatorFilter || item.moderatorName.toLowerCase().includes(moderatorFilter.toLowerCase())).sort((a, b) => order === 'newest' ? b.createdAt.localeCompare(a.createdAt) : a.createdAt.localeCompare(b.createdAt));
-  const actionTypes = Array.from(new Set(moderation.actions.map((item) => item.action)));
-  const act = async (result: { ok: boolean; message?: string } | Promise<{ ok: boolean; message?: string }>) => { const resolved = await result; if (resolved.ok) await loadRemoteReportedComments(); setFeedback(resolved.ok ? 'Ação registrada com sucesso.' : resolved.message ?? 'Ação não concluída.'); };
+  if (isLoading) return <p className="text-sm text-muted" role="status">Verificando permissões…</p>;
+  if (!isAuthenticated) return null;
+  if (!isAdmin) return <ForbiddenPage />;
+  return <>{children}</>;
+}
 
-  return <section className="space-y-6"><div><p className="text-sm font-semibold uppercase tracking-wide text-teal-700">Administração local</p><h1 className="text-4xl font-semibold">Painel administrativo</h1><p className="mt-2 text-muted">Centraliza contribuições e comentários reportados. Limitação temporária: responsáveis, notas internas e histórico de decisões de moderação ainda ficam no armazenamento local do navegador.</p></div><div role="tablist" aria-label="Seções administrativas" className="flex flex-wrap gap-2 rounded-3xl border border-line bg-white p-2">{tabs.map((item) => <button key={item} id={`tab-${item}`} role="tab" aria-selected={tab === item} aria-controls={`panel-${item}`} onClick={() => setTab(item)} className={`rounded-2xl px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-400 ${tab === item ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{item === 'overview' ? 'Visão geral' : item === 'contributions' ? 'Contribuições' : item === 'comments' ? 'Comentários reportados' : item === 'audit' ? 'Auditoria' : item === 'roles' ? 'Papéis' : 'Histórico'}</button>)}</div><p aria-live="polite" className="text-sm font-semibold text-slate-700">{feedback || moderation.storageError}</p>
-    {tab === 'overview' && <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" className="grid gap-4 md:grid-cols-3"><Card label="Contribuições pendentes" value={pending.length} /><Card label="Contribuições em revisão" value={reviewing.length} /><Card label="Comentários reportados" value={reportedComments.length} /><Card label="Casos abertos" value={moderation.stats.openCases} /><Card label="Casos resolvidos" value={moderation.stats.resolvedCases} /><Card label="Conteúdo ocultado" value={moderation.stats.hiddenContent} /><div className="rounded-3xl border border-line bg-white p-5 md:col-span-3"><h2 className="font-semibold">Ações recentes</h2>{moderation.stats.recentActions.length ? moderation.stats.recentActions.map((item) => <p key={item.id} className="mt-2 text-sm text-muted">{item.action} · {item.moderatorName} · {new Date(item.createdAt).toLocaleString('pt-BR')}</p>) : <p className="mt-2 text-sm text-muted">Nenhuma ação registrada.</p>}</div></div>}
-    {tab === 'contributions' && <div id="panel-contributions" role="tabpanel" aria-labelledby="tab-contributions" className="space-y-4">{!permissions.canReviewContributions && <p className="rounded-3xl bg-amber-50 p-4 text-sm text-amber-900">Seu papel não revisa contribuições.</p>}<div className="grid gap-3 rounded-3xl border border-line bg-white p-4 md:grid-cols-2"><input value={contributionSearch} onChange={(e: ChangeEvent<HTMLInputElement>) => setContributionSearch(e.target.value)} placeholder="Pesquisar alvo, título ou resumo" className="rounded-2xl border border-line p-3" /><select value={contributionStatus} onChange={(e: ChangeEvent<HTMLSelectElement>) => setContributionStatus(e.target.value as typeof contributionStatus)} className="rounded-2xl border border-line p-3"><option value="all">Todos os status</option><option value="pending">Pendentes</option><option value="reviewing">Em revisão</option><option value="approved">Aprovadas</option><option value="rejected">Rejeitadas</option></select></div>{contributionItems.map((item) => <article key={item.id} className="rounded-3xl border border-line bg-white p-5"><div className="flex flex-wrap justify-between gap-3"><div><h2 className="text-xl font-semibold">{item.payload.title || item.targetTitle}</h2><p className="mt-1 text-sm text-muted">{item.targetTitle} · {item.userName} · {item.status} · {new Date(item.createdAt).toLocaleDateString('pt-BR')} · Revisor: {item.moderatorName ?? item.moderatorId ?? 'não atribuído'} · {item.payload.changes.length} alteração(ões)</p></div><div className="flex flex-wrap gap-2">{(item.status === 'pending' || item.status === 'reviewing') && <button disabled={!permissions.canReviewContributions} onClick={() => act(contributionsHook.approveContribution(item.id))} className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Aprovar</button>}{(item.status === 'pending' || item.status === 'reviewing') && <button disabled={!permissions.canReviewContributions} onClick={() => { const message = window.prompt('Justificativa da rejeição') ?? ''; act(contributionsHook.rejectContribution(item.id, message)); }} className="rounded-full bg-rose-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Rejeitar</button>}</div></div><details className="mt-4"><summary className="cursor-pointer font-semibold">Abrir detalhes</summary><div className="mt-4"><ContributionDiff changes={item.payload.changes} /></div></details></article>)}{contributionItems.length === 0 && <p className="rounded-3xl border border-dashed border-line bg-white p-8 text-center text-muted">Nenhuma contribuição pendente.</p>}</div>}
-    {tab === 'comments' && <div id="panel-comments" role="tabpanel" aria-labelledby="tab-comments" className="space-y-4">{!permissions.canModerateComments && <p className="rounded-3xl bg-amber-50 p-4 text-sm text-amber-900">Seu papel não modera comentários.</p>}<label className="grid gap-2 text-sm font-semibold">Justificativa/nota<textarea value={reason} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setReason(event.target.value)} className="rounded-2xl border border-line p-3" /></label>{reportedComments.map(({ caseItem, comment }) => comment && <article key={caseItem.id} className="rounded-3xl border border-line bg-white p-5"><h2 className="font-semibold">{comment.authorName} · {comment.targetType} {comment.targetId}</h2><p className="mt-2 rounded-2xl bg-slate-50 p-3 text-sm">{comment.content}</p><p className="mt-2 text-sm text-muted">Reportes: {comment.reports.length} · Motivos: {comment.reports.map((r) => r.reason).join('; ')} · Status: {caseItem.status} · Visibilidade: {caseItem.visibility} · Responsável: {caseItem.assignedToName ?? 'não atribuído'}</p><div className="mt-4 flex flex-wrap gap-2"><button disabled={!permissions.canModerateComments} onClick={() => act(moderation.assignCase(caseItem.id))} className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50">Assumir</button><button disabled={!permissions.canModerateComments} onClick={() => act(moderation.startReview(caseItem.id))} className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50">Iniciar revisão</button><button disabled={!permissions.canModerateComments} onClick={() => act(moderation.addInternalNote(caseItem.id, reason))} className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50">Adicionar nota</button><button disabled={!permissions.canModerateComments} onClick={() => act(moderation.hideComment(caseItem.id, reason))} className="rounded-full bg-amber-600 px-4 py-2 text-sm text-white disabled:opacity-50">Ocultar</button><button disabled={!permissions.canModerateComments} onClick={() => act(moderation.restoreComment(caseItem.id, reason))} className="rounded-full bg-sky-700 px-4 py-2 text-sm text-white disabled:opacity-50">Restaurar</button><button disabled={!permissions.canModerateComments} onClick={() => window.confirm('Remover logicamente este comentário?') && act(moderation.removeComment(caseItem.id, reason))} className="rounded-full bg-rose-700 px-4 py-2 text-sm text-white disabled:opacity-50">Remover</button><button disabled={!permissions.canModerateComments} onClick={() => act(moderation.dismissReport(caseItem.id, reason))} className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50">Ignorar</button><button disabled={!permissions.canModerateComments} onClick={() => act(moderation.resolveCase(caseItem.id, reason))} className="rounded-full bg-slate-950 px-4 py-2 text-sm text-white disabled:opacity-50">Resolver</button></div></article>)}{reportedComments.length === 0 && <p className="rounded-3xl border border-dashed border-line bg-white p-8 text-center text-muted">Nenhum comentário reportado.</p>}</div>}
-    {tab === 'audit' && <AuditPanel enabled={permissions.canViewAudit} />}
-    {tab === 'roles' && permissions.canManageRoles && <RoleManager />}
-    {tab === 'history' && <div id="panel-history" role="tabpanel" aria-labelledby="tab-history" className="space-y-4"><section className="space-y-3 rounded-3xl border border-line bg-white p-5"><h2 className="text-xl font-semibold">Auditoria de contribuições</h2>{contributionsHook.audit.length ? contributionsHook.audit.map((item) => <article key={item.id} className="rounded-2xl bg-slate-50 p-4"><strong>{item.action === 'approved' ? 'Contribuição aprovada' : 'Contribuição rejeitada'}</strong><p className="mt-1 text-sm text-muted">{item.moderatorName} · {new Date(item.createdAt).toLocaleString('pt-BR')}</p><p className="mt-1 text-xs text-muted">Contribuição: {item.contributionId}</p></article>) : <p className="text-sm text-muted">Nenhuma decisão de contribuição persistida.</p>}</section><h2 className="text-xl font-semibold">Histórico da moderação de comentários</h2><div className="grid gap-3 rounded-3xl border border-line bg-white p-4 md:grid-cols-4"><select value={targetFilter} onChange={(e: ChangeEvent<HTMLSelectElement>) => setTargetFilter(e.target.value as ModerationTargetType | 'all')} className="rounded-2xl border border-line p-3" aria-label="Tipo de alvo"><option value="all">Todos os alvos</option><option value="comment">Comentário</option><option value="contribution">Contribuição</option></select><select value={actionFilter} onChange={(e: ChangeEvent<HTMLSelectElement>) => setActionFilter(e.target.value as ModerationActionType | 'all')} className="rounded-2xl border border-line p-3" aria-label="Tipo de ação"><option value="all">Todas as ações</option>{actionTypes.map((item) => <option key={item}>{item}</option>)}</select><input value={moderatorFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setModeratorFilter(e.target.value)} placeholder="Moderador" className="rounded-2xl border border-line p-3" aria-label="Filtrar por moderador" /><select value={order} onChange={(e: ChangeEvent<HTMLSelectElement>) => setOrder(e.target.value as 'newest' | 'oldest')} className="rounded-2xl border border-line p-3" aria-label="Ordenação"><option value="newest">Mais recentes</option><option value="oldest">Mais antigas</option></select></div>{history.length ? history.map((item) => <article key={item.id} className="rounded-3xl border border-line bg-white p-5"><strong>{item.action}</strong><p className="mt-1 text-sm text-muted">{item.targetType} · {item.targetId} · {item.moderatorName} · {new Date(item.createdAt).toLocaleString('pt-BR')}</p><p className="mt-2 text-sm">{item.reason}</p></article>) : <p className="rounded-3xl border border-dashed border-line bg-white p-8 text-center text-muted">Nenhuma ação encontrada.</p>}</div>}
+export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
+  return <section className="space-y-8">
+    <header>
+      <p className="text-sm font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">Administração</p>
+      <h1 className="mt-2 text-4xl font-semibold tracking-tight">Painel administrativo</h1>
+      <p className="mt-3 max-w-2xl text-muted dark:text-slate-300">Acesse as áreas de administração do Banco de Soluções.</p>
+    </header>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {adminSections.map(({ destination, title, description, icon: Icon }) => <article key={destination} className="flex min-h-56 flex-col rounded-3xl border border-line bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft dark:border-slate-700 dark:bg-slate-900">
+        <span className="inline-flex w-fit rounded-2xl bg-teal-50 p-3 text-teal-700 dark:bg-teal-950 dark:text-teal-300"><Icon size={22} aria-hidden="true" /></span>
+        <h2 className="mt-5 text-xl font-semibold">{title}</h2>
+        <p className="mt-2 text-sm leading-6 text-muted dark:text-slate-300">{description}</p>
+        <button onClick={() => onNavigate(destination)} className="mt-auto w-fit rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300">Abrir</button>
+      </article>)}
+    </div>
   </section>;
 }
-function Card({ label, value }: { label: string; value: number }) { return <div className="rounded-3xl border border-line bg-white p-5"><strong className="text-3xl">{value}</strong><p className="mt-2 text-sm text-muted">{label}</p></div>; }
+
+export function AdminSectionPlaceholder({ title, onBack }: { title: string; onBack: () => void }) {
+  return <section className="mx-auto max-w-2xl rounded-3xl border border-line bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <span className="inline-flex rounded-2xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200"><Settings size={24} aria-hidden="true" /></span>
+    <h1 className="mt-5 text-3xl font-semibold">{title}</h1>
+    <p className="mt-3 text-muted dark:text-slate-300">Esta área está estruturada e será disponibilizada em uma próxima etapa.</p>
+    <button onClick={onBack} className="mt-6 rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:bg-teal-400 dark:text-slate-950">Voltar ao painel</button>
+  </section>;
+}
+
+export function ForbiddenPage() {
+  return <section className="mx-auto max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-8 text-center dark:border-amber-900 dark:bg-amber-950/40">
+    <AlertTriangle className="mx-auto text-amber-700 dark:text-amber-300" size={32} aria-hidden="true" />
+    <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">Erro 403</p>
+    <h1 className="mt-2 text-3xl font-semibold">Acesso não autorizado</h1>
+    <p className="mt-3 text-muted dark:text-slate-300">Sua conta não possui permissão para acessar a área administrativa.</p>
+  </section>;
+}
