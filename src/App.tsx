@@ -12,7 +12,7 @@ import { Profile } from './pages/Profile';
 import { ContributionDetails, ContributionsList } from './pages/Contributions';
 import { useAuth } from './hooks/useAuth';
 import { usePermissions } from './hooks/usePermissions';
-import { AdminDashboard, AdminRoute, AdminSectionPlaceholder } from './pages/Admin';
+import { AdminDashboard, AdminPanel, AdminRoute, AdminSectionPlaceholder } from './pages/Admin';
 import { SupabaseStatus } from './integrations/supabase/SupabaseStatus';
 import { Account } from './pages/Account';
 import { PasswordRecovery } from './pages/PasswordRecovery';
@@ -47,6 +47,7 @@ const pageToHashPath: Record<string, string> = {
   'admin-comments': '/admin/comments',
   'admin-reports': '/admin/reports',
   'admin-audit': '/admin/audit',
+  'admin-contributions': '/admin/contributions',
   notifications: '/notificacoes',
   mapa: '/mapa',
 };
@@ -78,6 +79,7 @@ function pageFromHash(hash: string) {
   if (path === '/admin/comments') return 'admin-comments';
   if (path === '/admin/reports') return 'admin-reports';
   if (path === '/admin/audit') return 'admin-audit';
+  if (path === '/admin/contributions') return 'admin-contributions';
   if (path === '/admin') return 'admin';
   if (path === '/notificacoes') return 'notifications';
   if (path === '/mapa') return 'mapa';
@@ -130,10 +132,14 @@ export function App() {
     }
   }, [isAuthenticated, isLoading, mfaRequired, page]);
 
-  const adminPages = new Set(['admin', 'admin-system', 'admin-users', 'admin-problems', 'admin-solutions', 'admin-comments', 'admin-reports', 'admin-audit']);
+  const adminPages = new Set(['admin', 'admin-system', 'admin-users', 'admin-problems', 'admin-solutions', 'admin-comments', 'admin-reports', 'admin-audit', 'admin-contributions']);
   const adminPage = adminPages.has(page);
   const adminContent = page === 'admin' ? <AdminDashboard onNavigate={setPage} />
     : page === 'admin-system' ? <AdminSystem />
+      : page === 'admin-users' ? <AdminPanel initialTab="roles" />
+        : page === 'admin-comments' || page === 'admin-reports' ? <AdminPanel initialTab="comments" />
+          : page === 'admin-audit' ? <AdminPanel initialTab="audit" />
+            : page === 'admin-contributions' ? <AdminPanel initialTab="contributions" />
       : <AdminSectionPlaceholder title={({ 'admin-users': 'Usuários', 'admin-problems': 'Problemas', 'admin-solutions': 'Soluções', 'admin-comments': 'Comentários', 'admin-reports': 'Denúncias', 'admin-audit': 'Auditoria' } as Record<string, string>)[page]} onBack={() => setPage('admin')} />;
 
   return (
