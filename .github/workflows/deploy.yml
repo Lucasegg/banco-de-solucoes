@@ -34,6 +34,8 @@ jobs:
         run: npm run test:sprint26
       - name: Reconciliation safety tests
         run: npm run test:reconciliation
+      - name: Pending migration safety tests
+        run: npm run test:pending-migrations
       - name: Check patch formatting
         run: git diff --check
       - name: Build
@@ -93,6 +95,10 @@ jobs:
       # Legacy recovery is manual; a normal deployment has one baseline gate.
       - name: Check migration baseline
         run: npm run check:migration-baseline
+      - name: List local and remote migrations
+        run: npx --yes supabase@2.39.2 migration list --linked
+      - name: Validate pending migrations
+        run: npm run test:pending-migrations
       - name: Apply database migrations after baseline
         run: npx --yes supabase@2.39.2 db push
       - name: Audit production schema (read only)
