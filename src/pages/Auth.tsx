@@ -1,6 +1,7 @@
 import { FormEvent, type ChangeEvent, useState } from 'react';
 import { ArrowRight, GitBranch, LockKeyhole, UserPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { consumeAuthReturnTo } from '../components/auth/authReturnTo';
 import { SOCIAL_AUTH_PROVIDERS, SOCIAL_PROVIDER_LABELS, type SocialAuthProvider } from '../repositories/users/oauth';
 
 
@@ -56,14 +57,14 @@ export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
       setError(result.message);
       return;
     }
-    onNavigate('profile');
+    window.location.hash = consumeAuthReturnTo();
   };
 
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
       <div className="rounded-[2rem] border border-line bg-white p-8 shadow-sm">
         <h1 className="text-4xl font-semibold tracking-tight">Entre para acompanhar suas contribuições.</h1>
-        <p className="mt-4 leading-7 text-muted">Acesse sua conta para publicar ideias, acompanhar problemas, compartilhar soluções e colaborar com a comunidade.</p>
+        <p className="mt-4 leading-7 text-muted">A autenticação é necessária para interagir: publicar ideias, acompanhar problemas, compartilhar soluções e colaborar com a comunidade.</p>
         <div className="mt-8 flex items-start gap-4 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
           <span className="rounded-2xl bg-white p-3 text-emerald-700 shadow-sm"><LockKeyhole size={22} aria-hidden="true" /></span>
           <div>
@@ -136,7 +137,7 @@ export function Register({ onNavigate }: { onNavigate: (page: string) => void })
       return;
     }
     setSuccess(result.message ?? 'Cadastro criado com sucesso.');
-    if (!result.message) onNavigate('profile');
+    if (!result.message) window.location.hash = consumeAuthReturnTo();
   };
 
   return (
