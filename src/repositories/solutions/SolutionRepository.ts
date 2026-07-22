@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseClient } from '../../integrations/supabase/client';
-import type { ImplementationDifficulty, Solution, SolutionCategory, SolutionMaturityLevel, SolutionStatus } from '../../types/domain';
+import { solutionStatuses, type ImplementationDifficulty, type Solution, type SolutionCategory, type SolutionMaturityLevel, type SolutionStatus } from '../../types/domain';
 import type { RepositoryResult } from '../problems/ProblemRepository';
 
 export type SolutionProblemRow = { problem_id: string };
@@ -36,7 +36,7 @@ export type SolutionInput = Pick<Solution, 'title' | 'summary' | 'description' |
 const selectColumns = 'id,author_id,author_name,title,summary,description,category,image_url,organization,status,maturity_level,implementation_difficulty,estimated_cost,implementation_time,location,country,impact_metric,likes,comments,views,tags,evidence_links,created_at,updated_at,solution_problems(problem_id)';
 const selectColumnsWithProblemFilter = 'id,author_id,author_name,title,summary,description,category,image_url,organization,status,maturity_level,implementation_difficulty,estimated_cost,implementation_time,location,country,impact_metric,likes,comments,views,tags,evidence_links,created_at,updated_at,solution_problems!inner(problem_id)';
 const categories: SolutionCategory[] = ['Infraestrutura', 'Educação', 'Saúde', 'Segurança', 'Tecnologia', 'Mobilidade', 'Meio Ambiente', 'Assistência Social', 'Empreendedorismo', 'Outros'];
-const statuses: SolutionStatus[] = ['Proposta', 'Em teste', 'Implementada', 'Validada', 'Arquivada'];
+const statuses: readonly SolutionStatus[] = solutionStatuses;
 const maturities: SolutionMaturityLevel[] = ['Ideia', 'Protótipo', 'Piloto', 'Em operação', 'Escalável'];
 const difficulties: ImplementationDifficulty[] = ['Baixa', 'Média', 'Alta'];
 const safe = <T extends string>(value: string, allowed: readonly T[], fallback: T) => allowed.includes(value as T) ? value as T : fallback;

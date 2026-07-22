@@ -4,7 +4,7 @@
 
 Esta sprint acrescenta as páginas protegidas `#/admin/problems` e `#/admin/solutions`. Elas reutilizam `AdminRoute`: visitantes são direcionados ao login e contas autenticadas sem `role = admin` recebem a página 403. O dashboard abre as novas páginas sem substituir as rotas administrativas legadas.
 
-As páginas são **consultas administrativas paginadas**, de 25 itens por página, com busca local case-insensitive (aplicada somente à página retornada) e filtro pelos status efetivamente presentes na resposta. Há estados de carregamento, vazio, erro e nova tentativa, tabela em desktop e cards em mobile. São exibidos somente campos públicos úteis: título, resumo, responsável, status, categoria/região ou maturidade, datas e relacionamentos já retornados. O link de visualização usa a rota pública por hash.
+As páginas são **consultas administrativas paginadas**, de 25 itens por página, com busca server-side case-insensitive e filtro server-side por status. Busca, status, total e paginação são aplicados na mesma consulta antes da ordenação e do recorte da página. Há estados de carregamento, vazio, erro e nova tentativa, tabela em desktop e cards em mobile. São exibidos somente campos públicos úteis: título, resumo, responsável, status, categoria/região ou maturidade, datas e relacionamentos já retornados. O link de visualização usa a rota pública por hash.
 
 ## Levantamento do backend confirmado
 
@@ -25,7 +25,7 @@ A auditoria existente registra mudanças de domínio via trigger com `problem.cr
 
 Não houve migration criada ou alterada. Não há service role no navegador, nem `update`/`delete` nos repositórios administrativos. A listagem não expõe e-mails, tokens, UUIDs de autoria, metadados de fonte, coordenadas ou dados de autenticação. A ausência de uma RPC/view administrativa autorizada especificamente para conteúdo impede consulta de itens privados/removidos, contagem de denúncias e qualquer mudança de status; esses itens permanecem deliberadamente indisponíveis em vez de usar escrita direta insegura.
 
-A paginação é server-side. A busca e o filtro são locais à página, pois as RPCs/views administrativas com busca autorizada não existem; por isso o contador indica explicitamente os resultados da página atual.
+A paginação é server-side. A busca utiliza somente colunas públicas permitidas e sanitiza caracteres de sintaxe do PostgREST antes de montar o filtro `ilike`/`or`; o filtro de status usa as constantes estáveis dos tipos de domínio. O contador representa o total filtrado retornado pelo backend e também informa os itens visíveis na página atual.
 
 ## Roteiro de teste manual
 
