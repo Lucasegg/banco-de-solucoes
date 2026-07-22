@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseClient } from '../../integrations/supabase/client';
+import { safeDatabaseMessage } from '../errors';
 import { solutionStatuses, type ImplementationDifficulty, type Solution, type SolutionCategory, type SolutionMaturityLevel, type SolutionStatus } from '../../types/domain';
 import type { RepositoryResult } from '../problems/ProblemRepository';
 
@@ -44,7 +45,7 @@ function isRecord(value: unknown): value is Record<string, unknown> { return Boo
 function isString(value: unknown): value is string { return typeof value === 'string'; }
 function isNumber(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value); }
 function isStringArray(value: unknown): value is string[] { return Array.isArray(value) && value.every(isString); }
-function errorMessage(error: unknown, fallback: string) { return error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' ? error.message : fallback; }
+function errorMessage(error: unknown, fallback: string) { return safeDatabaseMessage(error, fallback); }
 function parseSolutionProblemRows(value: unknown): SolutionProblemRow[] | null {
   if (value === undefined) return [];
   if (!Array.isArray(value)) return null;

@@ -56,8 +56,8 @@ export function useFavorites(kind?: FavoriteKind) {
 
   const addFavorite = useCallback(async (id: string, targetKind: FavoriteKind | undefined = kind) => {
     if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
-    if (!user || !isAuthenticated) return { ok: false, message: 'Entre na sua conta para favoritar.' };
-    if (!FavoriteRepository) return { ok: false, message: 'Supabase não configurado para favoritos.' };
+    if (!user || !isAuthenticated) return { ok: false, message: 'Entre ou crie uma conta para favoritar.' };
+    if (!FavoriteRepository) return { ok: false, message: 'Não foi possível adicionar aos favoritos. Tente novamente.' };
     setOptimistic(targetKind, id, true);
     const result = await FavoriteRepository.add(user.id, { kind: targetKind, id });
     if (!result.ok) { setOptimistic(targetKind, id, false); setError(result.message); return result; }
@@ -68,7 +68,7 @@ export function useFavorites(kind?: FavoriteKind) {
   const removeFavorite = useCallback(async (id: string, targetKind: FavoriteKind | undefined = kind) => {
     if (!targetKind) return { ok: false, message: 'Tipo de favorito não informado.' };
     if (!user || !isAuthenticated) return { ok: false, message: 'Entre na sua conta para alterar favoritos.' };
-    if (!FavoriteRepository) return { ok: false, message: 'Supabase não configurado para favoritos.' };
+    if (!FavoriteRepository) return { ok: false, message: 'Não foi possível remover dos favoritos. Tente novamente.' };
     const removedFavorite = favorites[targetKind].find((item) => matchesFavoriteTarget(item, targetKind, id));
     setOptimistic(targetKind, id, false);
     const result = await FavoriteRepository.remove(user.id, { kind: targetKind, id });

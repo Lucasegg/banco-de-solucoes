@@ -3,6 +3,7 @@ import { supabaseClient } from '../../integrations/supabase/client';
 import type { Problem, Solution } from '../../types/domain';
 import { mapProblemRowToDomain, parseProblemRow, type RepositoryResult } from '../problems/ProblemRepository';
 import { mapSolutionRowToDomain, parseSolutionRow } from '../solutions/SolutionRepository';
+import { publicErrorMessage } from '../errors';
 
 export type FavoriteKind = 'problems' | 'solutions';
 export type FavoriteTarget = { kind: 'problems'; id: string } | { kind: 'solutions'; id: string };
@@ -35,7 +36,6 @@ const selectColumns = `id,user_id,problem_id,solution_id,created_at,problems(${p
 
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
 function isString(value: unknown): value is string { return typeof value === 'string'; }
-function errorMessage(error: unknown, fallback: string) { return error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' ? error.message : fallback; }
 function targetColumn(kind: FavoriteKind) { return kind === 'problems' ? 'problem_id' : 'solution_id'; }
 
 function parseFavoriteRow(value: unknown): FavoriteRow | null {
@@ -63,11 +63,11 @@ function mapFavoriteRow(row: FavoriteRow): Favorite | null {
   };
 }
 
-function mapFavoriteRows(data: unknown[] | null): RepositoryResult<Favorite[]> {
+export function mapFavoriteRows(data: unknown[] | null): RepositoryResult<Favorite[]> {
   const parsed = (data ?? []).map(parseFavoriteRow);
-  if (parsed.some((row) => !row)) return { ok: false, message: 'Supabase retornou favoritos em formato inválido.' };
+  if (parsed.some((row) => !row)) return { ok: false, message: 'Não foi possível carregar seus favoritos.' };
   const favorites = parsed.map((row) => mapFavoriteRow(row!));
-  if (favorites.some((favorite) => !favorite)) return { ok: false, message: 'Supabase retornou itens favoritados em formato inválido.' };
+  if (favorites.some((favorite) => !favorite)) return { ok: false, message: 'Não foi possível carregar seus favoritos.' };
   return { ok: true, data: favorites as Favorite[] };
 }
 
@@ -76,11 +76,11 @@ export class SupabaseFavoriteRepository {
 
   private async findByTarget(userId: string, target: FavoriteTarget): Promise<RepositoryResult<Favorite | null>> {
     const { data, error } = await this.client.from('favorites').select(selectColumns).eq('user_id', userId).eq(targetColumn(target.kind), target.id).maybeSingle();
-    if (error) return { ok: false, message: errorMessage(error, 'Não foi possível buscar favorito.') };
+    if (error) return { ok: false, message: publicErrorMessage(error, 'Não foi possível carregar seus favoritos.') };
     if (!data) return { ok: true, data: null };
     const row = parseFavoriteRow(data);
     const favorite = row ? mapFavoriteRow(row) : null;
-    return favorite ? { ok: true, data: favorite } : { ok: false, message: 'Supabase retornou favorito em formato inválido.' };
+    return favorite ? { ok: true, data: favorite } : { ok: false, message: 'Não foi possível carregar seus favoritos.' };
   }
 
   async add(userId: string, target: FavoriteTarget): Promise<RepositoryResult<Favorite>> {
@@ -93,22 +93,24 @@ export class SupabaseFavoriteRepository {
     if (error) {
       const duplicateResult = await this.findByTarget(userId, target);
       if (duplicateResult.ok && duplicateResult.data) return { ok: true, data: duplicateResult.data };
-      return { ok: false, message: errorMessage(error, 'Não foi possível favoritar.') };
+      return { ok: false, message: publicErrorMessage(error, 'Não foi possível adicionar aos favoritos. Tente novamente.') };
     }
     const row = parseFavoriteRow(data);
     const favorite = row ? mapFavoriteRow(row) : null;
-    return favorite ? { ok: true, data: favorite } : { ok: false, message: 'Supabase retornou favorito em formato inválido.' };
+    // PostgREST returns an object for insert(...).select(...).single(); do not accept
+    // an array or an empty body as a created favorite.
+    return favorite ? { ok: true, data: favorite } : { ok: false, message: 'Não foi possível adicionar aos favoritos. Tente novamente.' };
   }
 
   async remove(userId: string, target: FavoriteTarget): Promise<RepositoryResult<null>> {
     const { error } = await this.client.from('favorites').delete().eq('user_id', userId).eq(targetColumn(target.kind), target.id);
-    if (error) return { ok: false, message: errorMessage(error, 'Não foi possível remover favorito.') };
+    if (error) return { ok: false, message: publicErrorMessage(error, 'Não foi possível remover dos favoritos. Tente novamente.') };
     return { ok: true, data: null };
   }
 
   async listByUser(userId: string): Promise<RepositoryResult<FavoriteList>> {
     const { data, error } = await this.client.from('favorites').select(selectColumns).eq('user_id', userId).order('created_at', { ascending: false });
-    if (error) return { ok: false, message: errorMessage(error, 'Não foi possível listar favoritos.') };
+    if (error) return { ok: false, message: publicErrorMessage(error, 'Não foi possível carregar seus favoritos.') };
     const result = mapFavoriteRows(data as unknown[] | null);
     if (!result.ok) return result;
     return { ok: true, data: { problems: result.data.filter((favorite) => favorite.problemId), solutions: result.data.filter((favorite) => favorite.solutionId) } };
@@ -116,7 +118,7 @@ export class SupabaseFavoriteRepository {
 
   async isFavorite(userId: string, target: FavoriteTarget): Promise<RepositoryResult<boolean>> {
     const { data, error } = await this.client.from('favorites').select('id').eq('user_id', userId).eq(targetColumn(target.kind), target.id).maybeSingle();
-    if (error) return { ok: false, message: errorMessage(error, 'Não foi possível verificar favorito.') };
+    if (error) return { ok: false, message: publicErrorMessage(error, 'Não foi possível carregar seus favoritos.') };
     return { ok: true, data: Boolean(data) };
   }
 }

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseClient } from '../../integrations/supabase/client';
+import { safeDatabaseMessage } from '../errors';
 import type { ImpactLevel, Problem, ProblemCategory, ProblemStatus } from '../../types/domain';
 
 export type ProblemRow = {
@@ -24,7 +25,7 @@ const isString = (value: unknown): value is string => typeof value === 'string';
 const isNullableString = (value: unknown): value is string | null => value === null || isString(value);
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every(isString);
-const errorMessage = (error: unknown, fallback: string) => error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' ? error.message : fallback;
+const errorMessage = (error: unknown, fallback: string) => safeDatabaseMessage(error, fallback);
 
 export function parseProblemRow(value: unknown): ProblemRow | null {
   if (!isRecord(value)) return null;
