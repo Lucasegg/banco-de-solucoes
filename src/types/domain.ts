@@ -1,7 +1,8 @@
 export type ImpactLevel = 'local' | 'regional' | 'national' | 'global';
-export type { ProblemStatus } from './problemTimeline';
-import type { ProblemStatus } from './problemTimeline';
-export type SolutionStatus = 'Proposta' | 'Em teste' | 'Implementada' | 'Validada' | 'Arquivada';
+export type { ProblemStatus } from './problemTimeline.ts';
+import type { ProblemStatus } from './problemTimeline.ts';
+export const solutionStatuses = ['Proposta', 'Em teste', 'Implementada', 'Validada', 'Arquivada'] as const;
+export type SolutionStatus = typeof solutionStatuses[number];
 export type SolutionMaturityLevel = 'Ideia' | 'Protótipo' | 'Piloto' | 'Em operação' | 'Escalável';
 export type ImplementationDifficulty = 'Baixa' | 'Média' | 'Alta';
 export type ProblemCategory =
