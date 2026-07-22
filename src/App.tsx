@@ -22,6 +22,7 @@ import { PublicMap } from './pages/PublicMap';
 import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaReturnTo';
 import { isPasswordRecoveryCallbackUrl } from './repositories/users/passwordRecoveryCallback';
 import { AdminSystem } from './pages/AdminSystem';
+import { AdminUsers } from './pages/AdminUsers';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -136,7 +137,7 @@ export function App() {
   const adminPage = adminPages.has(page);
   const adminContent = page === 'admin' ? <AdminDashboard onNavigate={setPage} />
     : page === 'admin-system' ? <AdminSystem />
-      : page === 'admin-users' ? <AdminPanel initialTab="roles" />
+      : page === 'admin-users' ? <AdminUsers onBack={() => setPage('admin')} />
         : page === 'admin-comments' || page === 'admin-reports' ? <AdminPanel initialTab="comments" />
           : page === 'admin-audit' ? <AdminPanel initialTab="audit" />
             : page === 'admin-contributions' ? <AdminPanel initialTab="contributions" />
