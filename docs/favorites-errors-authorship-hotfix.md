@@ -26,4 +26,15 @@ As restrições parciais já existentes garantem unicidade por `(user_id, proble
 
 ## Validação e limitações
 
-O teste `favorites-permissions` cobre helpers de autoria e a ausência de termos internos no tradutor. Não havia ambiente local de banco configurado, portanto RLS não foi exercida dinamicamente. Validação SQL manual sugerida: autenticar como A/B, tentar `update/delete` de problems, solutions e contributions de A como B, e inserir/deletar favorites com `user_id` de A como B; todas as tentativas de B devem ser negadas. Validar manualmente refresh, clique duplo, visitante, sessão expirada, desktop/mobile e teclado antes do deploy.
+A migration original foi nomeada com o timestamp `20260722100000`, anterior ao Sprint 29 já existente (`20260722290000`). Ela foi renomeada para `20260722300000_hotfix_favorites_authorship.sql`, posterior a todo o histórico, para que as regras do hotfix não sejam aplicadas antes das dependências existentes. O bloco de grant/revoke com assinatura fixa de `update_solution_with_problems` foi removido: os grants já são tratados pelo Sprint 29 e repeti-los poderia falhar quando a função está ausente, possui overloads ou diverge legitimamente de assinatura. Assim, a ausência da RPC não derruba este hotfix; a disponibilidade da RPC deve ser validada separadamente pelo check de saúde da aplicação.
+
+O teste `favorites-permissions` cobre helpers de autoria, mensagens públicas e invariantes estáticos da migration. Não havia ambiente local de banco configurado, portanto RLS não foi exercida dinamicamente. Antes do deploy, execute no remoto para inspecionar as assinaturas reais:
+
+```sql
+select n.nspname, p.proname, p.oid::regprocedure
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname in ('create_solution_with_problems', 'update_solution_with_problems');
+```
+
+Validação SQL manual sugerida: autenticar como A/B, tentar `update/delete` de problems, solutions e contributions de A como B, e inserir/deletar favorites com `user_id` de A como B; todas as tentativas de B devem ser negadas. Validar manualmente refresh, clique duplo, visitante, sessão expirada, desktop/mobile e teclado antes do deploy.

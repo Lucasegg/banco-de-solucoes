@@ -36,8 +36,7 @@ create policy "Authors update editable contributions" on public.contributions fo
 create policy "Authors delete editable contributions" on public.contributions for delete to authenticated
  using (user_id = auth.uid() and status in ('pending', 'reviewing'));
 
--- update_solution_with_problems was audited: its existing SECURITY DEFINER body
--- checks auth.uid() against solutions.author_id before any write.
-revoke all on function public.update_solution_with_problems(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text[],text[],uuid[]) from public, anon;
-grant execute on function public.update_solution_with_problems(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text[],text[],uuid[]) to authenticated;
+-- Grants for update_solution_with_problems are owned by the earlier Sprint 29
+-- migration. Do not repeat them here: a fixed signature can fail on legitimate
+-- overloads or deployments where the RPC is not installed.
 commit;
