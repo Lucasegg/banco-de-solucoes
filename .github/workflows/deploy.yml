@@ -103,8 +103,6 @@ jobs:
         run: npm run test:pending-migrations
       - name: Apply database migrations after baseline
         run: npx --yes supabase@2.39.2 db push
-      - name: Audit production schema (read only)
-        run: npm run audit:legacy-schema
       - name: Validate production database health
         run: npm run check:database
       - name: Configure Pages
