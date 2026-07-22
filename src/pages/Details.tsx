@@ -83,13 +83,13 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
 
   const toggleFavorite = async () => {
     if (!problem) return;
-    if (!user) { saveAuthReturnTo(); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
+    if (!user) { saveAuthReturnTo(undefined, true); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
     const result = await favorites.toggleFavorite(problem.id);
     setFeedback(result.ok ? (isFavorite ? 'Problema removido dos favoritos.' : 'Problema adicionado aos favoritos.') : result.message);
   };
 
   const proposeContribution = () => {
-    if (!user) { saveAuthReturnTo(); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
+    if (!user) { saveAuthReturnTo(undefined, true); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
     setShowContributionForm(true);
   };
 
@@ -242,7 +242,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   };
 
   const proposeContribution = () => {
-    if (!user) { saveAuthReturnTo(); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
+    if (!user) { saveAuthReturnTo(undefined, true); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
     setShowContributionForm(true);
   };
 

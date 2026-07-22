@@ -15,7 +15,7 @@
     "audit:legacy-schema": "node --experimental-strip-types scripts/auditLegacySchema.ts",
     "test:reconciliation": "node --experimental-strip-types --test scripts/reconciliation.test.ts",
     "test:sprint28": "node --experimental-strip-types --test src/pages/AdminContentPage.test.ts",
-    "test:sprint29": "node --experimental-strip-types scripts/sprint29AuthAudit.test.ts"
+    "test:sprint29": "node --experimental-strip-types --test scripts/sprint29AuthAudit.test.ts src/components/auth/authenticatedRoute.test.ts"
   },
   "dependencies": {
     "vite": "latest",

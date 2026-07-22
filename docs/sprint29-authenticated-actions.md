@@ -22,7 +22,7 @@ Não há implementações de organizações, projetos, convites, seguir conteúd
 
 ## Rotas e retorno
 
-`AuthenticatedRoute` bloqueia sem flash `/problems/new`, `/solutions/new`, perfil, conta, contribuições, favoritos, notificações e detalhes privados de contribuições. As rotas de leitura de problemas, soluções, mapa, home e busca continuam públicas. O retorno é guardado somente em `sessionStorage`; `isSafeReturnTo` aceita apenas hash interno que começa com `#/`, rejeitando URLs externas, `//`, barras invertidas e esquemas. Login e cadastro consomem esse retorno e nunca reenviam uma mutação destrutiva automaticamente.
+`AuthenticatedRoute` é a autoridade única de redirecionamento para rotas autenticadas: seu `useEffect` idempotente bloqueia sem flash `/problems/new`, `/solutions/new`, perfil, conta, contribuições, favoritos, notificações e detalhes privados de contribuições. As rotas de leitura de problemas, soluções, mapa, home e busca continuam públicas. O `App` não possui fluxo concorrente para essas rotas. O retorno é guardado somente em `sessionStorage`; `isSafeReturnTo` aceita apenas hash interno que começa com `#/`, rejeitando URLs externas, `//`, barras invertidas e esquemas. Login e cadastro consomem esse retorno e nunca reenviam uma mutação destrutiva automaticamente.
 
 ## Backend, limitações e roteiro
 
