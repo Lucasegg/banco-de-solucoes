@@ -9,69 +9,116 @@ const { AuthenticatedRoute, createAuthenticationPromptActions } = await vite.ssr
 const { ProblemForm, SolutionForm } = await vite.ssrLoadModule('/src/pages/Forms.tsx');
 
 function renderRoute({ isAuthenticated, isLoading, description, children }) {
-  let formMounts = 0;
-  const ProtectedForm = () => {
-    formMounts += 1;
-    return React.createElement('form', { 'data-testid': 'protected-form' }, React.createElement('input', { name: 'title' }));
-  };
-  const html = renderToStaticMarkup(React.createElement(AuthenticatedRoute, {
+  return renderToStaticMarkup(React.createElement(AuthenticatedRoute, {
     isAuthenticated,
     isLoading,
     onLoginRequired: () => {},
     authPrompt: { description, onRegisterRequired: () => {}, onBack: () => {} },
-  }, children ?? React.createElement(ProtectedForm)));
-  return { html, formMounts };
+  }, children));
 }
 
-test('visitante recebe bloqueio de problema sem montar o formulário', () => {
-  const { html, formMounts } = renderRoute({ isAuthenticated: false, isLoading: false, description: 'Para registrar um problema, você precisa estar conectado à sua conta.', children: React.createElement(ProblemForm) });
-  assert.equal(formMounts, 0);
+function renderWithSpy({ isAuthenticated, isLoading }) {
+  let mounts = 0;
+  function SpyForm() {
+    mounts += 1;
+    return React.createElement('form', { 'data-testid': 'protected-form' }, React.createElement('input', { name: 'title' }));
+  }
+  const html = renderRoute({
+    isAuthenticated,
+    isLoading,
+    description: 'Descrição de teste.',
+    children: React.createElement(SpyForm),
+  });
+  return { html, mounts };
+}
+
+test('regressão: visitante não monta children protegidos', () => {
+  const { html, mounts } = renderWithSpy({ isAuthenticated: false, isLoading: false });
+  assert.equal(mounts, 0, 'o teste falha se AuthenticatedRoute renderizar children para visitante');
   assert.doesNotMatch(html, /protected-form|name="title"/);
   assert.match(html, /Entre ou crie uma conta para continuar/);
+});
+
+test('carregamento não monta children protegidos', () => {
+  const { html, mounts } = renderWithSpy({ isAuthenticated: false, isLoading: true });
+  assert.equal(mounts, 0);
+  assert.match(html, /Verificando sua sessão/);
+  assert.doesNotMatch(html, /protected-form/);
+});
+
+test('sessão autenticada monta children protegidos uma vez', () => {
+  const { html, mounts } = renderWithSpy({ isAuthenticated: true, isLoading: false });
+  assert.equal(mounts, 1);
+  assert.match(html, /protected-form/);
+});
+
+test('visitante não vê campos, título ou upload reais de ProblemForm', () => {
+  const html = renderRoute({
+    isAuthenticated: false,
+    isLoading: false,
+    description: 'Para registrar um problema, você precisa estar conectado à sua conta.',
+    children: React.createElement(ProblemForm),
+  });
+  assert.match(html, /Entre ou crie uma conta para continuar/);
   assert.match(html, /Para registrar um problema/);
-  assert.match(html, /Entrar/);
-  assert.match(html, /Criar conta/);
-  assert.match(html, /Voltar/);
+  assert.doesNotMatch(html, /Cadastrar problema|Imagem do problema|<input|<select|<textarea/);
 });
 
-test('visitante recebe bloqueio de solução sem montar o formulário', () => {
-  const { html, formMounts } = renderRoute({ isAuthenticated: false, isLoading: false, description: 'Para cadastrar uma solução, você precisa estar conectado à sua conta.', children: React.createElement(SolutionForm) });
-  assert.equal(formMounts, 0);
-  assert.doesNotMatch(html, /protected-form|name="title"/);
+test('visitante não vê campos, título ou upload reais de SolutionForm', () => {
+  const html = renderRoute({
+    isAuthenticated: false,
+    isLoading: false,
+    description: 'Para cadastrar uma solução, você precisa estar conectado à sua conta.',
+    children: React.createElement(SolutionForm),
+  });
+  assert.match(html, /Entre ou crie uma conta para continuar/);
   assert.match(html, /Para cadastrar uma solução/);
+  assert.doesNotMatch(html, /Cadastrar solução|Imagem da solução|<input|<select|<textarea/);
 });
 
-test('carregamento não mostra formulário e sessão autenticada o monta', () => {
-  const loading = renderRoute({ isAuthenticated: false, isLoading: true, description: 'não deve aparecer' });
-  assert.equal(loading.formMounts, 0);
-  assert.match(loading.html, /Verificando sua sessão/);
-
-  const authenticated = renderRoute({ isAuthenticated: true, isLoading: false, description: 'não deve aparecer' });
-  assert.equal(authenticated.formMounts, 1);
-  assert.match(authenticated.html, /protected-form/);
-});
-
-test('entrar e criar conta preservam a rota protegida e voltar usa o callback da rota', () => {
+function withHash(hash, callback) {
+  const originalWindow = globalThis.window;
   const storage = new Map();
   globalThis.window = {
-    location: { hash: '#/problems/new' },
+    location: { hash },
     sessionStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: (key) => storage.delete(key) },
   };
-  let destination = '';
-  const problemActions = createAuthenticationPromptActions(() => { destination = 'login'; }, () => { destination = 'register'; }, () => { destination = 'problems'; });
-  problemActions.login();
-  assert.equal(destination, 'login');
-  assert.equal(storage.get('banco-de-solucoes.auth-return-to'), '#/problems/new');
+  try {
+    callback(storage);
+  } finally {
+    if (originalWindow) globalThis.window = originalWindow;
+    else delete globalThis.window;
+  }
+}
 
-  globalThis.window.location.hash = '#/solutions/new';
-  const solutionActions = createAuthenticationPromptActions(() => { destination = 'login'; }, () => { destination = 'register'; }, () => { destination = 'solutions'; });
-  solutionActions.register();
-  assert.equal(destination, 'register');
-  assert.equal(storage.get('banco-de-solucoes.auth-return-to'), '#/solutions/new');
-  problemActions.back();
-  assert.equal(destination, 'problems');
-  solutionActions.back();
-  assert.equal(destination, 'solutions');
+test('ações de problema salvam #/problems/new e voltar direciona para problemas', () => {
+  withHash('#/problems/new', (storage) => {
+    let destination = '';
+    const actions = createAuthenticationPromptActions(() => { destination = 'login'; }, () => { destination = 'register'; }, () => { destination = 'problems'; });
+    actions.login();
+    assert.equal(destination, 'login');
+    assert.equal(storage.get('banco-de-solucoes.auth-return-to'), '#/problems/new');
+    actions.register();
+    assert.equal(destination, 'register');
+    assert.equal(storage.get('banco-de-solucoes.auth-return-to'), '#/problems/new');
+    actions.back();
+    assert.equal(destination, 'problems');
+  });
+});
+
+test('ações de solução salvam #/solutions/new e voltar direciona para soluções', () => {
+  withHash('#/solutions/new', (storage) => {
+    let destination = '';
+    const actions = createAuthenticationPromptActions(() => { destination = 'login'; }, () => { destination = 'register'; }, () => { destination = 'solutions'; });
+    actions.login();
+    assert.equal(destination, 'login');
+    assert.equal(storage.get('banco-de-solucoes.auth-return-to'), '#/solutions/new');
+    actions.register();
+    assert.equal(destination, 'register');
+    assert.equal(storage.get('banco-de-solucoes.auth-return-to'), '#/solutions/new');
+    actions.back();
+    assert.equal(destination, 'solutions');
+  });
 });
 
 await vite.close();
