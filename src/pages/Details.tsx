@@ -15,6 +15,7 @@ import { shareCurrentHashUrl, type ShareStatus } from '../utils/share';
 import { ImageUploadField } from '../components/forms/ImageUploadField';
 import { ImageUploadRepository, type UploadProgress } from '../repositories/images';
 import { usePermissions } from '../hooks/usePermissions';
+import { canDeleteProblem, canDeleteSolution, canEditProblem, canEditSolution } from '../lib/authorship';
 import { ItemReactionBar } from '../components/discussions/ItemReactionBar';
 import { ProblemTimeline } from '../components/problems/ProblemTimeline';
 import { problemStatuses } from '../types/problemTimeline';
@@ -48,7 +49,8 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   const [editImageError, setEditImageError] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const isFavorite = problem ? favorites.isFavorite(problem.id) : false;
-  const canManage = Boolean(user && (problem?.authorId === user.id || permissions.canAccessAdmin));
+  const canManage = canEditProblem(user?.id, problem ?? {});
+  const canDelete = canDeleteProblem(user?.id, problem ?? {});
 
   useEffect(() => {
     let active = true;
@@ -131,7 +133,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   };
 
   const deleteProblem = async () => {
-    if (!problem || !ProblemRepository || !canManage) return;
+    if (!problem || !ProblemRepository || !canDelete) return;
     if (!window.confirm('Excluir este problema? Esta ação não pode ser desfeita.')) return;
     const result = await ProblemRepository.delete(problem.id);
     if (result.ok) { setFeedback('Problema excluído.'); onNavigate('problemas'); } else setFeedback(result.message);
@@ -168,7 +170,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
             <Action icon={<GitBranch size={16} />} label="Contribuir" onClick={proposeContribution} ariaLabel={`Contribuir para o problema ${problem.title}`} />
             <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400"><Sparkles size={16} /> Encontrar Soluções</button>
             {canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}
-            {canManage && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteProblem} />}
+            {canDelete && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteProblem} />}
           </div>
           {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><ImageUploadField label="Imagem do problema" currentUrl={problem.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem do problema ${problem.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}>{problemStatuses.map((status) => <option key={status}>{status}</option>)}</select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
           <Feedback message={feedback} />
@@ -188,7 +190,6 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const [loadError, setLoadError] = useState('');
   const favorites = useFavorites('solutions');
   const { user } = useAuth();
-  const permissions = usePermissions(user);
   const [showContributionForm, setShowContributionForm] = useState(false);
   const discussion = useDiscussions('solution', solution?.id ?? id, solution ? [solution.author, solution.organization] : []);
   const [feedback, setFeedback] = useState('');
@@ -202,7 +203,8 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const [editImageError, setEditImageError] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const isFavorite = solution ? favorites.isFavorite(solution.id) : false;
-  const canManage = Boolean(user && (solution?.authorId === user.id || permissions.canAccessAdmin));
+  const canManage = canEditSolution(user?.id, solution ?? {});
+  const canDelete = canDeleteSolution(user?.id, solution ?? {});
 
   useEffect(() => {
     let active = true;
@@ -284,7 +286,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   };
 
   const deleteSolution = async () => {
-    if (!solution || !SolutionRepository || !canManage) return;
+    if (!solution || !SolutionRepository || !canDelete) return;
     if (!window.confirm('Excluir esta solução? Esta ação não pode ser desfeita.')) return;
     const result = await SolutionRepository.delete(solution.id);
     if (result.ok) { setFeedback('Solução excluída.'); onNavigate('solucoes'); } else setFeedback(result.message);
@@ -327,7 +329,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
           </div>
           <div className="mt-8 flex flex-wrap gap-2">{solution.tags.map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
           <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
-          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Contribuir" onClick={proposeContribution} ariaLabel={`Contribuir para a solução ${solution.title}`} />{canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}{canManage && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteSolution} />}<button onClick={() => onNavigate(related[0] ? `problema:${related[0].id}` : 'problemas')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Contribuir" onClick={proposeContribution} ariaLabel={`Contribuir para a solução ${solution.title}`} />{canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}{canDelete && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteSolution} />}<button onClick={() => onNavigate(related[0] ? `problema:${related[0].id}` : 'problemas')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
           {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-teal-50 p-4"><ImageUploadField label="Imagem da solução" currentUrl={solution.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem da solução ${solution.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as SolutionStatus)}><option>Proposta</option><option>Em teste</option><option>Implementada</option><option>Validada</option><option>Arquivada</option></select><button className="rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white" onClick={saveSolutionEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
           <Feedback message={feedback} />
           {showContributionForm && <ContributionForm targetType="solution" targetId={solution.id} fields={solutionFields} onClose={() => setShowContributionForm(false)} />}
