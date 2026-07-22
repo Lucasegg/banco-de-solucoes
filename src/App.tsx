@@ -23,6 +23,8 @@ import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaRetur
 import { isPasswordRecoveryCallbackUrl } from './repositories/users/passwordRecoveryCallback';
 import { AdminSystem } from './pages/AdminSystem';
 import { AdminUsers } from './pages/AdminUsers';
+import { AdminProblems } from './pages/AdminProblems';
+import { AdminSolutions } from './pages/AdminSolutions';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -138,6 +140,8 @@ export function App() {
   const adminContent = page === 'admin' ? <AdminDashboard onNavigate={setPage} />
     : page === 'admin-system' ? <AdminSystem />
       : page === 'admin-users' ? <AdminUsers onBack={() => setPage('admin')} />
+        : page === 'admin-problems' ? <AdminProblems onBack={() => setPage('admin')} />
+          : page === 'admin-solutions' ? <AdminSolutions onBack={() => setPage('admin')} />
         : page === 'admin-comments' || page === 'admin-reports' ? <AdminPanel initialTab="comments" />
           : page === 'admin-audit' ? <AdminPanel initialTab="audit" />
             : page === 'admin-contributions' ? <AdminPanel initialTab="contributions" />
