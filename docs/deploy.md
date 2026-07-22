@@ -47,6 +47,12 @@ Somente essas configurações públicas são incorporadas pelo Vite.
 
 O job `verify` executa `npm ci`, typecheck, testes da Sprint 26, `git diff --check` e build. Pull requests não aplicam migrations, não consultam produção, não usam credenciais server-side e não fazem deploy. Assim, a validação de uma PR não depende da disponibilidade do projeto Supabase.
 
+## Verificação do hotfix de autenticação no ambiente publicado
+
+O workflow publica somente pushes para `main`: a PR, por si só, não altera o site. Para confirmar que uma publicação contém este hotfix (inclusive ao investigar a PR #52), confira o SHA do commit do run de GitHub Actions que concluiu o job `deploy` e compare-o com o SHA que contém a alteração em `AuthenticatedRoute`. Em seguida, abra o site publicado em uma janela anônima (ou após limpar os dados do site), acesse diretamente `#/problems/new` e `#/solutions/new` e faça refresh em cada rota. Antes do login, deve aparecer apenas a tela “Entre ou crie uma conta para continuar”; campos, seletores e controles de upload não devem existir no DOM.
+
+Não há registro de service worker neste repositório e o artifact publicado é o diretório `dist` criado pelo Vite. Portanto, não atribua uma divergência a cache sem evidência: valide primeiro o SHA do deployment, o artifact associado ao run e a resposta atual do host. Se o SHA estiver correto e o comportamento persistir, faça um hard reload e inspecione se a URL/host acessado é o ambiente de GitHub Pages configurado pelo job `deploy`.
+
 ## Push para `main`
 
 Após `verify` ficar verde, o job `migrate-and-health`:
