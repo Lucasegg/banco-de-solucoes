@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import type { AdminUserRecord } from '../repositories/adminUsers';
 import type { UserRole } from '../types/user';
+import { restoreFocus } from '../components/admin/focusTrap';
 
 export function AdminUsers({ onBack }: { onBack: () => void }) {
   const { user } = useAuth(); const permissions = usePermissions(user); const adminUsers = useAdminUsers(permissions.canManageRoles);
@@ -15,7 +16,7 @@ export function AdminUsers({ onBack }: { onBack: () => void }) {
   useEffect(() => { const timer = window.setTimeout(() => setSearch(searchInput), 250); return () => window.clearTimeout(timer); }, [searchInput]);
   const filteredUsers = useMemo(() => filterAdminUsers(adminUsers.users, search, role), [adminUsers.users, search, role]);
   function openDialog(nextUser: AdminUserRecord, source: HTMLButtonElement) { trigger.current = source; setFeedback(''); setSelectedUser(nextUser); }
-  function closeDialog() { setSelectedUser(null); window.setTimeout(() => trigger.current?.focus(), 0); }
+  function closeDialog() { setSelectedUser(null); window.setTimeout(() => restoreFocus(trigger.current), 0); }
   async function changeRole(nextRole: UserRole) { if (!selectedUser) return { ok: false, message: 'Usuário não encontrado.' }; const result = await adminUsers.updateRole(selectedUser.id, nextRole); if (result.ok) { setFeedback(`Papel de ${selectedUser.name} atualizado para ${roleLabels[nextRole]}.`); closeDialog(); } return result; }
   if (!permissions.canManageRoles) return null;
   return <section className="space-y-6"><header className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">Administração</p><h1 className="mt-2 text-4xl font-semibold tracking-tight">Gestão de usuários</h1><p className="mt-3 max-w-2xl text-muted dark:text-slate-300">Consulte perfis e atualize papéis administrativos pela autorização segura da plataforma.</p></div><button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-400"><ArrowLeft size={16} aria-hidden="true" />Voltar ao painel</button></header>
