@@ -1,29 +1,64 @@
--- Sprint 29: database authority for authenticated mutations. Existing migrations remain immutable.
+-- Sprint 29: database authority for authenticated mutations.
+--
+-- This migration was pending in production when corrected.  Do not replace the
+-- catalogue-driven grants below with signatures inferred from application code:
+-- a legitimate legacy deployment can have a missing RPC or a different overload.
 begin;
 
--- Defense in depth: anon may read public catalog rows but can never mutate application tables.
+do $$
+declare
+  required_table text;
+begin
+  foreach required_table in array array[
+    'public.profiles', 'public.problems', 'public.solutions',
+    'public.solution_problems', 'public.comments', 'public.comment_reports',
+    'public.favorites', 'public.reactions', 'public.contributions',
+    'public.contribution_audit', 'public.notifications',
+    'public.problem_timeline', 'public.audit_events', 'storage.objects'
+  ] loop
+    if to_regclass(required_table) is null then
+      raise exception 'Sprint 29 schema integrity failure: required table % is absent', required_table
+        using errcode = '42P01';
+    end if;
+  end loop;
+end $$;
+
+-- Defense in depth: anon may read public catalog rows but can never mutate
+-- application tables.  These tables are required by the preceding baseline.
 revoke insert, update, delete on table public.profiles, public.problems, public.solutions, public.solution_problems, public.comments, public.comment_reports, public.favorites, public.reactions, public.contributions, public.contribution_audit, public.notifications, public.problem_timeline, public.audit_events from anon;
 revoke insert, update, delete on table storage.objects from anon;
 
--- Explicitly remove PostgreSQL's default PUBLIC execute grant from every mutable RPC.
-revoke all on function public.create_solution_with_problems(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text[],text[],uuid[]) from public, anon;
-revoke all on function public.update_solution_with_problems(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text[],text[],uuid[]) from public, anon;
-revoke all on function public.report_comment(uuid,text) from public, anon;
-revoke all on function public.mark_comment_best_answer(uuid) from public, anon;
-revoke all on function public.moderate_comment_visibility(uuid,text) from public, anon;
-revoke all on function public.review_contribution(uuid,text,text) from public, anon;
-revoke all on function public.publish_problem_update(uuid,text,text,text) from public, anon;
-revoke all on function public.mark_notification_read(uuid) from public, anon;
-revoke all on function public.mark_all_notifications_read() from public, anon;
-revoke all on function public.update_user_role(uuid,text) from public, anon;
-revoke all on function public.create_notification(uuid,text,text,text,text,uuid,text,jsonb,uuid) from public, anon;
-revoke all on function public.write_audit_event(text,text,uuid,jsonb) from public, anon;
+-- Resolve every existing overload by OID/regprocedure.  Client RPCs retain
+-- authenticated EXECUTE; internal helpers remain inaccessible to clients.
+do $$
+declare
+  fn record;
+  client_rpcs constant text[] := array[
+    'create_solution_with_problems', 'update_solution_with_problems',
+    'report_comment', 'mark_comment_best_answer', 'moderate_comment_visibility',
+    'review_contribution', 'publish_problem_update', 'mark_notification_read',
+    'mark_all_notifications_read', 'update_user_role'
+  ];
+  internal_rpcs constant text[] := array['create_notification', 'write_audit_event'];
+begin
+  for fn in
+    select p.proname, p.oid::regprocedure as signature
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = any (client_rpcs || internal_rpcs)
+  loop
+    execute format('revoke all on function %s from public, anon', fn.signature);
+    if fn.proname = any (client_rpcs) then
+      execute format('grant execute on function %s to authenticated', fn.signature);
+    else
+      execute format('revoke all on function %s from authenticated', fn.signature);
+    end if;
+  end loop;
+end $$;
 
-grant execute on function public.create_solution_with_problems(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text[],text[],uuid[]) to authenticated;
-grant execute on function public.update_solution_with_problems(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text[],text[],uuid[]) to authenticated;
-grant execute on function public.report_comment(uuid,text), public.mark_comment_best_answer(uuid), public.moderate_comment_visibility(uuid,text), public.review_contribution(uuid,text,text), public.publish_problem_update(uuid,text,text,text), public.mark_notification_read(uuid), public.mark_all_notifications_read(), public.update_user_role(uuid,text) to authenticated;
-
--- Storage remains publicly readable, while writes are scoped to the authenticated owner prefix.
+-- Storage remains publicly readable under the existing select policy.  Bucket
+-- names are intentionally checked in policy predicates so the policy remains
+-- valid before a bucket is provisioned, while writes require the owner prefix.
 drop policy if exists "Authenticated users upload own images" on storage.objects;
 drop policy if exists "Authenticated users update own images" on storage.objects;
 drop policy if exists "Authenticated users delete own images" on storage.objects;
