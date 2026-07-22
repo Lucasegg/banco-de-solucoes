@@ -69,6 +69,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Install dependencies
+        run: npm ci
       - name: Restore verified build
         uses: actions/download-artifact@v4
         with:
