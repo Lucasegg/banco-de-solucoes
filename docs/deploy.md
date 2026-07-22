@@ -60,10 +60,10 @@ Após `verify` ficar verde, o job `migrate-and-health`:
 1. conecta a Supabase CLI ao projeto usando uma versão fixa;
 2. executa `npm run check:migration-baseline`, sem modificar o banco;
 3. executa `supabase db push`;
-4. executa `npm run check:database` usando a service role;
+4. executa `npm run check:database` usando a service role e os endpoints estáveis de dados, autenticação e armazenamento;
 5. configura Pages e envia o artifact já verificado.
 
-O job `deploy` depende de `migrate-and-health`. Falha de migration, schema incompatível, RPC/assinatura/coluna ausente ou indisponibilidade de Auth/Storage impede tanto o artifact de Pages quanto o deploy.
+O job `deploy` depende de `migrate-and-health`. Falha de migration, baseline, histórico de migrations ou indisponibilidade dos serviços essenciais impede tanto o artifact de Pages quanto o deploy. A versão aplicada é verificada pelo histórico oficial de migrations, não por uma RPC. Antes do merge de alterações de migrations, workflows, scripts de deploy/baseline, `scripts/checkDatabase.ts` ou configuração do banco, execute e registre o [Production preflight](deployment-preflight.md).
 
 ## Baseline inicial do projeto existente
 
