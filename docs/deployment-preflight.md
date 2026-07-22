@@ -18,12 +18,12 @@ Em pushes para `main`, `migrate-and-health` continua executando, nesta ordem: in
 
 ## Como executar o preflight
 
-1. Abra **Actions** > **Production preflight** > **Run workflow**.
+1. Abra **Actions** > **Verify, migrate and deploy** > **Run workflow**.
 2. Informe a branch da PR ou o SHA exato do commit que será revisado.
 3. Aguarde o workflow verde e copie o URL do run e o SHA efetivamente validado exibido pelo checkout.
 4. Registre ambos na revisão/descrição da PR, junto com o resultado.
 
-O workflow usa o environment `production-preflight`, que pode ser protegido nas configurações do repositório. Ele faz checkout do ref informado, `npm ci`, testes, build, validações de migration, link, `migration list --linked`, `db push --dry-run` e `check:database`. Ele não publica Pages, não executa `migration repair` e não aplica migrations. A CLI fixada (`2.39.2`) oferece `db push --dry-run`; se uma futura versão removê-lo, o preflight deve falhar em vez de usar uma flag inventada. Nesse caso, mantenha `migration list --linked`, os testes estáticos e a validação em banco local, documente a limitação e restaure uma prévia suportada antes de aprovar o merge.
+O job `production-preflight`, no workflow já existente de deploy, usa o environment `production-preflight`, que pode ser protegido nas configurações do repositório. Ele só roda em `workflow_dispatch`, faz checkout do ref informado, `npm ci`, testes, build, validações de migration, link, `migration list --linked`, `db push --dry-run` e `check:database`. Ele não publica Pages, não executa `migration repair` e não aplica migrations. A CLI fixada (`2.39.2`) oferece `db push --dry-run`; se uma futura versão removê-lo, o preflight deve falhar em vez de usar uma flag inventada. Nesse caso, mantenha `migration list --linked`, os testes estáticos e a validação em banco local, documente a limitação e restaure uma prévia suportada antes de aprovar o merge.
 
 ## Regra de merge
 

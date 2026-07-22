@@ -5,6 +5,13 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch ou SHA para validar
+        required: true
+        default: main
+        type: string
 
 permissions:
   contents: read
@@ -17,6 +24,7 @@ concurrency:
 
 jobs:
   verify:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -50,6 +58,60 @@ jobs:
           name: pages-dist
           path: dist
           retention-days: 1
+
+  production-preflight:
+    if: github.event_name == 'workflow_dispatch'
+    name: Validate production gates without deployment
+    runs-on: ubuntu-latest
+    environment: production-preflight
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - name: Validate pending migrations
+        run: npm run test:pending-migrations
+      - name: Validate required Supabase secrets
+        shell: bash
+        run: |
+          set +x
+          for secret_name in SUPABASE_PROJECT_REF SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY
+          do
+            if [[ -z "${!secret_name:-}" ]]; then
+              echo "Missing required secret: ${secret_name}" >&2
+              exit 1
+            fi
+          done
+      - name: Link Supabase project
+        run: npx --yes supabase@2.39.2 link --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Check migration baseline
+        run: npm run check:migration-baseline
+      - name: List local and remote migrations
+        run: npx --yes supabase@2.39.2 migration list --linked
+      - name: Preview database migrations without applying them
+        run: npx --yes supabase@2.39.2 db push --dry-run
+      - name: Validate production service endpoints
+        run: npm run check:database
 
   migrate-and-health:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
