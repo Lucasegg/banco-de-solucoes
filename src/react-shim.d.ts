@@ -40,6 +40,7 @@ declare module 'react-dom/client' {
 
 declare module 'lucide-react' {
   export const ArrowRight: any;
+  export const ArrowLeft: any;
   export const Calendar: any;
   export const Building2: any;
   export const CheckCircle2: any;
