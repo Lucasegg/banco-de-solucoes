@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { globSync } from 'node:fs';
+const migration = readFileSync('supabase/migrations/20260722290000_sprint29_authenticated_actions.sql', 'utf8');
+assert.match(migration, /revoke insert, update, delete[\s\S]+from anon/i);
+assert.match(migration, /revoke all on function public\.report_comment[\s\S]+from public, anon/i);
+assert.match(migration, /grant execute[\s\S]+to authenticated/i);
+assert.match(migration, /storage\.objects[\s\S]+for insert to authenticated/i);
+assert.doesNotMatch(migration, /service_role/i);
+const all = globSync('supabase/migrations/*.sql').map((p) => readFileSync(p, 'utf8')).join('\n');
+for (const rpc of ['report_comment', 'mark_comment_best_answer', 'moderate_comment_visibility', 'review_contribution', 'publish_problem_update']) assert.match(all, new RegExp(`function public\\.${rpc}[\\s\\S]{0,2500}auth\\.uid\\(\\)`, 'i'));
+console.log('Sprint 29 static authorization audit passed.');

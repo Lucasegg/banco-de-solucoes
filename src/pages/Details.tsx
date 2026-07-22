@@ -19,6 +19,7 @@ import { ItemReactionBar } from '../components/discussions/ItemReactionBar';
 import { ProblemTimeline } from '../components/problems/ProblemTimeline';
 import { problemStatuses } from '../types/problemTimeline';
 import { ProblemLocationMap } from '../components/map/ProblemLocationMap';
+import { saveAuthReturnTo } from '../components/auth/authReturnTo';
 
 
 function getShareMessage(status: ShareStatus, url: string) {
@@ -82,12 +83,13 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
 
   const toggleFavorite = async () => {
     if (!problem) return;
+    if (!user) { saveAuthReturnTo(); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
     const result = await favorites.toggleFavorite(problem.id);
     setFeedback(result.ok ? (isFavorite ? 'Problema removido dos favoritos.' : 'Problema adicionado aos favoritos.') : result.message);
   };
 
   const proposeContribution = () => {
-    if (!user) { setFeedback('Entre na sua conta para propor alteração.'); onNavigate('login'); return; }
+    if (!user) { saveAuthReturnTo(); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
     setShowContributionForm(true);
   };
 
@@ -240,7 +242,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   };
 
   const proposeContribution = () => {
-    if (!user) { setFeedback('Entre na sua conta para propor alteração.'); onNavigate('login'); return; }
+    if (!user) { saveAuthReturnTo(); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
     setShowContributionForm(true);
   };
 

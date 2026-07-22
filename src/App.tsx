@@ -25,6 +25,8 @@ import { AdminSystem } from './pages/AdminSystem';
 import { AdminUsers } from './pages/AdminUsers';
 import { AdminProblems } from './pages/AdminProblems';
 import { AdminSolutions } from './pages/AdminSolutions';
+import { AuthenticatedRoute } from './components/auth/AuthenticatedRoute';
+import { saveAuthReturnTo } from './components/auth/authReturnTo';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -122,6 +124,8 @@ export function App() {
     return () => window.removeEventListener('hashchange', sync);
   }, []);
 
+  const privatePage = page === 'novo-problema' || page === 'nova-solucao' || page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'notifications' || kind === 'contribution';
+
   useEffect(() => {
     if (mfaRequired && page !== 'mfa-challenge') {
       ensureMfaReturnTo(window.location.hash);
@@ -129,11 +133,12 @@ export function App() {
       return;
     }
     if (!mfaRequired && page === 'mfa-challenge' && isAuthenticated) { setPage('profile'); return; }
-    if (!isLoading && (page === 'profile' || page === 'account' || page === 'contributions' || page === 'favorites' || page === 'notifications' || kind === 'contribution') && !isAuthenticated) {
+    if (!isLoading && privatePage && !isAuthenticated) {
+      saveAuthReturnTo();
       setMfaReturnTo(window.location.hash);
       setPage('login');
     }
-  }, [isAuthenticated, isLoading, mfaRequired, page]);
+  }, [isAuthenticated, isLoading, mfaRequired, page, privatePage]);
 
   const adminPages = new Set(['admin', 'admin-system', 'admin-users', 'admin-problems', 'admin-solutions', 'admin-comments', 'admin-reports', 'admin-audit', 'admin-contributions']);
   const adminPage = adminPages.has(page);
@@ -155,21 +160,21 @@ export function App() {
       {page === 'solucoes' && <ExploreSolutions onNavigate={setPage} onOpen={(solutionId) => setPage(`solucao:${solutionId}`)} />}
       {kind === 'problema' && <ProblemDetails id={id} onNavigate={setPage} />}
       {kind === 'solucao' && <SolutionDetails id={id} onNavigate={setPage} />}
-      {page === 'novo-problema' && <ProblemForm />}
-      {page === 'nova-solucao' && <SolutionForm />}
+      {page === 'novo-problema' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={() => setPage('login')}><ProblemForm /></AuthenticatedRoute>}
+      {page === 'nova-solucao' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={() => setPage('login')}><SolutionForm /></AuthenticatedRoute>}
       {page === 'sobre' && <About />}
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
       {page === 'mfa-challenge' && mfaRequired && <MfaChallenge onNavigate={setPage} />}
       {page === 'password-recovery' && <PasswordRecovery onNavigate={setPage} />}
-      {page === 'profile' && isAuthenticated && <Profile onNavigate={setPage} />}
-      {page === 'account' && isAuthenticated && <Account onNavigate={setPage} />}
+      {page === 'profile' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={() => setPage('login')}><Profile onNavigate={setPage} /></AuthenticatedRoute>}
+      {page === 'account' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={() => setPage('login')}><Account onNavigate={setPage} /></AuthenticatedRoute>}
       {adminPage && <AdminRoute isAuthenticated={isAuthenticated} isLoading={isLoading} isAdmin={permissions.canAccessAdmin} onLoginRequired={() => { setMfaReturnTo(window.location.hash); setPage('login'); }}>{adminContent}</AdminRoute>}
-      {page === 'contributions' && isAuthenticated && <ContributionsList onNavigate={setPage} />}
-      {page === 'favorites' && isAuthenticated && <Favorites onNavigate={setPage} />}
-      {page === 'notifications' && isAuthenticated && <Notifications />}
+      {page === 'contributions' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={() => setPage('login')}><ContributionsList onNavigate={setPage} /></AuthenticatedRoute>}
+      {page === 'favorites' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={() => setPage('login')}><Favorites onNavigate={setPage} /></AuthenticatedRoute>}
+      {page === 'notifications' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={() => setPage('login')}><Notifications /></AuthenticatedRoute>}
       {page === 'diagnostics' && <SupabaseStatus />}
-      {kind === 'contribution' && isAuthenticated && <ContributionDetails id={id} />}
+      {kind === 'contribution' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={() => setPage('login')}><ContributionDetails id={id} /></AuthenticatedRoute>}
     </Layout>
   );
 }
