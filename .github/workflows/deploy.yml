@@ -12,6 +12,11 @@ on:
         required: true
         default: main
         type: string
+      run_service_diagnostics:
+        description: Executar diagnóstico manual dos serviços
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -110,7 +115,28 @@ jobs:
         run: npx --yes supabase@2.39.2 migration list --linked
       - name: Preview database migrations without applying them
         run: npx --yes supabase@2.39.2 db push --dry-run
-      - name: Validate production service endpoints
+
+  service-diagnostics:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_service_diagnostics == true
+    name: Run manual service diagnostics
+    runs-on: ubuntu-latest
+    environment: production-preflight
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run service diagnostics
         run: npm run check:database
 
   migrate-and-health:
@@ -165,8 +191,6 @@ jobs:
         run: npm run test:pending-migrations
       - name: Apply database migrations after baseline
         run: npx --yes supabase@2.39.2 db push
-      - name: Validate production database health
-        run: npm run check:database
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

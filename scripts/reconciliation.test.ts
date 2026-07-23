@@ -29,8 +29,9 @@ test('migration order and exact Sprint 22–24 contracts are explicit', () => {
  assert.ok(migration.includes("'verified_organization'")); assert.ok(migration.includes("'Reportado','Em análise','Em vistoria','Planejado','Licitado','Em execução','Parcialmente resolvido','Resolvido','Arquivado','Reaberto'"));
  const deploymentWorkflows = readdirSync('.github/workflows').filter((file) => readFileSync(`.github/workflows/${file}`, 'utf8').includes('name: Verify, migrate and deploy'));
  assert.deepEqual(deploymentWorkflows, ['deploy.yml']);
- for (const job of ['verify', 'production-preflight', 'migrate-and-health', 'deploy']) assert.match(workflow, new RegExp(`^  ${job}:`, 'm'));
+ for (const job of ['verify', 'production-preflight', 'service-diagnostics', 'migrate-and-health', 'deploy']) assert.match(workflow, new RegExp(`^  ${job}:`, 'm'));
  assert.match(workflow, /^  production-preflight:\n    if: github\.event_name == 'workflow_dispatch'/m);
+ assert.match(workflow, /^  service-diagnostics:\n    if: github\.event_name == 'workflow_dispatch' && inputs\.run_service_diagnostics == true/m);
  assert.match(workflow, /^  migrate-and-health:\n    if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/m);
  assert.match(workflow, /^  deploy:[\s\S]*?^    needs: migrate-and-health$/m);
 });
