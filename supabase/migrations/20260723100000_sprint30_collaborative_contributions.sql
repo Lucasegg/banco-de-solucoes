@@ -45,13 +45,17 @@ create policy "Authors update editable contributions" on public.contributions fo
 -- RLS identifies the author; this trigger also prevents an author from changing
 -- moderation fields or moving a contribution to a different lifecycle state.
 create or replace function public.guard_contribution_author_update_sprint30() returns trigger language plpgsql security definer set search_path=public as $$
+declare rpc_write boolean := current_setting('app.contribution_rpc_write', true) = 'true';
 begin
- if not public.is_contribution_moderator() and auth.uid() is not null then
-   if old.user_id <> auth.uid() or new.user_id <> old.user_id or new.status <> old.status
-      or new.moderator_id is distinct from old.moderator_id or new.reviewed_at is distinct from old.reviewed_at
-      or new.rejection_reason is distinct from old.rejection_reason or new.moderation_note is distinct from old.moderation_note then
-     raise exception 'Not authorized' using errcode='42501';
-   end if;
+ -- The marker is set only inside the two SECURITY DEFINER lifecycle RPCs and is
+ -- transaction-local. Roles never bypass this guard: direct writes must be by
+ -- the contribution author and may change only payload/updated_at.
+ if rpc_write then return new; end if;
+ if auth.uid() is null or old.user_id <> auth.uid() or old.status not in ('pending','changes_requested') then
+   raise exception 'Not authorized' using errcode='42501';
+ end if;
+ if (to_jsonb(new) - array['payload','updated_at']) is distinct from (to_jsonb(old) - array['payload','updated_at']) then
+   raise exception 'Not authorized' using errcode='42501';
  end if;
  return new;
 end $$;
@@ -81,6 +85,7 @@ create trigger audit_contribution_write_sprint30 after insert or update on publi
 create or replace function public.withdraw_contribution(p_contribution_id uuid) returns void language plpgsql security definer set search_path=public as $$
 begin
  if auth.uid() is null then raise exception 'Not authorized' using errcode='42501'; end if;
+ perform set_config('app.contribution_rpc_write', 'true', true);
  update public.contributions set status='withdrawn', rejection_reason=null, moderation_note=null, moderator_id=null, reviewed_at=null
  where id=p_contribution_id and user_id=auth.uid() and status in ('pending','changes_requested');
  if not found then raise exception 'Unable to withdraw contribution' using errcode='42501'; end if;
@@ -116,6 +121,7 @@ returns void language plpgsql security definer set search_path=public as $$
 declare c public.contributions%rowtype; change jsonb; column_name text; proposed jsonb; v_reason text:=nullif(trim(coalesce(p_rejection_reason,'')), ''); v_owner uuid; v_kind text; v_target uuid;
 begin
  if auth.uid() is null or not public.is_contribution_moderator() then raise exception 'Not authorized' using errcode='42501'; end if;
+ perform set_config('app.contribution_rpc_write', 'true', true);
  if p_contribution_id is null or p_status not in ('approved','rejected','changes_requested') then raise exception 'Invalid input' using errcode='22023'; end if;
  if p_status in ('rejected','changes_requested') and v_reason is null then raise exception 'A reason is required' using errcode='22023'; end if;
  select * into c from public.contributions where id=p_contribution_id for update;

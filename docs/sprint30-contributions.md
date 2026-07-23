@@ -27,3 +27,7 @@ As páginas de detalhes destacam **Contribuir** e preservam a rota hash ao envia
 A retirada nunca remove a linha: ela é exclusivamente a RPC `withdraw_contribution`, que muda o estado para `withdrawn` e aciona a auditoria existente. Não há policy, grant ou método de repository para `DELETE` de contribuições. Atualizações diretas são limitadas ao payload do próprio autor; campos de moderação e transições de estado são bloqueados por RLS e trigger, sendo efetuados apenas por `review_contribution`.
 
 A revisão valida a estrutura integral do payload, chaves permitidas, mudanças, campos permitidos por alvo e o tipo de cada `proposedValue` antes de aplicar qualquer alteração. A migration também normaliza aliases conhecidos e qualquer valor legado desconhecido antes de recriar constraints. O teste `npm run test:sprint30` cobre esses contratos estáticos de retirada, moderação, validação e normalização.
+
+## Estado exclusivamente por RPC
+
+Nenhuma atualização direta de `contributions` recebe exceção por papel administrativo. Fora das RPCs, apenas o autor de uma contribuição em estado editável pode atualizar `payload` (e `updated_at`, quando existir). O trigger rejeita qualquer mudança direta de estado, autoria, alvo, tipo ou campos de moderação. `review_contribution` e `withdraw_contribution` ativam uma marca interna com `set_config(..., true)` limitada à transação; somente essa marca local autoriza as transições depois de suas validações de moderador ou autor, respectivamente.
