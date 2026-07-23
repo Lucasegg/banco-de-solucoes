@@ -21,16 +21,20 @@ envia `recipient_id` nem usa service role.
 
 Foram auditadas e reutilizadas `get_notifications`, `get_unread_notification_count`,
 `mark_notification_read`, `mark_all_notifications_read` e `create_notification`.
-`get_notifications` exige `auth.uid()`, filtra o destinatário no servidor e só retorna
-metadata pública permitida (identificadores de conteúdo, ator, status e categoria).
-Os grants da RPC de leitura são revogados de `PUBLIC` e `anon`, e concedidos somente a
-`authenticated`.
+`get_notifications` mantém o contrato legado: `p_type` continua aceitando apenas o tipo
+técnico (por exemplo, `comment.created` ou `contribution.approved`). A nova RPC
+`get_notifications_page(p_category, p_unread_only, p_limit, p_offset)` atende aos filtros
+por categoria. Ambas exigem `auth.uid()` e filtram o destinatário no servidor; a RPC nova
+só retorna metadata pública permitida. As assinaturas existentes são auditadas por
+`pg_proc`; grants são revogados de `PUBLIC` e `anon`, concedidos somente a
+`authenticated` para RPCs de usuário, e `create_notification` permanece interna.
 
 ## Paginação, deduplicação e metadata
 
-A RPC aceita uma categoria limitada, o filtro de não lidas, `limit` normalizado entre 1
-e 50 (padrão 20) e `offset` não negativo. A ordenação é `created_at DESC, id DESC`.
-Não há filtragem de lista completa no navegador.
+A nova RPC aceita uma categoria limitada, o filtro de não lidas, `limit` normalizado entre
+1 e 50 (padrão 20) e `offset` não negativo. Ela busca `limit + 1`; o repositório devolve
+apenas os primeiros `limit` e calcula `hasMore` pelo item adicional. A ordenação é
+`created_at DESC, id DESC`. Não há filtragem de lista completa no navegador.
 
 Não foi criada chave de deduplicação: os triggers existentes já evitam autoaviso por meio
 de `create_notification`, que descarta ator igual ao destinatário; o fluxo de revisão da
@@ -42,10 +46,11 @@ jsonb existentes e a RPC projeta somente chaves públicas permitidas.
 
 ## Navegação e UX
 
-Antes de navegar, a notificação é marcada como lida. URLs só podem ser rotas internas
-conhecidas para problemas, soluções, contribuições ou perfil; URLs externas, `data:`,
-`javascript:`, caminhos administrativos e caminhos malformados são rejeitados. Sem
-destino válido, a interface mantém os detalhes da notificação sem quebrar a página.
+Antes de navegar, a notificação é marcada como lida. URLs aceitas são somente `/profile`
+ou `/problems|solutions|contributions/<uuid-canônico>`, sem query, fragmento, barra extra,
+controle ou barra invertida. URLs externas, `data:`, `javascript:`, caminhos administrativos
+e caminhos malformados são rejeitados. Sem destino válido, a interface não navega e anuncia
+“Este conteúdo não está mais disponível.”.
 
 Os controles possuem foco visível, labels acessíveis, indicador textual “Não lida” e
 prevenção de operação duplicada. Mensagens públicas não expõem infraestrutura.

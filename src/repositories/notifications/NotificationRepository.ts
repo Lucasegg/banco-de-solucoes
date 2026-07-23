@@ -24,10 +24,10 @@ export class SupabaseNotificationRepository {
   constructor(private readonly client: SupabaseClient) {}
   async list(filters: NotificationFilters = {}): Promise<Result<NotificationPageResult>> {
     const limit = Math.min(50, Math.max(1, filters.limit ?? 20));
-    const { data, error } = await this.client.rpc('get_notifications', { p_type: filters.category ?? null, p_unread_only: filters.unreadOnly ?? false, p_limit: limit, p_offset: Math.max(0, filters.offset ?? 0) });
+    const { data, error } = await this.client.rpc('get_notifications_page', { p_category: filters.category ?? null, p_unread_only: filters.unreadOnly ?? false, p_limit: limit, p_offset: Math.max(0, filters.offset ?? 0) });
     if (error) return { ok: false, message: safeDatabaseMessage(error, 'Não foi possível carregar as notificações.') };
     const items = ((data ?? []) as Record<string, unknown>[]).map(mapRow).filter((item): item is NotificationItem => item !== null);
-    return { ok: true, data: { items, hasMore: items.length === limit } };
+    return { ok: true, data: { items: items.slice(0, limit), hasMore: items.length > limit } };
   }
   async getUnreadCount(): Promise<Result<number>> { const { data,error }=await this.client.rpc('get_unread_notification_count'); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível atualizar o contador.')}:{ok:true,data:Number(data??0)}; }
   async markRead(notificationId: string): Promise<Result<boolean>> { const {data,error}=await this.client.rpc('mark_notification_read',{p_notification_id:notificationId}); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível marcar a notificação.')}:{ok:true,data:Boolean(data)}; }
