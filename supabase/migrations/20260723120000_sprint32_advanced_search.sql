@@ -3,10 +3,22 @@
 -- and favourite tables when filters are combined with a page request.
 begin;
 
+-- array_to_string(text[], text) is STABLE, so keep the fixed delimiter behind
+-- an explicitly immutable wrapper before using tags in an index expression.
+create or replace function public.search_tags_text(p_tags text[])
+returns text
+language sql
+immutable
+parallel safe
+set search_path = pg_catalog
+as $$
+  select coalesce(array_to_string(p_tags, ' '), '')
+$$;
+
 create index if not exists problems_search_document_idx on public.problems using gin
-  ((setweight(to_tsvector('portuguese', title),'A') || setweight(to_tsvector('portuguese', coalesce(summary,'')),'B') || setweight(to_tsvector('portuguese', description),'C') || setweight(to_tsvector('portuguese', category || ' ' || city || ' ' || state || ' ' || array_to_string(tags,' ')),'D')));
+  ((setweight(to_tsvector('portuguese', coalesce(title, '')), 'A') || setweight(to_tsvector('portuguese', coalesce(summary, '')), 'B') || setweight(to_tsvector('portuguese', coalesce(description, '')), 'C') || setweight(to_tsvector('portuguese', coalesce(category, '') || ' ' || coalesce(city, '') || ' ' || coalesce(state, '') || ' ' || public.search_tags_text(tags)), 'D')));
 create index if not exists solutions_search_document_idx on public.solutions using gin
-  ((setweight(to_tsvector('portuguese', title),'A') || setweight(to_tsvector('portuguese', summary),'B') || setweight(to_tsvector('portuguese', description),'C') || setweight(to_tsvector('portuguese', category || ' ' || organization || ' ' || impact_metric || ' ' || array_to_string(tags,' ')),'D')));
+  ((setweight(to_tsvector('portuguese', coalesce(title, '')), 'A') || setweight(to_tsvector('portuguese', coalesce(summary, '')), 'B') || setweight(to_tsvector('portuguese', coalesce(description, '')), 'C') || setweight(to_tsvector('portuguese', coalesce(category, '') || ' ' || coalesce(organization, '') || ' ' || coalesce(impact_metric, '') || ' ' || public.search_tags_text(tags)), 'D')));
 create index if not exists problems_search_filters_idx on public.problems(status, category, created_at desc, id);
 create index if not exists solutions_search_filters_idx on public.solutions(category, created_at desc, id);
 create index if not exists solution_problems_solution_problem_idx on public.solution_problems(solution_id, problem_id);
@@ -38,10 +50,10 @@ language sql stable set search_path = public as $$
       case when p_sort='relevance' and nullif(btrim(p_query),'') is null then 'recent' when p_sort in ('relevance','recent','oldest','favorites','comments','updated') then p_sort else 'recent' end sort
   ), query as (select case when q='' then null else public.safe_search_tsquery(q) end tsq from args), matches as (
     select p.*, count(sp.solution_id) as solution_count,
-      ts_rank_cd(setweight(to_tsvector('portuguese', coalesce(p.title,'')),'A') || setweight(to_tsvector('portuguese',coalesce(p.summary,'')),'B') || setweight(to_tsvector('portuguese',p.description),'C') || setweight(to_tsvector('portuguese',concat_ws(' ',p.category,array_to_string(p.tags,' '))),'D'), q.tsq) relevance
+      ts_rank_cd(setweight(to_tsvector('portuguese', coalesce(p.title, '')), 'A') || setweight(to_tsvector('portuguese', coalesce(p.summary, '')), 'B') || setweight(to_tsvector('portuguese', coalesce(p.description, '')), 'C') || setweight(to_tsvector('portuguese', coalesce(p.category, '') || ' ' || coalesce(p.city, '') || ' ' || coalesce(p.state, '') || ' ' || public.search_tags_text(p.tags)), 'D'), q.tsq) relevance
     from public.problems p cross join args a cross join query q left join public.solution_problems sp on sp.problem_id=p.id
     where p.status <> 'Arquivado'
-      and (a.q = '' or (setweight(to_tsvector('portuguese',p.title),'A') || setweight(to_tsvector('portuguese',coalesce(p.summary,'')),'B') || setweight(to_tsvector('portuguese',p.description),'C') || setweight(to_tsvector('portuguese',p.category || ' ' || p.city || ' ' || p.state || ' ' || array_to_string(p.tags,' ')),'D')) @@ q.tsq)
+      and (a.q = '' or (setweight(to_tsvector('portuguese', coalesce(p.title, '')), 'A') || setweight(to_tsvector('portuguese', coalesce(p.summary, '')), 'B') || setweight(to_tsvector('portuguese', coalesce(p.description, '')), 'C') || setweight(to_tsvector('portuguese', coalesce(p.category, '') || ' ' || coalesce(p.city, '') || ' ' || coalesce(p.state, '') || ' ' || public.search_tags_text(p.tags)), 'D')) @@ q.tsq)
       and (p_category is null or p.category=p_category) and (p_status is null or p.status=p_status)
       and (p_state is null or p.state=p_state) and (p_city is null or p.city=p_city)
       and (p_tags is null or p.tags @> p_tags) and (p_created_from is null or p.created_at>=p_created_from) and (p_created_to is null or p.created_at<=p_created_to)
@@ -71,9 +83,9 @@ language sql stable set search_path = public as $$
   with args as (select left(regexp_replace(coalesce(p_query,''),'\\s+',' ','g'),160) q, least(greatest(coalesce(p_limit,20),1),50) lim, greatest(coalesce(p_offset,0),0) off, case when p_sort='relevance' and nullif(btrim(p_query),'') is null then 'recent' when p_sort in ('relevance','recent','oldest','favorites','comments','updated') then p_sort else 'recent' end sort),
   query as (select case when q='' then null else public.safe_search_tsquery(q) end tsq from args),
   matches as (select s.*, array_remove(array_agg(sp.problem_id),null) problem_ids,
-    ts_rank_cd(setweight(to_tsvector('portuguese',s.title),'A') || setweight(to_tsvector('portuguese',s.summary),'B') || setweight(to_tsvector('portuguese',s.description),'C') || setweight(to_tsvector('portuguese',concat_ws(' ',s.category,s.organization,s.impact_metric,array_to_string(s.tags,' '))),'D'),q.tsq) relevance
+    ts_rank_cd(setweight(to_tsvector('portuguese', coalesce(s.title, '')), 'A') || setweight(to_tsvector('portuguese', coalesce(s.summary, '')), 'B') || setweight(to_tsvector('portuguese', coalesce(s.description, '')), 'C') || setweight(to_tsvector('portuguese', coalesce(s.category, '') || ' ' || coalesce(s.organization, '') || ' ' || coalesce(s.impact_metric, '') || ' ' || public.search_tags_text(s.tags)), 'D'), q.tsq) relevance
     from public.solutions s cross join args a cross join query q left join public.solution_problems sp on sp.solution_id=s.id
-    where s.status <> 'Arquivada' and (a.q='' or (setweight(to_tsvector('portuguese',s.title),'A') || setweight(to_tsvector('portuguese',s.summary),'B') || setweight(to_tsvector('portuguese',s.description),'C') || setweight(to_tsvector('portuguese',s.category || ' ' || s.organization || ' ' || s.impact_metric || ' ' || array_to_string(s.tags,' ')),'D')) @@ q.tsq)
+    where s.status <> 'Arquivada' and (a.q='' or (setweight(to_tsvector('portuguese', coalesce(s.title, '')), 'A') || setweight(to_tsvector('portuguese', coalesce(s.summary, '')), 'B') || setweight(to_tsvector('portuguese', coalesce(s.description, '')), 'C') || setweight(to_tsvector('portuguese', coalesce(s.category, '') || ' ' || coalesce(s.organization, '') || ' ' || coalesce(s.impact_metric, '') || ' ' || public.search_tags_text(s.tags)), 'D')) @@ q.tsq)
       and (p_category is null or s.category=p_category) and (p_organization is null or s.organization=p_organization) and (p_tags is null or s.tags @> p_tags)
       and (p_created_from is null or s.created_at>=p_created_from) and (p_created_to is null or s.created_at<=p_created_to)
       and (p_problem_id is null or exists(select 1 from public.solution_problems x where x.solution_id=s.id and x.problem_id=p_problem_id))
@@ -85,6 +97,7 @@ language sql stable set search_path = public as $$
 $$;
 
 revoke all on function public.safe_search_tsquery(text) from public, anon, authenticated;
+revoke all on function public.search_tags_text(text[]) from public, anon, authenticated;
 revoke all on function public.search_problems(text,text,text,text,text,text[],timestamptz,timestamptz,boolean,boolean,boolean,text,integer,integer) from public;
 revoke all on function public.search_solutions(text,text,text,text[],timestamptz,timestamptz,uuid,boolean,boolean,boolean,boolean,text,integer,integer) from public;
 grant execute on function public.search_problems(text,text,text,text,text,text[],timestamptz,timestamptz,boolean,boolean,boolean,text,integer,integer) to anon, authenticated;
