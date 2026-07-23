@@ -21,3 +21,33 @@ test('Sprint 32 search contracts are server-side and public-safe', () => {
   assert.match(migration, /p\.status <> 'Arquivado'/); assert.match(migration, /s\.status <> 'Arquivada'/);
   assert.match(migration, /p\.summary/); assert.match(migration, /s\.evidence_links/);
 });
+
+test('Sprint 32 search documents use an immutable, private tag helper', () => {
+  const helper = /create or replace function public\.search_tags_text\(p_tags text\[\]\)[\s\S]*?\$\$;/.exec(migration)?.[0] ?? '';
+  assert.match(helper, /returns text/);
+  assert.match(helper, /language sql/);
+  assert.match(helper, /immutable/);
+  assert.match(helper, /parallel safe/);
+  assert.match(helper, /set search_path = pg_catalog/);
+  assert.match(helper, /coalesce\(array_to_string\(p_tags, ' '\), ''\)/);
+  assert.doesNotMatch(helper, /\bfrom\b/i, 'the helper must not query tables');
+  assert.match(migration, /revoke all on function public\.search_tags_text\(text\[\]\) from public, anon, authenticated/);
+  const indexAndRpcDocuments = migration
+    .replace(helper, '')
+    .replace(/--[^\n]*/g, '');
+  assert.doesNotMatch(indexAndRpcDocuments, /array_to_string\(/i, 'indexes and RPCs must not call array_to_string directly');
+});
+
+test('Sprint 32 indexed search documents remain null-safe and equivalent to @@ documents', () => {
+  const compact = migration.replace(/\s+/g, ' ');
+  const problemDocument = "setweight(to_tsvector('portuguese', coalesce(p.title, '')), 'A') || setweight(to_tsvector('portuguese', coalesce(p.summary, '')), 'B') || setweight(to_tsvector('portuguese', coalesce(p.description, '')), 'C') || setweight(to_tsvector('portuguese', coalesce(p.category, '') || ' ' || coalesce(p.city, '') || ' ' || coalesce(p.state, '') || ' ' || public.search_tags_text(p.tags)), 'D')";
+  const solutionDocument = "setweight(to_tsvector('portuguese', coalesce(s.title, '')), 'A') || setweight(to_tsvector('portuguese', coalesce(s.summary, '')), 'B') || setweight(to_tsvector('portuguese', coalesce(s.description, '')), 'C') || setweight(to_tsvector('portuguese', coalesce(s.category, '') || ' ' || coalesce(s.organization, '') || ' ' || coalesce(s.impact_metric, '') || ' ' || public.search_tags_text(s.tags)), 'D')";
+  for (const document of [problemDocument, solutionDocument]) {
+    assert.ok(compact.includes(document), `missing relevance document: ${document}`);
+    assert.ok(compact.includes(`(${document}) @@ q.tsq`), `@@ document must match relevance document: ${document}`);
+    assert.match(document, /public\.search_tags_text\(/);
+    assert.match(document, /coalesce\(/);
+  }
+  assert.match(compact, /problems_search_document_idx[\s\S]*?coalesce\(title, ''\)[\s\S]*?public\.search_tags_text\(tags\)/);
+  assert.match(compact, /solutions_search_document_idx[\s\S]*?coalesce\(title, ''\)[\s\S]*?public\.search_tags_text\(tags\)/);
+});
