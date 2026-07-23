@@ -26,6 +26,7 @@ import { AdminUsers } from './pages/AdminUsers';
 import { AdminProblems } from './pages/AdminProblems';
 import { AdminSolutions } from './pages/AdminSolutions';
 import { AuthenticatedRoute } from './components/auth/AuthenticatedRoute';
+import { Search } from './pages/Search';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -54,6 +55,7 @@ const pageToHashPath: Record<string, string> = {
   'admin-contributions': '/admin/contributions',
   notifications: '/notifications',
   mapa: '/mapa',
+  search: '/search',
 };
 
 function normalizeHash(hash: string) {
@@ -87,6 +89,7 @@ function pageFromHash(hash: string) {
   if (path === '/admin') return 'admin';
   if (path === '/notifications' || path === '/notificacoes') return 'notifications';
   if (path === '/mapa') return 'mapa';
+  if (path === '/search') return 'search';
   if (path === '/contributions') return 'contributions';
   if (path === '/favorites') return 'favorites';
   if (path === '/diagnostics') return 'diagnostics';
@@ -152,6 +155,7 @@ export function App() {
       {page === 'home' && <Home onNavigate={setPage} />}
       {page === 'problemas' && <ExploreProblems onNavigate={setPage} onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
       {page === 'mapa' && <PublicMap onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
+      {page === 'search' && <Search onOpenProblem={(problemId) => setPage(`problema:${problemId}`)} onOpenSolution={(solutionId) => setPage(`solucao:${solutionId}`)} />}
       {page === 'solucoes' && <ExploreSolutions onNavigate={setPage} onOpen={(solutionId) => setPage(`solucao:${solutionId}`)} />}
       {kind === 'problema' && <ProblemDetails id={id} onNavigate={setPage} />}
       {kind === 'solucao' && <SolutionDetails id={id} onNavigate={setPage} />}
