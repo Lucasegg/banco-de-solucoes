@@ -21,3 +21,9 @@ A migration `20260723100000_sprint30_collaborative_contributions.sql` atualiza o
 ## UX e limitações
 
 As páginas de detalhes destacam **Contribuir** e preservam a rota hash ao enviar visitantes ao login. “Minhas contribuições” permite filtrar, abrir o conteúdo e retirar propostas editáveis. A tela administrativa existente reúne as revisões; filtros completos de período/autor e paginação no servidor permanecem uma evolução futura. Anexos reutilizam somente o upload já seguro para imagens; não foi criada nova infraestrutura de upload.
+
+## Ajuste de segurança da PR #60
+
+A retirada nunca remove a linha: ela é exclusivamente a RPC `withdraw_contribution`, que muda o estado para `withdrawn` e aciona a auditoria existente. Não há policy, grant ou método de repository para `DELETE` de contribuições. Atualizações diretas são limitadas ao payload do próprio autor; campos de moderação e transições de estado são bloqueados por RLS e trigger, sendo efetuados apenas por `review_contribution`.
+
+A revisão valida a estrutura integral do payload, chaves permitidas, mudanças, campos permitidos por alvo e o tipo de cada `proposedValue` antes de aplicar qualquer alteração. A migration também normaliza aliases conhecidos e qualquer valor legado desconhecido antes de recriar constraints. O teste `npm run test:sprint30` cobre esses contratos estáticos de retirada, moderação, validação e normalização.

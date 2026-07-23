@@ -10,9 +10,16 @@ alter table public.contribution_audit add column if not exists next_payload json
 alter table public.contribution_audit alter column moderator_id drop not null;
 
 -- Normalize legacy values before replacing constraints, preserving all authored rows.
-update public.contributions set status='pending' where status='reviewing';
-update public.contributions set contribution_type='other' where contribution_type='general';
-update public.contributions set contribution_type='status_update' where contribution_type='update';
+-- Normalize every legacy value before the new domain constraints are attached.
+-- Known aliases retain their closest meaning; any unrecognised legacy value is safe
+-- as a pending/other contribution rather than making the migration fail mid-flight.
+update public.contributions set status=case lower(trim(coalesce(status,'')))
+  when 'reviewing' then 'pending' when 'pending' then 'pending' when 'changes_requested' then 'changes_requested'
+  when 'approved' then 'approved' when 'rejected' then 'rejected' when 'withdrawn' then 'withdrawn' else 'pending' end;
+update public.contributions set contribution_type=case lower(trim(coalesce(contribution_type,'')))
+  when 'general' then 'other' when 'update' then 'status_update' when 'correction' then 'correction'
+  when 'supplement' then 'supplement' when 'status_update' then 'status_update' when 'evidence' then 'evidence'
+  when 'description_improvement' then 'description_improvement' when 'location' then 'location' when 'other' then 'other' else 'other' end;
 alter table public.contributions drop constraint if exists contributions_status_check;
 alter table public.contributions add constraint contributions_status_check check (status in ('pending','changes_requested','approved','rejected','withdrawn'));
 alter table public.contributions drop constraint if exists contributions_type_check;
@@ -50,8 +57,8 @@ begin
 end $$;
 drop trigger if exists guard_contribution_author_update_sprint30 on public.contributions;
 create trigger guard_contribution_author_update_sprint30 before update on public.contributions for each row execute function public.guard_contribution_author_update_sprint30();
-create policy "Authors delete editable contributions" on public.contributions for delete to authenticated
- using (user_id=auth.uid() and status in ('pending','changes_requested'));
+-- Contributions are retained permanently; withdrawal is an RPC-mediated status change.
+revoke delete on table public.contributions from authenticated;
 
 create or replace function public.audit_contribution_write_sprint30() returns trigger language plpgsql security definer set search_path=public as $$
 declare v_action text; v_owner uuid; v_target text; v_id uuid;
@@ -79,6 +86,31 @@ begin
  if not found then raise exception 'Unable to withdraw contribution' using errcode='42501'; end if;
 end $$;
 
+create or replace function public.is_valid_contribution_payload_sprint30(p_payload jsonb, p_target text)
+returns boolean language plpgsql immutable set search_path=public as $$
+declare item jsonb; field_name text; expected_array boolean; allowed text[];
+begin
+ if jsonb_typeof(p_payload) <> 'object' or p_payload ?| array['__proto__','constructor']
+    or exists (select 1 from jsonb_object_keys(p_payload) key where key <> all(array['title','description','summary','references','images','changes'])) then return false; end if;
+ if jsonb_typeof(p_payload->'description') <> 'string' or jsonb_typeof(p_payload->'summary') <> 'string'
+    or length(trim(p_payload->>'description')) not between 1 and 10000 or length(trim(p_payload->>'summary')) not between 1 and 1000
+    or jsonb_typeof(p_payload->'references') <> 'array' or jsonb_typeof(p_payload->'images') <> 'array'
+    or jsonb_typeof(p_payload->'changes') <> 'array' or jsonb_array_length(p_payload->'changes') = 0 then return false; end if;
+ if exists (select 1 from jsonb_array_elements(p_payload->'references') x where jsonb_typeof(x) <> 'string')
+    or exists (select 1 from jsonb_array_elements(p_payload->'images') x where jsonb_typeof(x) <> 'string') then return false; end if;
+ allowed := case when p_target='problem' then array['title','summary','description','category','status','tags','image'] else array['title','summary','description','category','status','tags','image','organization','impactMetric','evidenceLinks'] end;
+ for item in select value from jsonb_array_elements(p_payload->'changes') loop
+   if jsonb_typeof(item) <> 'object' or exists (select 1 from jsonb_object_keys(item) key where key <> all(array['id','field','label','previousValue','proposedValue']))
+      or not (item ?& array['field','label','previousValue','proposedValue']) then return false; end if;
+   field_name:=item->>'field'; expected_array:=field_name in ('tags','evidenceLinks');
+   if field_name is null or not field_name=any(allowed) or jsonb_typeof(item->'label') <> 'string' or not(item ? 'proposedValue') then return false; end if;
+   if expected_array then
+     if jsonb_typeof(item->'proposedValue') <> 'array' or exists(select 1 from jsonb_array_elements(item->'proposedValue') x where jsonb_typeof(x)<>'string') then return false; end if;
+   elsif jsonb_typeof(item->'proposedValue') <> 'string' then return false; end if;
+ end loop;
+ return true;
+end $$;
+
 create or replace function public.review_contribution(p_contribution_id uuid, p_status text, p_rejection_reason text default null)
 returns void language plpgsql security definer set search_path=public as $$
 declare c public.contributions%rowtype; change jsonb; column_name text; proposed jsonb; v_reason text:=nullif(trim(coalesce(p_rejection_reason,'')), ''); v_owner uuid; v_kind text; v_target uuid;
@@ -88,6 +120,7 @@ begin
  if p_status in ('rejected','changes_requested') and v_reason is null then raise exception 'A reason is required' using errcode='22023'; end if;
  select * into c from public.contributions where id=p_contribution_id for update;
  if not found or c.status not in ('pending','changes_requested') then raise exception 'Unable to review contribution' using errcode='22023'; end if;
+ if not public.is_valid_contribution_payload_sprint30(c.payload, case when c.problem_id is not null then 'problem' else 'solution' end) then raise exception 'Unable to process contribution' using errcode='22023'; end if;
  if p_status='approved' then
   for change in select value from jsonb_array_elements(c.payload->'changes') loop
    column_name:=case change->>'field' when 'title' then 'title' when 'summary' then 'summary' when 'description' then 'description' when 'category' then 'category' when 'status' then 'status' when 'tags' then 'tags' when 'image' then 'image_url' when 'organization' then 'organization' when 'impactMetric' then 'impact_metric' when 'evidenceLinks' then 'evidence_links' else null end;
