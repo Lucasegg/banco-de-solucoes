@@ -15,6 +15,7 @@ const links = [
   ['problemas', 'Problemas'],
   ['mapa', 'Mapa'],
   ['solucoes', 'Soluções'],
+  ['search', 'Buscar'],
   ['novo-problema', 'Cadastrar problema'],
   ['nova-solucao', 'Cadastrar solução'],
   ['sobre', 'Sobre'],
