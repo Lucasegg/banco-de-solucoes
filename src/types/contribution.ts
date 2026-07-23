@@ -1,6 +1,6 @@
 export type ContributionTargetType = 'problem' | 'solution';
-export type ContributionStatus = 'pending' | 'reviewing' | 'approved' | 'rejected';
-export type ContributionType = 'correction' | 'update' | 'evidence' | 'general';
+export type ContributionStatus = 'pending' | 'changes_requested' | 'approved' | 'rejected' | 'withdrawn';
+export type ContributionType = 'correction' | 'supplement' | 'status_update' | 'evidence' | 'description_improvement' | 'location' | 'other';
 export type SerializableValue = string | number | boolean | null | SerializableValue[] | { [key: string]: SerializableValue };
 
 export interface ContributionChange {
@@ -45,10 +45,10 @@ export interface ContributionAudit {
   contributionId: string;
   moderatorId: string;
   moderatorName: string;
-  action: 'approved' | 'rejected';
+  action: 'created' | 'edited' | 'withdrawn' | 'changes_requested' | 'approved' | 'rejected';
   createdAt: string;
 }
 
 export const contributionStatusLabel: Record<ContributionStatus, string> = {
-  pending: 'Pendente', reviewing: 'Em revisão', approved: 'Aprovada', rejected: 'Rejeitada',
+  pending: 'Pendente', changes_requested: 'Ajustes solicitados', approved: 'Aprovada', rejected: 'Rejeitada', withdrawn: 'Retirada',
 };
