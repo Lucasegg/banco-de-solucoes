@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNotificationsContext } from '../context/NotificationsContext';
 import { useAuth } from './useAuth';
 import { NotificationRepository } from '../repositories/notifications';
-import type { NotificationItem, NotificationType } from '../types/notification';
+import type { NotificationCategory, NotificationItem } from '../types/notification';
 
 export function useNotifications(pageSize = 20) {
   const { isAuthenticated, user } = useAuth();
@@ -10,7 +10,7 @@ export function useNotifications(pageSize = 20) {
   const mounted = useRef(true);
   const requestId = useRef(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
-  const [type, setType] = useState<NotificationType | undefined>(undefined);
+  const [category, setCategory] = useState<NotificationCategory | undefined>(undefined);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,7 +22,7 @@ export function useNotifications(pageSize = 20) {
     setLoading(true);
     setError('');
     const result = await NotificationRepository.list({
-      type,
+      category,
       unreadOnly,
       limit: pageSize,
       offset: append ? items.length : 0,
@@ -35,7 +35,7 @@ export function useNotifications(pageSize = 20) {
       setError(result.message);
     }
     setLoading(false);
-  }, [isAuthenticated, items.length, pageSize, type, unreadOnly, user]);
+  }, [category, isAuthenticated, items.length, pageSize, unreadOnly, user]);
 
   useEffect(() => {
     mounted.current = true;
@@ -55,7 +55,7 @@ export function useNotifications(pageSize = 20) {
       return;
     }
     void load(false);
-  }, [isAuthenticated, type, unreadOnly, user?.id]);
+  }, [category, isAuthenticated, unreadOnly, user?.id]);
 
   useEffect(() => {
     setItems((current) => current.map((item) => {
@@ -87,8 +87,8 @@ export function useNotifications(pageSize = 20) {
   return {
     items,
     unreadCount: global.unreadCount,
-    type,
-    setType,
+    category,
+    setCategory,
     unreadOnly,
     setUnreadOnly,
     loading,

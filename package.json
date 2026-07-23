@@ -19,7 +19,8 @@
     "test:auth-hotfix": "node --test scripts/authenticationRequiredRoute.test.mjs",
     "test:favorites-permissions": "node --experimental-strip-types --test scripts/favoritesPermissions.test.ts",
     "test:pending-migrations": "node --experimental-strip-types --test scripts/pendingMigrationsSafety.test.ts",
-    "test:sprint30": "node --experimental-strip-types --test scripts/sprint30Contributions.test.ts"
+    "test:sprint30": "node --experimental-strip-types --test scripts/sprint30Contributions.test.ts",
+    "test:sprint31": "node --experimental-strip-types --test scripts/sprint31Notifications.test.ts"
   },
   "dependencies": {
     "vite": "latest",

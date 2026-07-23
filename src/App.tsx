@@ -52,7 +52,7 @@ const pageToHashPath: Record<string, string> = {
   'admin-reports': '/admin/reports',
   'admin-audit': '/admin/audit',
   'admin-contributions': '/admin/contributions',
-  notifications: '/notificacoes',
+  notifications: '/notifications',
   mapa: '/mapa',
 };
 
@@ -85,7 +85,7 @@ function pageFromHash(hash: string) {
   if (path === '/admin/audit') return 'admin-audit';
   if (path === '/admin/contributions') return 'admin-contributions';
   if (path === '/admin') return 'admin';
-  if (path === '/notificacoes') return 'notifications';
+  if (path === '/notifications' || path === '/notificacoes') return 'notifications';
   if (path === '/mapa') return 'mapa';
   if (path === '/contributions') return 'contributions';
   if (path === '/favorites') return 'favorites';

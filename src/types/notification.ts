@@ -1,11 +1,15 @@
 export type NotificationType =
+  | 'contribution.received'
   | 'contribution.approved'
   | 'contribution.rejected'
+  | 'contribution.changes_requested'
   | 'comment.created'
   | 'comment.replied'
   | 'comment.reacted'
   | 'favorite.content_updated'
   | 'user.role_changed';
+
+export type NotificationCategory = 'contributions' | 'comments' | 'favorites' | 'account';
 
 export interface NotificationItem {
   id: string;
@@ -23,7 +27,7 @@ export interface NotificationItem {
 }
 
 export interface NotificationFilters {
-  type?: NotificationType;
+  category?: NotificationCategory;
   unreadOnly?: boolean;
   limit?: number;
   offset?: number;
