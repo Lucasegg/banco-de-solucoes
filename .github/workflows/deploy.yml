@@ -51,19 +51,55 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up Node for the fixed Supabase CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify Docker daemon and Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v docker >/dev/null 2>&1; then
+            echo 'Docker CLI is unavailable; local migration validation cannot start.' >&2
+            exit 1
+          fi
+          docker version
+          if ! docker info; then
+            echo 'Docker daemon is unavailable; local migration validation cannot start.' >&2
+            exit 1
+          fi
+          npx --yes supabase@2.39.2 --version
+          if ! command -v psql >/dev/null 2>&1; then
+            echo 'psql is unavailable; local migration validation cannot run SQL assertions.' >&2
+            exit 1
+          fi
+          psql --version
       - name: Start local Supabase PostgreSQL
         run: npx --yes supabase@2.39.2 start
+      - name: Show local Supabase status
+        run: npx --yes supabase@2.39.2 status
       - name: Apply all migrations to an empty local database
         run: npx --yes supabase@2.39.2 db reset --local
       - name: Verify Sprint 32 indexes and public search RPCs
         shell: bash
         run: |
           set -euo pipefail
-          docker exec supabase_db_banco-de-solucoes psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          eval "$(npx --yes supabase@2.39.2 status --output env)"
+          : "${DB_URL:?Supabase CLI did not return DB_URL for the local database}"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
           do $$
           begin
             if (select count(*) from pg_indexes where schemaname = 'public' and indexname in ('problems_search_document_idx', 'solutions_search_document_idx')) <> 2 then
               raise exception 'Sprint 32 full-text indexes were not created';
+            end if;
+            if to_regprocedure('public.search_tags_text(text[])') is null then
+              raise exception 'search_tags_text(text[]) was not created';
+            end if;
+            if (select provolatile from pg_proc where oid = 'public.search_tags_text(text[])'::regprocedure) <> 'i' then
+              raise exception 'search_tags_text(text[]) is not immutable';
+            end if;
+            if (select proparallel from pg_proc where oid = 'public.search_tags_text(text[])'::regprocedure) <> 's' then
+              raise exception 'search_tags_text(text[]) is not parallel safe';
             end if;
           end
           $$;
