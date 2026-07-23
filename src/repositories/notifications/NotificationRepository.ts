@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseClient } from '../../integrations/supabase/client';
 import type { NotificationFilters, NotificationItem, NotificationPageResult, NotificationType } from '../../types/notification';
-import { safeNotificationActionUrl } from '../../notifications/presentation';
+import { safeNotificationActionUrl } from '../../notifications/navigation';
 import { safeDatabaseMessage } from '../errors';
 
 type Result<T> = { ok: true; data: T } | { ok: false; message: string };

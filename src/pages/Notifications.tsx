@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { NotificationFilters } from '../components/notifications/NotificationFilters';
 import { NotificationList } from '../components/notifications/NotificationList';
 import { useNotifications } from '../hooks/useNotifications';
-import { notificationMessages, safeNotificationActionUrl } from '../notifications/presentation';
+import { notificationMessages } from '../notifications/presentation';
+import { safeNotificationActionUrl } from '../notifications/navigation';
 import type { NotificationItem } from '../types/notification';
 
 export function Notifications() {

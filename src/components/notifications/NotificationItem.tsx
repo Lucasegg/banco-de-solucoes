@@ -1,4 +1,5 @@
-import { notificationIcon, safeNotificationActionUrl } from '../../notifications/presentation';
+import { notificationIcon } from '../../notifications/presentation';
+import { safeNotificationActionUrl } from '../../notifications/navigation';
 import type { NotificationItem as Notification } from '../../types/notification';
 import { formatNotificationDate } from '../../utils/formatNotificationDate';
 

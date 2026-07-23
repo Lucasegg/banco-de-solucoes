@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { safeNotificationActionUrl } from '../src/notifications/navigation.ts';
 
 const sql = readFileSync('supabase/migrations/20260723110000_sprint31_notifications.sql', 'utf8');
 const repository = readFileSync('src/repositories/notifications/NotificationRepository.ts', 'utf8');
-const presentation = readFileSync('src/notifications/presentation.tsx', 'utf8');
+const navigation = readFileSync('src/notifications/navigation.ts', 'utf8');
 const page = readFileSync('src/pages/Notifications.tsx', 'utf8');
 const bell = readFileSync('src/components/notifications/NotificationBell.tsx', 'utf8');
 const badge = readFileSync('src/components/notifications/NotificationBadge.tsx', 'utf8');
@@ -35,11 +36,11 @@ test('server pagination uses one extra row and stable bounded ordering', () => {
   assert.doesNotMatch(repository, /items\.length === limit/);
 });
 
-test('safe navigation permits only canonical internal UUID paths', () => {
-  assert.match(presentation, /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{12\}/i);
-  assert.match(presentation, /\^\/\(\?:problems\|solutions\|contributions\)/);
-  assert.match(presentation, /\[\\\\\\x00-\\x1f\\x7f\?#\]/);
-  assert.match(presentation, /value === '\/profile'/);
+test('safe navigation accepts canonical paths and rejects malformed destinations', () => {
+  const uuid = '123e4567-e89b-12d3-a456-426614174000';
+  for (const path of ['/profile', `/problems/${uuid}`, `/solutions/${uuid}`, `/contributions/${uuid}`]) assert.equal(safeNotificationActionUrl(path), path);
+  for (const path of [`/problems/${uuid.slice(0, 8)}`, `/problems/${uuid}/extra`, `/problems/${uuid}/`, `//problems/${uuid}`, `/problems/${uuid}?next=x`, `/problems/${uuid}#x`, 'https://example.test/x', 'javascript:alert(1)', 'data:text/plain,x', '/admin', `/problems/${uuid}\\x`]) assert.equal(safeNotificationActionUrl(path), null, path);
+  assert.match(navigation, /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{12\}/i);
   assert.match(page, /await notifications\.markRead/);
   assert.match(page, /notificationMessages\.unavailable/);
 });

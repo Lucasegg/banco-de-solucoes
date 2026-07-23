@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { useNotificationsContext } from '../../context/NotificationsContext';
 import { formatNotificationDate } from '../../utils/formatNotificationDate';
-import { safeNotificationActionUrl } from '../../notifications/presentation';
+import { safeNotificationActionUrl } from '../../notifications/navigation';
 import { NotificationBadge } from './NotificationBadge';
 
 export function NotificationBell({ onNavigate }: { onNavigate: (page: string) => void }) {
