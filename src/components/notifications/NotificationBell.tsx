@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { useNotificationsContext } from '../../context/NotificationsContext';
 import { formatNotificationDate } from '../../utils/formatNotificationDate';
+import { safeNotificationActionUrl } from '../../notifications/presentation';
+import { NotificationBadge } from './NotificationBadge';
 
 export function NotificationBell({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -26,7 +28,8 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
   const activate = async (id: string, readAt: string | null, url: string | null) => {
     if (!readAt) await markRead(id);
     setOpen(false);
-    if (url) window.location.hash = `#${url}`;
+    const destination = safeNotificationActionUrl(url);
+    if (destination) window.location.hash = `#${destination}`;
   };
 
   return (
@@ -39,11 +42,7 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
         className="relative rounded-full p-2 text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
       >
         <Bell size={19} />
-        {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-rose-600 px-1 text-center text-[10px] font-bold leading-5 text-white">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
+        <NotificationBadge count={unreadCount} />
       </button>
       {open && (
         <section
