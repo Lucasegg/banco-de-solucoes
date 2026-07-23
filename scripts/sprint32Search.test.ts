@@ -14,4 +14,10 @@ test('Sprint 32 search contracts are server-side and public-safe', () => {
   assert.doesNotMatch(migration, /service_role/i); assert.doesNotMatch(page, /dangerouslySetInnerHTML/);
   assert.match(page, /aria-live/); assert.match(hook, /350/); assert.match(page, /known = new Set/);
   assert.match(repository, /\.rpc\('search_/); assert.doesNotMatch(page, /\.from\(/);
+  assert.match(repository, /canonicalUuid.*\^\[0-9a-f\]/);
+  assert.match(repository, /p_problem_id: canonicalUuid\(filters.problemId\)/);
+  assert.match(migration, /safe_search_tsquery[\s\S]*exception when others/);
+  assert.match(migration, /p_sort='relevance' and nullif\(btrim\(p_query\),''\) is null then 'recent'/);
+  assert.match(migration, /p\.status <> 'Arquivado'/); assert.match(migration, /s\.status <> 'Arquivada'/);
+  assert.match(migration, /p\.summary/); assert.match(migration, /s\.evidence_links/);
 });

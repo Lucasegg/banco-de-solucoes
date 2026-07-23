@@ -37,3 +37,23 @@ O catálogo atual não possui coluna geral de visibilidade para problemas e solu
 `Arquivado`/`Arquivada` é tratado como conteúdo removido na busca. As opções livres
 (categoria, cidade e organização) não carregam listas inteiras no cliente. A suíte
 Sprint 32 audita os contratos de segurança, URL, UI e migration.
+
+## Auditoria corretiva
+
+O schema de migrations confirma que `problems` usa `summary` opcional e `description`,
+`category`, `city`, `state`, `tags`, `status`, `author_id`, `author_name`, `likes`,
+`comments`, `created_at` e `updated_at`; `solutions` usa os mesmos campos aplicáveis,
+mais `organization`, `impact_metric` e `evidence_links`. `favorites` relaciona `user_id`
+a `problem_id` ou `solution_id`, e `solution_problems` usa os UUIDs `solution_id` e
+`problem_id`. Não há coluna de privacidade/moderação para problemas ou soluções no schema
+atual; as policies de leitura existentes são públicas e a busca, executada como invoker,
+não as ignora. Arquivados são removidos explicitamente, e não são retornados campos
+administrativos.
+
+Os GIN usam precisamente o mesmo `tsvector` ponderado do `@@`: A título, B resumo,
+C descrição e D taxonomia/localização. `safe_search_tsquery` normaliza e limita a 160
+caracteres, captura termos websearch malformados e usa `plainto_tsquery` como fallback.
+`problemId` só segue para a RPC quando for UUID canônico; os demais viram `null`.
+Os filtros de solução por evidências e impacto devem evoluir para estado tri-state completo
+(todos/com/sem); o contrato SQL já aceita `boolean|null`. `relevance` sem texto é
+normalizado para `recent` no servidor.

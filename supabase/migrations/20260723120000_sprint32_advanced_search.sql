@@ -4,12 +4,22 @@
 begin;
 
 create index if not exists problems_search_document_idx on public.problems using gin
-  (to_tsvector('portuguese', title || ' ' || coalesce(summary, '') || ' ' || description || ' ' || category || ' ' || city || ' ' || state || ' ' || array_to_string(tags, ' ')));
+  ((setweight(to_tsvector('portuguese', title),'A') || setweight(to_tsvector('portuguese', coalesce(summary,'')),'B') || setweight(to_tsvector('portuguese', description),'C') || setweight(to_tsvector('portuguese', category || ' ' || city || ' ' || state || ' ' || array_to_string(tags,' ')),'D')));
 create index if not exists solutions_search_document_idx on public.solutions using gin
-  (to_tsvector('portuguese', title || ' ' || summary || ' ' || description || ' ' || category || ' ' || organization || ' ' || impact_metric || ' ' || array_to_string(tags, ' ')));
+  ((setweight(to_tsvector('portuguese', title),'A') || setweight(to_tsvector('portuguese', summary),'B') || setweight(to_tsvector('portuguese', description),'C') || setweight(to_tsvector('portuguese', category || ' ' || organization || ' ' || impact_metric || ' ' || array_to_string(tags,' ')),'D')));
 create index if not exists problems_search_filters_idx on public.problems(status, category, created_at desc, id);
 create index if not exists solutions_search_filters_idx on public.solutions(category, created_at desc, id);
 create index if not exists solution_problems_solution_problem_idx on public.solution_problems(solution_id, problem_id);
+
+create or replace function public.safe_search_tsquery(p_query text) returns tsquery
+language plpgsql immutable set search_path = pg_catalog as $$
+begin
+  if nullif(btrim(p_query), '') is null then return null; end if;
+  return websearch_to_tsquery('portuguese', left(regexp_replace(p_query, '\s+', ' ', 'g'), 160));
+exception when others then
+  return plainto_tsquery('portuguese', left(regexp_replace(p_query, '\s+', ' ', 'g'), 160));
+end;
+$$;
 
 create or replace function public.search_problems(
   p_query text default null, p_category text default null, p_status text default null,
@@ -25,13 +35,13 @@ language sql stable set search_path = public as $$
   with args as (
     select left(regexp_replace(coalesce(p_query, ''), '\\s+', ' ', 'g'), 160) q,
       least(greatest(coalesce(p_limit,20),1),50) lim, greatest(coalesce(p_offset,0),0) off,
-      case when p_sort in ('relevance','recent','oldest','favorites','comments','updated') then p_sort else 'recent' end sort
-  ), matches as (
+      case when p_sort='relevance' and nullif(btrim(p_query),'') is null then 'recent' when p_sort in ('relevance','recent','oldest','favorites','comments','updated') then p_sort else 'recent' end sort
+  ), query as (select case when q='' then null else public.safe_search_tsquery(q) end tsq from args), matches as (
     select p.*, count(sp.solution_id) as solution_count,
-      ts_rank_cd(setweight(to_tsvector('portuguese', coalesce(p.title,'')),'A') || setweight(to_tsvector('portuguese',coalesce(p.summary,'')),'B') || setweight(to_tsvector('portuguese',p.description),'C') || setweight(to_tsvector('portuguese',concat_ws(' ',p.category,array_to_string(p.tags,' '))),'D'), websearch_to_tsquery('portuguese', a.q)) relevance
-    from public.problems p cross join args a left join public.solution_problems sp on sp.problem_id=p.id
+      ts_rank_cd(setweight(to_tsvector('portuguese', coalesce(p.title,'')),'A') || setweight(to_tsvector('portuguese',coalesce(p.summary,'')),'B') || setweight(to_tsvector('portuguese',p.description),'C') || setweight(to_tsvector('portuguese',concat_ws(' ',p.category,array_to_string(p.tags,' '))),'D'), q.tsq) relevance
+    from public.problems p cross join args a cross join query q left join public.solution_problems sp on sp.problem_id=p.id
     where p.status <> 'Arquivado'
-      and (a.q = '' or to_tsvector('portuguese',concat_ws(' ',p.title,p.summary,p.description,p.category,p.city,p.state,array_to_string(p.tags,' '))) @@ websearch_to_tsquery('portuguese',a.q))
+      and (a.q = '' or (setweight(to_tsvector('portuguese',p.title),'A') || setweight(to_tsvector('portuguese',coalesce(p.summary,'')),'B') || setweight(to_tsvector('portuguese',p.description),'C') || setweight(to_tsvector('portuguese',p.category || ' ' || p.city || ' ' || p.state || ' ' || array_to_string(p.tags,' ')),'D')) @@ q.tsq)
       and (p_category is null or p.category=p_category) and (p_status is null or p.status=p_status)
       and (p_state is null or p.state=p_state) and (p_city is null or p.city=p_city)
       and (p_tags is null or p.tags @> p_tags) and (p_created_from is null or p.created_at>=p_created_from) and (p_created_to is null or p.created_at<=p_created_to)
@@ -58,11 +68,12 @@ create or replace function public.search_solutions(
 ) returns table(id uuid, title text, summary text, category text, organization text, tags text[], author_name text,
   created_at timestamptz, updated_at timestamptz, problem_ids uuid[], impact_metric text, favorites integer, comments integer, total_count bigint)
 language sql stable set search_path = public as $$
-  with args as (select left(regexp_replace(coalesce(p_query,''),'\\s+',' ','g'),160) q, least(greatest(coalesce(p_limit,20),1),50) lim, greatest(coalesce(p_offset,0),0) off, case when p_sort in ('relevance','recent','oldest','favorites','comments','updated') then p_sort else 'recent' end sort),
+  with args as (select left(regexp_replace(coalesce(p_query,''),'\\s+',' ','g'),160) q, least(greatest(coalesce(p_limit,20),1),50) lim, greatest(coalesce(p_offset,0),0) off, case when p_sort='relevance' and nullif(btrim(p_query),'') is null then 'recent' when p_sort in ('relevance','recent','oldest','favorites','comments','updated') then p_sort else 'recent' end sort),
+  query as (select case when q='' then null else public.safe_search_tsquery(q) end tsq from args),
   matches as (select s.*, array_remove(array_agg(sp.problem_id),null) problem_ids,
-    ts_rank_cd(setweight(to_tsvector('portuguese',s.title),'A') || setweight(to_tsvector('portuguese',s.summary),'B') || setweight(to_tsvector('portuguese',s.description),'C') || setweight(to_tsvector('portuguese',concat_ws(' ',s.category,s.organization,s.impact_metric,array_to_string(s.tags,' '))),'D'),websearch_to_tsquery('portuguese',a.q)) relevance
-    from public.solutions s cross join args a left join public.solution_problems sp on sp.solution_id=s.id
-    where s.status <> 'Arquivada' and (a.q='' or to_tsvector('portuguese',concat_ws(' ',s.title,s.summary,s.description,s.category,s.organization,s.impact_metric,array_to_string(s.tags,' '))) @@ websearch_to_tsquery('portuguese',a.q))
+    ts_rank_cd(setweight(to_tsvector('portuguese',s.title),'A') || setweight(to_tsvector('portuguese',s.summary),'B') || setweight(to_tsvector('portuguese',s.description),'C') || setweight(to_tsvector('portuguese',concat_ws(' ',s.category,s.organization,s.impact_metric,array_to_string(s.tags,' '))),'D'),q.tsq) relevance
+    from public.solutions s cross join args a cross join query q left join public.solution_problems sp on sp.solution_id=s.id
+    where s.status <> 'Arquivada' and (a.q='' or (setweight(to_tsvector('portuguese',s.title),'A') || setweight(to_tsvector('portuguese',s.summary),'B') || setweight(to_tsvector('portuguese',s.description),'C') || setweight(to_tsvector('portuguese',s.category || ' ' || s.organization || ' ' || s.impact_metric || ' ' || array_to_string(s.tags,' ')),'D')) @@ q.tsq)
       and (p_category is null or s.category=p_category) and (p_organization is null or s.organization=p_organization) and (p_tags is null or s.tags @> p_tags)
       and (p_created_from is null or s.created_at>=p_created_from) and (p_created_to is null or s.created_at<=p_created_to)
       and (p_problem_id is null or exists(select 1 from public.solution_problems x where x.solution_id=s.id and x.problem_id=p_problem_id))
@@ -73,6 +84,7 @@ language sql stable set search_path = public as $$
   order by case when args.sort='relevance' and args.q<>'' then relevance end desc nulls last,case when args.sort='oldest' then created_at end asc,case when args.sort in ('recent','relevance') then created_at end desc,case when args.sort='favorites' then likes end desc,case when args.sort='comments' then comments end desc,case when args.sort='updated' then updated_at end desc,id asc limit args.lim offset args.off;
 $$;
 
+revoke all on function public.safe_search_tsquery(text) from public, anon, authenticated;
 revoke all on function public.search_problems(text,text,text,text,text,text[],timestamptz,timestamptz,boolean,boolean,boolean,text,integer,integer) from public;
 revoke all on function public.search_solutions(text,text,text,text[],timestamptz,timestamptz,uuid,boolean,boolean,boolean,boolean,text,integer,integer) from public;
 grant execute on function public.search_problems(text,text,text,text,text,text[],timestamptz,timestamptz,boolean,boolean,boolean,text,integer,integer) to anon, authenticated;
