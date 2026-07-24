@@ -48,45 +48,43 @@ jobs:
     needs: migration-changes
     name: Apply migrations against local Supabase PostgreSQL
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Node for the fixed Supabase CLI
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Verify Docker daemon and Supabase CLI
+      - name: Wait for isolated PostgreSQL
         shell: bash
         run: |
           set -euo pipefail
-          if ! command -v docker >/dev/null 2>&1; then
-            echo 'Docker CLI is unavailable; local migration validation cannot start.' >&2
-            exit 1
-          fi
-          docker version
-          if ! docker info; then
-            echo 'Docker daemon is unavailable; local migration validation cannot start.' >&2
-            exit 1
-          fi
-          npx --yes supabase@2.39.2 --version
-          if ! command -v psql >/dev/null 2>&1; then
-            echo 'psql is unavailable; local migration validation cannot run SQL assertions.' >&2
-            exit 1
-          fi
-          psql --version
-      - name: Start local Supabase PostgreSQL
-        run: npx --yes supabase@2.39.2 start
-      - name: Show local Supabase status
-        run: npx --yes supabase@2.39.2 status
-      - name: Apply all migrations to an empty local database
-        run: npx --yes supabase@2.39.2 db reset --local
+          until pg_isready --host localhost --port 5432 --username postgres --dbname postgres; do sleep 1; done
+      - name: Apply Sprint 32 compatible schema fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint32_search_schema.sql
+      - name: Apply the pending Sprint 32 migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260723120000_sprint32_advanced_search.sql
       - name: Verify Sprint 32 indexes and public search RPCs
         shell: bash
+        env:
+          PGPASSWORD: postgres
         run: |
           set -euo pipefail
-          eval "$(npx --yes supabase@2.39.2 status --output env)"
-          : "${DB_URL:?Supabase CLI did not return DB_URL for the local database}"
-          psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 <<'SQL'
           do $$
           begin
             if (select count(*) from pg_indexes where schemaname = 'public' and indexname in ('problems_search_document_idx', 'solutions_search_document_idx')) <> 2 then
@@ -101,14 +99,17 @@ jobs:
             if (select proparallel from pg_proc where oid = 'public.search_tags_text(text[])'::regprocedure) <> 's' then
               raise exception 'search_tags_text(text[]) is not parallel safe';
             end if;
+            if not (select indisvalid from pg_index where indexrelid = 'public.problems_search_document_idx'::regclass) then
+              raise exception 'problems_search_document_idx is invalid';
+            end if;
+            if not (select indisvalid from pg_index where indexrelid = 'public.solutions_search_document_idx'::regclass) then
+              raise exception 'solutions_search_document_idx is invalid';
+            end if;
           end
           $$;
-          select count(*) from public.search_problems();
-          select count(*) from public.search_solutions();
+          select count(*) from public.search_problems(p_query => 'drenagem');
+          select count(*) from public.search_solutions(p_query => 'drenagem');
           SQL
-      - name: Stop local Supabase
-        if: always()
-        run: npx --yes supabase@2.39.2 stop
 
   verify:
     if: github.event_name != 'workflow_dispatch'

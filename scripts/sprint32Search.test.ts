@@ -6,6 +6,7 @@ const migration = readFileSync('supabase/migrations/20260723120000_sprint32_adva
 const page = readFileSync('src/pages/Search.tsx', 'utf8');
 const repository = readFileSync('src/repositories/search/SearchRepository.ts', 'utf8');
 const hook = readFileSync('src/hooks/useSearch.ts', 'utf8');
+const fixture = readFileSync('scripts/fixtures/sprint32_search_schema.sql', 'utf8');
 test('Sprint 32 search contracts are server-side and public-safe', () => {
   assert.match(migration, /search_problems/); assert.match(migration, /search_solutions/);
   assert.match(migration, /auth\.uid\(\)/); assert.match(migration, /websearch_to_tsquery/);
@@ -50,4 +51,11 @@ test('Sprint 32 indexed search documents remain null-safe and equivalent to @@ d
   }
   assert.match(compact, /problems_search_document_idx[\s\S]*?coalesce\(title, ''\)[\s\S]*?public\.search_tags_text\(tags\)/);
   assert.match(compact, /solutions_search_document_idx[\s\S]*?coalesce\(title, ''\)[\s\S]*?public\.search_tags_text\(tags\)/);
+});
+
+test('Sprint 32 fixture is minimal, non-production, and supports the pending migration', () => {
+  for (const required of ['create schema if not exists auth', 'create or replace function auth.uid()', 'create role anon', 'create role authenticated', 'create table public.problems', 'create table public.solutions', 'create table public.favorites', 'create table public.solution_problems']) assert.ok(fixture.includes(required), `fixture missing ${required}`);
+  assert.match(fixture, /insert into public\.problems/);
+  assert.match(fixture, /insert into public\.solutions/);
+  assert.doesNotMatch(fixture, /service_role/i);
 });

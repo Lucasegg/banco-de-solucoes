@@ -21,6 +21,8 @@ const appliedChecksums: Record<string, string> = {
   // Last migration known applied by the documented remote baseline.  This makes
   // an accidental edit to the pre-Sprint-29 history a review-blocking failure.
   '20260717260000_sprint26_system_health.sql': '680cc883ebe9bbdfbfb2b1f3792eeb07271764dcc83d1301394a38fc512f5316',
+  '20260717240000_problem_timeline.sql': '75a547b54baf0cd97f3927cdb2f3604c1987550a5ccad4127a39e23f3fd58379',
+  '20260717250000_public_problem_map.sql': '0780657dcf32c58290f5c2be30a0a83a62becbf75667e21be2c242d719dc04ee',
 };
 
 function files() {
