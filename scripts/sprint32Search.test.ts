@@ -59,3 +59,8 @@ test('Sprint 32 fixture is minimal, non-production, and supports the pending mig
   assert.match(fixture, /insert into public\.solutions/);
   assert.doesNotMatch(fixture, /service_role/i);
 });
+
+test('Sprint 32 ranking tsquery is grouped with each aggregate search result', () => {
+  assert.match(migration, /group by p\.id, a\.q, q\.tsq/);
+  assert.match(migration, /group by s\.id, a\.q, q\.tsq/);
+});

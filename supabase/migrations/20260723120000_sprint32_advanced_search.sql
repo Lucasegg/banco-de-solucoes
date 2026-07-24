@@ -60,7 +60,7 @@ language sql stable set search_path = public as $$
       and (p_has_solution is null or p_has_solution = exists(select 1 from public.solution_problems x where x.problem_id=p.id))
       and (not coalesce(p_favorites_only,false) or exists(select 1 from public.favorites f where f.problem_id=p.id and f.user_id=auth.uid()))
       and (not coalesce(p_authored_only,false) or p.author_id=auth.uid())
-    group by p.id, a.q
+    group by p.id, a.q, q.tsq
   ), numbered as (select *, count(*) over() total_count from matches)
   select id,title,coalesce(summary,left(description,180)),category,status,city,state,tags,
     coalesce(author_name,'Usuário da plataforma'),created_at,updated_at,solution_count,likes,comments,total_count
@@ -90,7 +90,7 @@ language sql stable set search_path = public as $$
       and (p_created_from is null or s.created_at>=p_created_from) and (p_created_to is null or s.created_at<=p_created_to)
       and (p_problem_id is null or exists(select 1 from public.solution_problems x where x.solution_id=s.id and x.problem_id=p_problem_id))
       and (p_has_evidence is null or p_has_evidence=(cardinality(s.evidence_links)>0)) and (p_has_impact_metric is null or p_has_impact_metric=(nullif(btrim(s.impact_metric),'') is not null))
-      and (not coalesce(p_favorites_only,false) or exists(select 1 from public.favorites f where f.solution_id=s.id and f.user_id=auth.uid())) and (not coalesce(p_authored_only,false) or s.author_id=auth.uid()) group by s.id,a.q),
+      and (not coalesce(p_favorites_only,false) or exists(select 1 from public.favorites f where f.solution_id=s.id and f.user_id=auth.uid())) and (not coalesce(p_authored_only,false) or s.author_id=auth.uid()) group by s.id, a.q, q.tsq),
   numbered as (select *,count(*) over() total_count from matches)
   select id,title,summary,category,organization,tags,coalesce(author_name,'Usuário da plataforma'),created_at,updated_at,problem_ids,impact_metric,likes,comments,total_count from numbered cross join args
   order by case when args.sort='relevance' and args.q<>'' then relevance end desc nulls last,case when args.sort='oldest' then created_at end asc,case when args.sort in ('recent','relevance') then created_at end desc,case when args.sort='favorites' then likes end desc,case when args.sort='comments' then comments end desc,case when args.sort='updated' then updated_at end desc,id asc limit args.lim offset args.off;
