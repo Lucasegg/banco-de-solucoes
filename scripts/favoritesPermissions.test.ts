@@ -23,7 +23,7 @@ test('hotfix migration is ordered, transactional, and avoids fixed RPC signature
   const migrations = (await readdir(migrationsDir)).filter((name) => name.endsWith('.sql')).sort();
   const hotfix = '20260722300000_hotfix_favorites_authorship.sql';
   assert.ok(migrations.includes(hotfix));
-  assert.equal(migrations.at(-1), hotfix, 'new migrations must follow the current history');
+  assert.ok(migrations.indexOf(hotfix) < migrations.length - 1, 'new migrations must follow the hotfix instead of renaming history');
   assert.ok(!migrations.includes('20260722100000_hotfix_favorites_authorship.sql'));
 
   const sql = await readFile(path.join(migrationsDir, hotfix), 'utf8');
