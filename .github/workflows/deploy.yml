@@ -28,6 +28,89 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  migration-changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      requires-local-db: ${{ steps.filter.outputs.database }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            database:
+              - 'supabase/migrations/**'
+              - 'supabase/**/*.sql'
+
+  local-migration-validation:
+    if: github.event_name == 'pull_request' && needs.migration-changes.outputs.requires-local-db == 'true'
+    needs: migration-changes
+    name: Apply migrations against local Supabase PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Wait for isolated PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          until pg_isready --host localhost --port 5432 --username postgres --dbname postgres; do sleep 1; done
+      - name: Apply Sprint 32 compatible schema fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint32_search_schema.sql
+      - name: Apply the pending Sprint 32 migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260723120000_sprint32_advanced_search.sql
+      - name: Verify Sprint 32 indexes and public search RPCs
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if (select count(*) from pg_indexes where schemaname = 'public' and indexname in ('problems_search_document_idx', 'solutions_search_document_idx')) <> 2 then
+              raise exception 'Sprint 32 full-text indexes were not created';
+            end if;
+            if to_regprocedure('public.search_tags_text(text[])') is null then
+              raise exception 'search_tags_text(text[]) was not created';
+            end if;
+            if (select provolatile from pg_proc where oid = 'public.search_tags_text(text[])'::regprocedure) <> 'i' then
+              raise exception 'search_tags_text(text[]) is not immutable';
+            end if;
+            if (select proparallel from pg_proc where oid = 'public.search_tags_text(text[])'::regprocedure) <> 's' then
+              raise exception 'search_tags_text(text[]) is not parallel safe';
+            end if;
+            if not (select indisvalid from pg_index where indexrelid = 'public.problems_search_document_idx'::regclass) then
+              raise exception 'problems_search_document_idx is invalid';
+            end if;
+            if not (select indisvalid from pg_index where indexrelid = 'public.solutions_search_document_idx'::regclass) then
+              raise exception 'solutions_search_document_idx is invalid';
+            end if;
+          end
+          $$;
+          select count(*) from public.search_problems(p_query => 'drenagem');
+          select count(*) from public.search_solutions(p_query => 'drenagem');
+          SQL
+
   verify:
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
