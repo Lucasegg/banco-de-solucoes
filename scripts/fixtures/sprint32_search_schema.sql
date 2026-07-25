@@ -1,5 +1,5 @@
--- Minimal non-production schema for applying the pending Sprint 32 migration.
--- It validates only that pending migration; the remote history remains protected
+-- Minimal non-production schema for applying the pending Sprint 32 and Sprint 33 migrations.
+-- It validates only those pending migrations; the remote history remains protected
 -- by the migration baseline and reconciliation checks.
 create schema if not exists auth;
 
@@ -31,7 +31,10 @@ create table public.problems (
   likes integer not null default 0,
   comments integer not null default 0,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  latitude double precision,
+  longitude double precision,
+  geolocation_precision text
 );
 
 create table public.solutions (
@@ -66,8 +69,26 @@ create table public.favorites (
   solution_id uuid
 );
 
-insert into public.problems (id, author_id, title, summary, description, category, city, state, status, tags)
-values ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'Drenagem urbana', 'Alagamentos', 'Busca textual de problema.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem']);
+-- Real pre-Sprint-33 dependency from Sprint 25. Keep the same signature and
+-- behavior so migration validation cannot hide projection/type errors.
+create or replace function public.public_problem_coordinate(value double precision, precision text)
+returns double precision language sql immutable strict set search_path=public as $$
+  select case precision
+    when 'exact' then value
+    when 'street' then round(value::numeric,3)::double precision
+    when 'neighborhood' then round(value::numeric,2)::double precision
+    when 'city' then round(value::numeric,1)::double precision
+    when 'state' then round(value::numeric,0)::double precision
+  end;
+$$;
+
+insert into public.problems (id, author_id, title, summary, description, category, city, state, status, tags, latitude, longitude, geolocation_precision)
+values
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'Drenagem urbana', 'Alagamentos', 'Busca textual de problema.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5505, -46.6333, 'exact'),
+  ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000010', 'Drenagem próxima A', 'Alagamentos', 'Busca textual próxima.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5415, -46.6333, 'exact'),
+  ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000010', 'Drenagem próxima B', 'Alagamentos', 'Busca textual próxima.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5415, -46.6333, 'exact'),
+  ('00000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000010', 'Drenagem distante', 'Alagamentos', 'Busca textual distante.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.3505, -46.6333, 'exact'),
+  ('00000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000010', 'Drenagem sem coordenadas', 'Alagamentos', 'Busca textual sem coordenadas.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], null, null, null);
 insert into public.solutions (id, author_id, title, summary, description, category, organization, status, impact_metric, tags, evidence_links)
 values ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010', 'Jardins de chuva', 'Solução para drenagem', 'Busca textual de solução.', 'Infraestrutura', 'Prefeitura', 'Proposta', 'Redução de alagamentos', array['drenagem'], '{}');
 insert into public.solution_problems (solution_id, problem_id)
