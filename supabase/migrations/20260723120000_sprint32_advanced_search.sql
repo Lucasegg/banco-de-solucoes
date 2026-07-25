@@ -68,7 +68,8 @@ language sql stable set search_path = public as $$
   order by case when args.sort='relevance' and args.q<>'' then relevance end desc nulls last,
     case when args.sort='oldest' then created_at end asc, case when args.sort in ('recent','relevance') then created_at end desc,
     case when args.sort='favorites' then likes end desc, case when args.sort='comments' then comments end desc,
-    case when args.sort='updated' then updated_at end desc, id asc limit args.lim offset args.off;
+    case when args.sort='updated' then updated_at end desc, id asc
+  limit (select lim from args) offset (select off from args);
 $$;
 
 create or replace function public.search_solutions(
@@ -93,7 +94,8 @@ language sql stable set search_path = public as $$
       and (not coalesce(p_favorites_only,false) or exists(select 1 from public.favorites f where f.solution_id=s.id and f.user_id=auth.uid())) and (not coalesce(p_authored_only,false) or s.author_id=auth.uid()) group by s.id, a.q, q.tsq),
   numbered as (select *,count(*) over() total_count from matches)
   select id,title,summary,category,organization,tags,coalesce(author_name,'Usuário da plataforma'),created_at,updated_at,problem_ids,impact_metric,likes,comments,total_count from numbered cross join args
-  order by case when args.sort='relevance' and args.q<>'' then relevance end desc nulls last,case when args.sort='oldest' then created_at end asc,case when args.sort in ('recent','relevance') then created_at end desc,case when args.sort='favorites' then likes end desc,case when args.sort='comments' then comments end desc,case when args.sort='updated' then updated_at end desc,id asc limit args.lim offset args.off;
+  order by case when args.sort='relevance' and args.q<>'' then relevance end desc nulls last,case when args.sort='oldest' then created_at end asc,case when args.sort in ('recent','relevance') then created_at end desc,case when args.sort='favorites' then likes end desc,case when args.sort='comments' then comments end desc,case when args.sort='updated' then updated_at end desc,id asc
+  limit (select lim from args) offset (select off from args);
 $$;
 
 revoke all on function public.safe_search_tsquery(text) from public, anon, authenticated;

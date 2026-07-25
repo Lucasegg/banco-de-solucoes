@@ -64,3 +64,8 @@ test('Sprint 32 ranking tsquery is grouped with each aggregate search result', (
   assert.match(migration, /group by p\.id, a\.q, q\.tsq/);
   assert.match(migration, /group by s\.id, a\.q, q\.tsq/);
 });
+
+test('Sprint 32 pagination uses uncorrelated scalar values in LIMIT and OFFSET', () => {
+  assert.doesNotMatch(migration, /limit args\.lim|offset args\.off/i);
+  assert.equal(migration.match(/limit \(select lim from args\) offset \(select off from args\)/gi)?.length, 2);
+});
