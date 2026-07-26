@@ -21,7 +21,8 @@
     "test:pending-migrations": "node --experimental-strip-types --test scripts/pendingMigrationsSafety.test.ts",
     "test:sprint30": "node --experimental-strip-types --test scripts/sprint30Contributions.test.ts",
     "test:sprint31": "node --experimental-strip-types --test scripts/sprint31Notifications.test.ts",
-    "test:sprint32": "node --experimental-strip-types --test scripts/sprint32Search.test.ts"
+    "test:sprint32": "node --experimental-strip-types --test scripts/sprint32Search.test.ts",
+    "test:sprint33": "node --experimental-strip-types --test scripts/sprint33GeographicSearch.test.ts"
   },
   "dependencies": {
     "vite": "latest",

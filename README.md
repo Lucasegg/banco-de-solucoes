@@ -1,5 +1,9 @@
 # Banco de Soluções
 
+## Busca geográfica
+
+A busca avançada oferece pesquisa textual e territorial de problemas e soluções, com raios de 1 a 100 km, ordenação por proximidade e visualização Leaflet/OpenStreetMap. Consulte a [documentação da Sprint 33](docs/sprint33-geographic-search.md) para arquitetura, privacidade, operação e testes.
+
 Banco de Soluções é uma plataforma open source para conectar problemas reais a soluções reutilizáveis, pessoas, empresas e projetos. A visão é construir uma base mundial de conhecimento colaborativo, onde desafios possam ser descritos com contexto, soluções possam ser comparadas por impacto e comunidades possam se organizar em torno da execução.
 
 ## Visão do produto

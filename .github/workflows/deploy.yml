@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           until pg_isready --host localhost --port 5432 --username postgres --dbname postgres; do sleep 1; done
-      - name: Apply Sprint 32 compatible schema fixture
+      - name: Apply Sprint 32 and 33 compatible schema fixture
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint32_search_schema.sql
@@ -78,6 +78,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260723120000_sprint32_advanced_search.sql
+      - name: Apply the pending Sprint 33 migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260725120000_sprint33_geographic_search.sql
       - name: Verify Sprint 32 indexes and public search RPCs
         shell: bash
         env:
@@ -110,6 +114,10 @@ jobs:
           select count(*) from public.search_problems(p_query => 'drenagem');
           select count(*) from public.search_solutions(p_query => 'drenagem');
           SQL
+      - name: Verify Sprint 33 objects and execute geographic RPC scenarios
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint33_geographic_assertions.sql
 
   verify:
     if: github.event_name != 'workflow_dispatch'
@@ -132,6 +140,8 @@ jobs:
         run: npm run test:reconciliation
       - name: Pending migration safety tests
         run: npm run test:pending-migrations
+      - name: Sprint 33 geographic search tests
+        run: npm run test:sprint33
       - name: Check patch formatting
         run: git diff --check
       - name: Build
