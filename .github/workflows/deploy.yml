@@ -82,6 +82,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260725120000_sprint33_geographic_search.sql
+      - name: Apply the pending Sprint 34 migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260726120000_sprint34_recommendations.sql
       - name: Verify Sprint 32 indexes and public search RPCs
         shell: bash
         env:
@@ -118,6 +122,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint33_geographic_assertions.sql
+      - name: Verify Sprint 34 recommendation RPCs
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint34_recommendations_assertions.sql
 
   verify:
     if: github.event_name != 'workflow_dispatch'
@@ -142,6 +150,8 @@ jobs:
         run: npm run test:pending-migrations
       - name: Sprint 33 geographic search tests
         run: npm run test:sprint33
+      - name: Sprint 34 recommendation tests
+        run: npm run test:sprint34
       - name: Check patch formatting
         run: git diff --check
       - name: Build

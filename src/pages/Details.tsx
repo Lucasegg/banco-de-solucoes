@@ -21,6 +21,8 @@ import { ProblemTimeline } from '../components/problems/ProblemTimeline';
 import { problemStatuses } from '../types/problemTimeline';
 import { ProblemLocationMap } from '../components/map/ProblemLocationMap';
 import { saveAuthReturnTo } from '../components/auth/authReturnTo';
+import { RecommendationSection } from '../components/recommendations/RecommendationSection';
+import { useRecommendedSolutions, useRelatedProblems, useRelatedProblemsForSolution } from '../hooks/useRecommendations';
 
 
 function getShareMessage(status: ShareStatus, url: string) {
@@ -30,6 +32,8 @@ function getShareMessage(status: ShareStatus, url: string) {
 }
 
 export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
+  const similarProblems = useRelatedProblems(id);
+  const recommendedSolutions = useRecommendedSolutions(id);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [related, setRelated] = useState<Solution[]>([]);
   const [loadError, setLoadError] = useState('');
@@ -179,12 +183,14 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
+      <div className="lg:col-span-2"><RecommendationSection title="Problemas semelhantes" state={similarProblems} onOpen={(itemId) => onNavigate(`problema:${itemId}`)} /><RecommendationSection title="Soluções recomendadas" state={recommendedSolutions} onOpen={(itemId) => onNavigate(`solucao:${itemId}`)} /></div>
       <div className="lg:col-span-2 space-y-6"><ProblemTimeline problemId={problem.id} canPublish={permissions.canPublishOfficialUpdate} onStatusChange={(status) => setProblem((current) => current ? { ...current, status } : current)} /><ContributionHistory targetType="problem" targetId={problem.id} /><ItemReactionBar target={{ kind: 'problem', id: problem.id }} /><DiscussionList title="Discussão do problema" comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
     </section>
   );
 }
 
 export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
+  const recommendedProblems = useRelatedProblemsForSolution(id);
   const [solution, setSolution] = useState<Solution | null>(null);
   const [related, setRelated] = useState<Problem[]>([]);
   const [loadError, setLoadError] = useState('');
@@ -337,6 +343,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
         </div>
       </article>
       <aside className="space-y-4"><h2 className="text-xl font-semibold">Problemas relacionados</h2>{related.map((problem) => <button key={problem.id} onClick={() => onNavigate(`problema:${problem.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{problem.title}</strong><p className="mt-2 text-sm text-muted">{problem.category} · {problem.city}, {problem.state} · {problem.status}</p></button>)}</aside>
+      <div className="lg:col-span-2"><RecommendationSection title="Problemas relacionados" state={recommendedProblems} onOpen={(itemId) => onNavigate(`problema:${itemId}`)} /></div>
       <div className="lg:col-span-2 space-y-6"><ContributionHistory targetType="solution" targetId={solution.id} /><ItemReactionBar target={{ kind: 'solution', id: solution.id }} /><DiscussionList title="Discussão da solução" comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
     </section>
   );

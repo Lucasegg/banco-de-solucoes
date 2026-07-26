@@ -1,0 +1,21 @@
+import type { Recommendation } from '../../repositories/recommendations';
+
+export function RecommendationReasons({ reasons }: { reasons: string[] }) {
+  return <p className="mt-3 text-sm text-teal-800">Recomendado porque {reasons.length ? reasons.join(', ').toLocaleLowerCase('pt-BR') : 'é relevante para este conteúdo'}.</p>;
+}
+
+export function RecommendationEmptyState() {
+  return <p className="rounded-3xl border border-dashed border-line p-5 text-sm text-muted">Nenhum conteúdo relacionado foi encontrado.</p>;
+}
+
+export function RecommendationCard({ item, onOpen }: { item: Recommendation; onOpen: () => void }) {
+  const publicPlace = item.organization ?? (item.city && item.state ? `${item.city}, ${item.state}` : undefined);
+  return <article className="rounded-3xl border border-line bg-white p-5 shadow-sm"><span className="text-xs font-semibold text-teal-700">{item.category}</span><h3 className="mt-2 font-semibold">{item.title}</h3><p className="mt-2 line-clamp-3 text-sm text-muted">{item.summary}</p><div className="mt-2 flex flex-wrap gap-1">{item.tags.slice(0, 3).map((tag) => <span key={tag} className="rounded-full bg-slate-100 px-2 py-1 text-xs">{tag}</span>)}</div>{publicPlace && <p className="mt-2 text-xs text-muted">{publicPlace}</p>}<RecommendationReasons reasons={item.recommendation_reasons} /><button onClick={onOpen} className="mt-4 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Abrir conteúdo</button></article>;
+}
+
+export function RecommendationSection({ title, state, onOpen }: { title: string; state: { items: Recommendation[]; total: number; loading: boolean; error: string; loadMore: () => void }; onOpen: (id: string) => void }) {
+  if (state.loading && !state.items.length) return <section className="mt-8" aria-live="polite"><h2 className="mb-4 text-xl font-semibold">{title}</h2><div className="grid gap-3 md:grid-cols-2">{[1, 2].map((item) => <div key={item} className="h-40 animate-pulse rounded-3xl bg-slate-100" />)}</div></section>;
+  if (state.error && !state.items.length) return <section className="mt-8" aria-live="polite"><h2 className="mb-4 text-xl font-semibold">{title}</h2><p role="alert" className="rounded-3xl bg-red-50 p-5 text-sm text-red-800">Não foi possível carregar as recomendações.</p></section>;
+  if (!state.items.length) return <section className="mt-8" aria-live="polite"><h2 className="mb-4 text-xl font-semibold">{title}</h2><RecommendationEmptyState /></section>;
+  return <section className="mt-8" aria-live="polite"><h2 className="mb-4 text-xl font-semibold">{title}</h2><div className="grid gap-3 md:grid-cols-2">{state.items.map((item) => <RecommendationCard key={item.id} item={item} onOpen={() => onOpen(item.id)} />)}</div>{state.error && <p role="alert" className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">Não foi possível carregar mais recomendações. Tente novamente.</p>}{state.items.length < state.total && <button disabled={state.loading} onClick={state.loadMore} className="mt-4 rounded-full border border-line px-5 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-400">{state.loading ? 'Carregando...' : 'Ver mais'}</button>}</section>;
+}
