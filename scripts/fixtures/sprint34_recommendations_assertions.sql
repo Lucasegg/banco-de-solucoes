@@ -37,6 +37,7 @@ begin
 
  if exists(select 1 from public.get_related_problems('00000000-0000-0000-0000-000000000001') where id in ('00000000-0000-0000-0000-000000000001','34000000-0000-0000-0000-000000000001')) then raise exception 'self or archived problem returned'; end if;
  if exists(select 1 from public.get_recommended_solutions('00000000-0000-0000-0000-000000000001') where id in ('34000000-0000-0000-0000-000000000010','34000000-0000-0000-0000-000000000012')) then raise exception 'linked or archived solution returned'; end if;
+ if not exists(select 1 from public.get_recommended_solutions('00000000-0000-0000-0000-000000000001') where id='34000000-0000-0000-0000-000000000011' and organization='Org') then raise exception 'solution public contract failed'; end if;
  select recommendation_score into category_score from public.get_related_problems('00000000-0000-0000-0000-000000000001',24,0) where id='34000000-0000-0000-0000-000000000002';
  select recommendation_score into tag_score from public.get_related_problems('00000000-0000-0000-0000-000000000001',24,0) where id='34000000-0000-0000-0000-000000000003';
  select recommendation_score into popular_score from public.get_related_problems('00000000-0000-0000-0000-000000000001',24,0) where id='34000000-0000-0000-0000-000000000004';

@@ -2,9 +2,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseClient } from '../../integrations/supabase/client';
 import { safeDatabaseMessage } from '../errors';
 
-export type Recommendation = { id:string; title:string; summary:string; category:string; tags:string[]; city?:string; state?:string; location?:string; recommendation_score:number; recommendation_reasons:string[]; total_count:number };
+export type Recommendation = { id:string; title:string; summary:string; category:string; tags:string[]; city?:string; state?:string; organization?:string; recommendation_score:number; recommendation_reasons:string[]; total_count:number };
 export type RecommendationPage = { items:Recommendation[]; total:number };
-const rows=(data:unknown):Recommendation[]=>Array.isArray(data)?data.filter((x):x is Recommendation=>Boolean(x)&&typeof x==='object'&&typeof (x as Recommendation).id==='string').map(x=>({...x,tags:Array.isArray(x.tags)?x.tags:[],recommendation_reasons:Array.isArray(x.recommendation_reasons)?x.recommendation_reasons:[],recommendation_score:Number(x.recommendation_score)||0,total_count:Number(x.total_count)||0})):[];
+const optionalText=(value:unknown)=>typeof value==='string'&&value.trim()?value:undefined;
+const rows=(data:unknown):Recommendation[]=>Array.isArray(data)?data.filter((x):x is Record<string,unknown>=>Boolean(x)&&typeof x==='object'&&typeof (x as Record<string,unknown>).id==='string').map(x=>({id:String(x.id),title:String(x.title??''),summary:String(x.summary??''),category:String(x.category??''),tags:Array.isArray(x.tags)?x.tags.filter((tag):tag is string=>typeof tag==='string'):[],city:optionalText(x.city),state:optionalText(x.state),organization:optionalText(x.organization),recommendation_reasons:Array.isArray(x.recommendation_reasons)?x.recommendation_reasons.filter((reason):reason is string=>typeof reason==='string'):[],recommendation_score:Number(x.recommendation_score)||0,total_count:Number(x.total_count)||0})):[];
 export class SupabaseRecommendationRepository {
  constructor(private client:SupabaseClient){}
  private async call(name:string,idName:string,id:string,offset:number){const {data,error}=await this.client.rpc(name,{[idName]:id,p_limit:6,p_offset:Math.max(0,offset)});if(error)return {ok:false as const,message:safeDatabaseMessage(error,'Não foi possível carregar as recomendações.')};const items=rows(data);return {ok:true as const,data:{items,total:items[0]?.total_count??0}};}

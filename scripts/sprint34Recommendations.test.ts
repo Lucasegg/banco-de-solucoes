@@ -7,6 +7,10 @@ const migrationPath='supabase/migrations/20260726120000_sprint34_recommendations
 const migration=readFileSync(migrationPath,'utf8');
 const assertions=readFileSync('scripts/fixtures/sprint34_recommendations_assertions.sql','utf8');
 const workflow=readFileSync('.github/workflows/deploy.yml','utf8');
+const repository=readFileSync('src/repositories/recommendations/RecommendationRepository.ts','utf8');
+const card=readFileSync('src/components/recommendations/RecommendationSection.tsx','utf8');
+const fixture=readFileSync('scripts/fixtures/sprint32_search_schema.sql','utf8');
+const docs=readFileSync('docs/sprint34-recommendations.md','utf8');
 
 test('distance helper is private and has safe mathematical attributes',()=>{
  const declaration=/function public\.recommendation_distance_km[\s\S]*?returns double precision language sql immutable strict parallel safe security invoker set search_path=pg_catalog/;
@@ -24,8 +28,19 @@ test('three public RPCs remain invoker-safe, paginated and deterministic',()=>{
  assert.match(migration,/p\.id<>o\.id/); assert.match(migration,/not exists\(select 1 from public\.solution_problems/);
 });
 
+test('recommended solutions use the real organization contract, never a fictitious location column',()=>{
+ const rpc=/get_recommended_solutions[\s\S]*?returns table\(id uuid,title text,summary text,category text,tags text\[\],organization text,updated_at timestamptz,recommendation_score numeric,recommendation_reasons text\[\],total_count bigint\)[\s\S]*?select id,title,summary,category,tags,organization,updated_at,score,reasons,n from numbered/;
+ assert.match(migration,rpc);
+ assert.doesNotMatch(migration,/\b(?:s\.)?location\b|add column(?: if not exists)? location/i);
+ const solutionSchema=/create table public\.solutions \(([\s\S]*?)\n\);/.exec(fixture)?.[1]??'';
+ assert.match(solutionSchema,/organization text/); assert.doesNotMatch(solutionSchema,/\blocation\b/);
+ assert.match(repository,/organization\?:string/); assert.doesNotMatch(repository,/location\?:string|\.location/);
+ assert.match(card,/item\.organization/); assert.match(card,/publicPlace&&/); assert.doesNotMatch(card,/item\.location/);
+ assert.match(docs,/solutions\.location/); assert.match(docs,/organization/);
+});
+
 test('real SQL assertions cover recommendation behavior and privileges',()=>{
- for(const contract of ['self or archived problem returned','linked or archived solution returned','category/tags/popularity weighting failed','score or public reasons failed','candidate without coordinates omitted','maximum limit failed','negative offset failed','total_count failed','stable ordering failed','distance helper is directly executable']) assert.ok(assertions.includes(contract),`missing ${contract}`);
+ for(const contract of ['self or archived problem returned','linked or archived solution returned','solution public contract failed','category/tags/popularity weighting failed','score or public reasons failed','candidate without coordinates omitted','maximum limit failed','negative offset failed','total_count failed','stable ordering failed','distance helper is directly executable']) assert.ok(assertions.includes(contract),`missing ${contract}`);
  assert.match(assertions,/generate_series\(1,30\)/); assert.match(assertions,/has_function_privilege\('authenticated'/); assert.match(assertions,/aclexplode/);
 });
 

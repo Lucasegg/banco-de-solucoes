@@ -2,6 +2,8 @@
 
 As três RPCs públicas relacionam problema–problema, problema–solução e solução–problema. São `SECURITY INVOKER`, respeitam RLS, omitem registros arquivados e ligações já existentes, e retornam apenas dados de catálogo, pontuação, razões e total.
 
+Resultados de problemas retornam `city` e `state`. Resultados de soluções retornam `organization`, que é o único rótulo público de contexto disponível no schema validado; não existe dependência de uma coluna persistida `solutions.location`, nem são retornadas coordenadas nos cards.
+
 ## Pontuação e razões
 
 Categoria vale 35 pontos, cada tag distinta (até cinco) vale 8, texto vale até 25, cidade/estado valem 10/5 e distância pública vale até 10. Evidência vale 7 e métrica de impacto 5 nas soluções. Popularidade usa logaritmo limitado a 5, portanto nunca domina. Nulos valem zero e apenas resultados positivos são exibidos. O desempate é `score DESC`, `updated_at DESC`, `id ASC`.

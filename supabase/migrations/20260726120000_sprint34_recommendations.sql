@@ -23,7 +23,7 @@ select id,title,coalesce(summary,left(description,180)),category,tags,city,state
 $$;
 
 create or replace function public.get_recommended_solutions(p_problem_id uuid,p_limit integer default 6,p_offset integer default 0)
-returns table(id uuid,title text,summary text,category text,tags text[],location text,updated_at timestamptz,recommendation_score numeric,recommendation_reasons text[],total_count bigint)
+returns table(id uuid,title text,summary text,category text,tags text[],organization text,updated_at timestamptz,recommendation_score numeric,recommendation_reasons text[],total_count bigint)
 language sql stable security invoker set search_path=public as $$
 with origin as (select * from public.problems where problems.id=p_problem_id and status<>'Arquivado'), candidates as (
  select s.*,o.category origin_category,(select count(distinct t) from unnest(coalesce(s.tags,'{}')) t where t=any(coalesce(o.tags,'{}'))) shared_tags,
@@ -33,7 +33,7 @@ with origin as (select * from public.problems where problems.id=p_problem_id and
 ), scored as (select c.*,greatest(0,(case when category=origin_category then 35 else 0 end)+(least(shared_tags,5)*8)+(least(text_rank,1)*25)+(case when cardinality(coalesce(evidence_links,'{}'))>0 then 7 else 0 end)+(case when nullif(btrim(impact_metric),'') is not null then 5 else 0 end)+(case when distance<=10 then 10 when distance<=50 then 5 else 0 end)+least(5,ln(1+greatest(coalesce(likes,0),0))))::numeric(8,3) score,
  array_remove(array[case when category=origin_category then 'Mesma categoria' end,case when shared_tags>0 then shared_tags||case when shared_tags=1 then ' tag em comum' else ' tags em comum' end end,case when text_rank>0.05 then 'Descrição semelhante' end,case when cardinality(coalesce(evidence_links,'{}'))>0 then 'Possui evidências públicas' end,case when nullif(btrim(impact_metric),'') is not null then 'Possui métrica de impacto' end,case when distance<=50 then 'Próximo da localização do problema' end],null) reasons from candidates c
 ), numbered as(select *,count(*) over() n from scored where score>0)
-select id,title,summary,category,tags,location,updated_at,score,reasons,n from numbered order by score desc,updated_at desc,id asc limit least(greatest(coalesce(p_limit,6),1),24) offset greatest(coalesce(p_offset,0),0)
+select id,title,summary,category,tags,organization,updated_at,score,reasons,n from numbered order by score desc,updated_at desc,id asc limit least(greatest(coalesce(p_limit,6),1),24) offset greatest(coalesce(p_offset,0),0)
 $$;
 
 create or replace function public.get_related_problems_for_solution(p_solution_id uuid,p_limit integer default 6,p_offset integer default 0)
