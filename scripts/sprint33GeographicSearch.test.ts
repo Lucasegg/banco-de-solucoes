@@ -43,7 +43,7 @@ test('problem privacy projection and solution-owned coordinates remain distinct'
   assert.match(migration,/public_problem_coordinate\(p\.latitude,p\.geolocation_precision\) public_latitude/);
   assert.match(migration,/public_problem_coordinate\(p\.longitude,p\.geolocation_precision\) public_longitude/);
   assert.match(migration,/haversine_distance_km\(p_latitude,p_longitude,c\.latitude,c\.longitude\)/);
-  assert.match(fixture,/create or replace function public\.public_problem_coordinate\(value double precision, precision text\)/);
+  assert.match(fixture,/create or replace function public\.public_problem_coordinate\(value double precision, p_precision text\)/);
   assert.match(fixture,/geolocation_precision text/);
   const preSprint33Solutions = /create table public\.solutions \(([\s\S]*?)\n\);/.exec(fixture)?.[1] ?? '';
   assert.doesNotMatch(preSprint33Solutions,/latitude|longitude/);

@@ -71,9 +71,9 @@ create table public.favorites (
 
 -- Real pre-Sprint-33 dependency from Sprint 25. Keep the same signature and
 -- behavior so migration validation cannot hide projection/type errors.
-create or replace function public.public_problem_coordinate(value double precision, precision text)
+create or replace function public.public_problem_coordinate(value double precision, p_precision text)
 returns double precision language sql immutable strict set search_path=public as $$
-  select case precision
+  select case p_precision
     when 'exact' then value
     when 'street' then round(value::numeric,3)::double precision
     when 'neighborhood' then round(value::numeric,2)::double precision
