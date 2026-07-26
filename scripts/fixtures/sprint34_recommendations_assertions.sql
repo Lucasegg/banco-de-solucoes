@@ -29,11 +29,11 @@ begin
 
  if has_function_privilege('anon','public.recommendation_distance_km(double precision,double precision,double precision,double precision)','execute')
  or has_function_privilege('authenticated','public.recommendation_distance_km(double precision,double precision,double precision,double precision)','execute')
- or exists(select 1 from pg_proc p,cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid='public.recommendation_distance_km(double precision,double precision,double precision,double precision)'::regprocedure and a.grantee=0 and a.privilege_type='EXECUTE') then raise exception 'distance helper is directly executable'; end if;
+ or exists(select 1 from pg_proc p cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid='public.recommendation_distance_km(double precision,double precision,double precision,double precision)'::regprocedure and a.grantee=0 and a.privilege_type='EXECUTE') then raise exception 'distance helper is directly executable'; end if;
  if not has_function_privilege('anon','public.get_related_problems(uuid,integer,integer)','execute') or not has_function_privilege('authenticated','public.get_related_problems(uuid,integer,integer)','execute')
  or not has_function_privilege('anon','public.get_recommended_solutions(uuid,integer,integer)','execute') or not has_function_privilege('authenticated','public.get_recommended_solutions(uuid,integer,integer)','execute')
  or not has_function_privilege('anon','public.get_related_problems_for_solution(uuid,integer,integer)','execute') or not has_function_privilege('authenticated','public.get_related_problems_for_solution(uuid,integer,integer)','execute') then raise exception 'recommendation grants missing'; end if;
- if exists(select 1 from pg_proc p,cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid in ('public.get_related_problems(uuid,integer,integer)'::regprocedure,'public.get_recommended_solutions(uuid,integer,integer)'::regprocedure,'public.get_related_problems_for_solution(uuid,integer,integer)'::regprocedure) and a.grantee=0 and a.privilege_type='EXECUTE') then raise exception 'PUBLIC recommendation grant found'; end if;
+ if exists(select 1 from pg_proc p cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid in ('public.get_related_problems(uuid,integer,integer)'::regprocedure,'public.get_recommended_solutions(uuid,integer,integer)'::regprocedure,'public.get_related_problems_for_solution(uuid,integer,integer)'::regprocedure) and a.grantee=0 and a.privilege_type='EXECUTE') then raise exception 'PUBLIC recommendation grant found'; end if;
 
  if exists(select 1 from public.get_related_problems('00000000-0000-0000-0000-000000000001') where id in ('00000000-0000-0000-0000-000000000001','34000000-0000-0000-0000-000000000001')) then raise exception 'self or archived problem returned'; end if;
  if exists(select 1 from public.get_recommended_solutions('00000000-0000-0000-0000-000000000001') where id in ('34000000-0000-0000-0000-000000000010','34000000-0000-0000-0000-000000000012')) then raise exception 'linked or archived solution returned'; end if;
@@ -49,7 +49,7 @@ begin
  select count(*) into expected from public.get_related_problems('00000000-0000-0000-0000-000000000001',24,0);
  select total_count into actual from public.get_related_problems('00000000-0000-0000-0000-000000000001',1,0);
  if actual<expected or actual is null then raise exception 'total_count failed'; end if;
- if exists(with x as(select *,lag(recommendation_score) over() ps,lag(updated_at) over() pu,lag(id) over() pi from public.get_related_problems('00000000-0000-0000-0000-000000000001',24,0)) select 1 from x where ps<recommendation_score or (ps=recommendation_score and pu<updated_at) or (ps=recommendation_score and pu=updated_at and pi>id)) then raise exception 'stable ordering failed'; end if;
+ if exists(with emitted as(select * from public.get_related_problems('00000000-0000-0000-0000-000000000001',24,0) with ordinality), x as(select *,lag(recommendation_score) over(order by ordinality) ps,lag(updated_at) over(order by ordinality) pu,lag(id) over(order by ordinality) pi from emitted) select 1 from x where ps<recommendation_score or (ps=recommendation_score and pu<updated_at) or (ps=recommendation_score and pu=updated_at and pi>id)) then raise exception 'stable ordering failed'; end if;
 end $$;
 
 rollback;

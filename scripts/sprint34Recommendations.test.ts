@@ -11,6 +11,7 @@ const repository=readFileSync('src/repositories/recommendations/RecommendationRe
 const card=readFileSync('src/components/recommendations/RecommendationSection.tsx','utf8');
 const fixture=readFileSync('scripts/fixtures/sprint32_search_schema.sql','utf8');
 const docs=readFileSync('docs/sprint34-recommendations.md','utf8');
+const hook=readFileSync('src/hooks/useRecommendations.ts','utf8');
 
 test('distance helper is private and has safe mathematical attributes',()=>{
  const declaration=/function public\.recommendation_distance_km[\s\S]*?returns double precision language sql immutable strict parallel safe security invoker set search_path=pg_catalog/;
@@ -28,6 +29,11 @@ test('three public RPCs remain invoker-safe, paginated and deterministic',()=>{
  assert.match(migration,/p\.id<>o\.id/); assert.match(migration,/not exists\(select 1 from public\.solution_problems/);
 });
 
+test('popularity cannot overflow an integer and remains capped',()=>{
+ assert.equal((migration.match(/least\(5,ln\(1::numeric\+greatest\(coalesce\(likes,0\),0\)::numeric\)\)/g)||[]).length,3);
+ assert.match(assertions,/likes,updated_at[\s\S]*2147483647/);
+});
+
 test('recommended solutions use the real organization contract, never a fictitious location column',()=>{
  const rpc=/get_recommended_solutions[\s\S]*?returns table\(id uuid,title text,summary text,category text,tags text\[\],organization text,updated_at timestamptz,recommendation_score numeric,recommendation_reasons text\[\],total_count bigint\)[\s\S]*?select id,title,summary,category,tags,organization,updated_at,score,reasons,n from numbered/;
  assert.match(migration,rpc);
@@ -42,6 +48,16 @@ test('recommended solutions use the real organization contract, never a fictitio
 test('real SQL assertions cover recommendation behavior and privileges',()=>{
  for(const contract of ['self or archived problem returned','linked or archived solution returned','solution public contract failed','category/tags/popularity weighting failed','score or public reasons failed','candidate without coordinates omitted','maximum limit failed','negative offset failed','total_count failed','stable ordering failed','distance helper is directly executable']) assert.ok(assertions.includes(contract),`missing ${contract}`);
  assert.match(assertions,/generate_series\(1,30\)/); assert.match(assertions,/has_function_privilege\('authenticated'/); assert.match(assertions,/aclexplode/);
+ assert.doesNotMatch(assertions,/p,cross join lateral/i);
+ assert.match(assertions,/with ordinality/); assert.equal((assertions.match(/lag\([^)]+\) over\(order by ordinality\)/g)||[]).length,3);
+});
+
+test('recommendation hook terminates safely and ignores obsolete responses',()=>{
+ assert.match(hook,/if \(!RecommendationRepository\)[\s\S]*setError\(recommendationError\)[\s\S]*setLoading\(false\)/);
+ assert.match(hook,/catch \{[\s\S]*setError\(recommendationError\)/);
+ assert.match(hook,/finally \{[\s\S]*setLoading\(false\)/);
+ assert.match(hook,/version !== requestVersion\.current/);
+ assert.match(hook,/replace \? result\.data\.items : \[\.\.\.current, \.\.\.result\.data\.items\]/);
 });
 
 test('PostgreSQL 15 CI applies migration and blocking real assertions',()=>{
