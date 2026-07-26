@@ -41,7 +41,7 @@ test('recommended solutions use the real organization contract, never a fictitio
  const solutionSchema=/create table public\.solutions \(([\s\S]*?)\n\);/.exec(fixture)?.[1]??'';
  assert.match(solutionSchema,/organization text/); assert.doesNotMatch(solutionSchema,/\blocation\b/);
  assert.match(repository,/organization\?:string/); assert.doesNotMatch(repository,/location\?:string|\.location/);
- assert.match(card,/item\.organization/); assert.match(card,/publicPlace&&/); assert.doesNotMatch(card,/item\.location/);
+ assert.match(card,/item\.organization/); assert.match(card,/publicPlace &&/); assert.doesNotMatch(card,/item\.location/);
  assert.match(docs,/solutions\.location/); assert.match(docs,/organization/);
 });
 
@@ -49,7 +49,18 @@ test('real SQL assertions cover recommendation behavior and privileges',()=>{
  for(const contract of ['self or archived problem returned','linked or archived solution returned','solution public contract failed','category/tags/popularity weighting failed','score or public reasons failed','candidate without coordinates omitted','maximum limit failed','negative offset failed','total_count failed','stable ordering failed','distance helper is directly executable']) assert.ok(assertions.includes(contract),`missing ${contract}`);
  assert.match(assertions,/generate_series\(1,30\)/); assert.match(assertions,/has_function_privilege\('authenticated'/); assert.match(assertions,/aclexplode/);
  assert.doesNotMatch(assertions,/p,cross join lateral/i);
- assert.match(assertions,/with ordinality/); assert.equal((assertions.match(/lag\([^)]+\) over\(order by ordinality\)/g)||[]).length,3);
+ assert.match(assertions,/with ordinality/); assert.equal((assertions.match(/lag\([^)]+\) over\(order by emit_order\)/g)||[]).length,3);
+ assert.ok((assertions.match(/get_related_problems\('[^']+',24,24\)/g)||[]).length>=4);
+ assert.match(assertions,/count\(\*\),count\(distinct id\),min\(total_count\)/);
+ assert.match(assertions,/returned_count<>reported_count or unique_count<>returned_count/);
+});
+
+test('pagination error keeps existing cards and offers retry',()=>{
+ assert.match(card,/state\.error && !state\.items\.length/);
+ assert.match(card,/state\.items\.map/);
+ assert.match(card,/state\.error && <p role=\"alert\"[\s\S]*Não foi possível carregar mais recomendações/);
+ assert.match(card,/state\.items\.length < state\.total[\s\S]*onClick=\{state\.loadMore\}/);
+ assert.doesNotMatch(card,/state\.error\?[^:]+:[^:]*state\.items\.map/);
 });
 
 test('recommendation hook terminates safely and ignores obsolete responses',()=>{
