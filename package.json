@@ -22,7 +22,8 @@
     "test:sprint30": "node --experimental-strip-types --test scripts/sprint30Contributions.test.ts",
     "test:sprint31": "node --experimental-strip-types --test scripts/sprint31Notifications.test.ts",
     "test:sprint32": "node --experimental-strip-types --test scripts/sprint32Search.test.ts",
-    "test:sprint33": "node --experimental-strip-types --test scripts/sprint33GeographicSearch.test.ts"
+    "test:sprint33": "node --experimental-strip-types --test scripts/sprint33GeographicSearch.test.ts",
+    "test:sprint34": "node --experimental-strip-types --test scripts/sprint34Recommendations.test.ts"
   },
   "dependencies": {
     "vite": "latest",
