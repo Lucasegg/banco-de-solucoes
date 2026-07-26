@@ -12,6 +12,8 @@ As razões são frases públicas: mesma categoria, quantidade de tags, descriç�
 
 O texto reutiliza `safe_search_tsquery`; tags são desduplicadas. Distância reutiliza `haversine_distance_km`. Problemas passam por `public_problem_coordinate`, e ausência de coordenadas apenas remove o bônus. Nenhum índice equivalente foi criado.
 
+`recommendation_distance_km` é `SECURITY INVOKER`, imutável, estrita e *parallel safe*, sem permissão direta para `PUBLIC`, `anon` ou `authenticated`. As RPCs incorporam o cálculo Haversine e não criam um bypass de permissões.
+
 ## Paginação, interface e limitações
 
 O padrão é 6, máximo 24, e offset negativo vira zero. `total_count` permite “Ver mais”. Cards exibem explicações, loading, skeleton, vazio e erro com `aria-live`. Não há IA externa nem cache persistente; alterações são refletidas em nova consulta.
