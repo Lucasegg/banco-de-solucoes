@@ -17,7 +17,7 @@ values
  ('34000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000010','Arquivado','Alagamentos','Drenagem','Infraestrutura','São Paulo','SP','Arquivado',array['drenagem'],0,'2026-01-01'),
  ('34000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000010','Categoria apenas','Outro assunto','Outro assunto','Infraestrutura','Recife','PE','Aberto','{}',0,'2026-01-02'),
  ('34000000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000010','Tags de drenagem','Alagamentos','Drenagem urbana','Infraestrutura','Recife','PE','Aberto',array['drenagem','drenagem'],0,'2026-01-03'),
- ('34000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000010','Popular sem relação','Cultura','Bibliotecas','Cultura','Manaus','AM','Aberto',array['livros'],2147483647,'2026-01-04'),
+ ('34000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000010','Popular sem relação','Cultura','Bibliotecas','Outros','Manaus','AM','Aberto',array['livros'],2147483647,'2026-01-04'),
  ('34000000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000010','Sem coordenadas','Alagamentos','Drenagem','Infraestrutura','Recife','PE','Aberto',array['drenagem'],0,'2026-01-05');
 
 insert into public.problems(id,author_id,title,summary,description,category,city,state,status,tags,updated_at)

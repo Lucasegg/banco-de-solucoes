@@ -94,6 +94,7 @@ values
   ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000010', 'Drenagem próxima B', 'Alagamentos', 'Busca textual próxima.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5415, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000010', 'Drenagem distante', 'Alagamentos', 'Busca textual distante.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.3505, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000010', 'Drenagem sem coordenadas', 'Alagamentos', 'Busca textual sem coordenadas.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], null, null, null);
+update public.problems set updated_at='2025-01-01 00:00:00+00' where id='00000000-0000-0000-0000-000000000001';
 insert into public.solutions (id, author_id, title, summary, description, category, organization, status, impact_metric, tags, evidence_links)
 values ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010', 'Jardins de chuva', 'Solução para drenagem', 'Busca textual de solução.', 'Infraestrutura', 'Prefeitura', 'Proposta', 'Redução de alagamentos', array['drenagem'], '{}');
 insert into public.solution_problems (solution_id, problem_id)

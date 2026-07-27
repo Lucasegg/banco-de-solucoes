@@ -1,6 +1,6 @@
 import { Activity, ClipboardList, FileWarning, MessageSquare, Settings, ShieldCheck, Users } from 'lucide-react';
 
-export type AdminDestination = 'admin-users' | 'admin-problems' | 'admin-solutions' | 'admin-comments' | 'admin-reports' | 'admin-audit' | 'admin-system';
+export type AdminDestination = 'admin-users' | 'admin-problems' | 'admin-solutions' | 'admin-comments' | 'admin-reports' | 'admin-audit' | 'admin-system' | 'admin-taxonomy';
 
 interface AdminDashboardProps {
   onNavigate: (page: AdminDestination) => void;
@@ -13,6 +13,7 @@ const adminSections: Array<{ destination: AdminDestination; title: string; descr
   { destination: 'admin-comments', title: 'Comentários', description: 'Consulte as discussões e interações da comunidade.', icon: MessageSquare },
   { destination: 'admin-reports', title: 'Denúncias', description: 'Acompanhe conteúdos sinalizados para análise.', icon: FileWarning },
   { destination: 'admin-audit', title: 'Auditoria', description: 'Consulte os registros de ações administrativas.', icon: Activity },
+  { destination: 'admin-taxonomy', title: 'Taxonomia', description: 'Revise sugestões de categorias e tags.', icon: ShieldCheck },
   { destination: 'admin-system', title: 'Sistema', description: 'Verifique a saúde e os diagnósticos do sistema.', icon: Settings },
 ];
 

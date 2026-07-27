@@ -27,6 +27,7 @@ import { AdminProblems } from './pages/AdminProblems';
 import { AdminSolutions } from './pages/AdminSolutions';
 import { AuthenticatedRoute } from './components/auth/AuthenticatedRoute';
 import { Search } from './pages/Search';
+import { TaxonomyProposalQueue } from './components/admin/TaxonomyProposalQueue';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -53,6 +54,7 @@ const pageToHashPath: Record<string, string> = {
   'admin-reports': '/admin/reports',
   'admin-audit': '/admin/audit',
   'admin-contributions': '/admin/contributions',
+  'admin-taxonomy': '/admin/taxonomy',
   notifications: '/notifications',
   mapa: '/mapa',
   search: '/search',
@@ -86,6 +88,7 @@ function pageFromHash(hash: string) {
   if (path === '/admin/reports') return 'admin-reports';
   if (path === '/admin/audit') return 'admin-audit';
   if (path === '/admin/contributions') return 'admin-contributions';
+  if (path === '/admin/taxonomy') return 'admin-taxonomy';
   if (path === '/admin') return 'admin';
   if (path === '/notifications' || path === '/notificacoes') return 'notifications';
   if (path === '/mapa') return 'mapa';
@@ -168,7 +171,8 @@ export function App() {
       {page === 'password-recovery' && <PasswordRecovery onNavigate={setPage} />}
       {page === 'profile' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><Profile onNavigate={setPage} /></AuthenticatedRoute>}
       {page === 'account' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><Account onNavigate={setPage} /></AuthenticatedRoute>}
-      {adminPage && page === 'admin-contributions' && permissions.canReviewTaxonomy && !permissions.canAccessAdmin ? <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}>{adminContent}</AuthenticatedRoute> : adminPage && <AdminRoute isAuthenticated={isAuthenticated} isLoading={isLoading} isAdmin={permissions.canAccessAdmin} onLoginRequired={() => { setMfaReturnTo(window.location.hash); setPage('login'); }}>{adminContent}</AdminRoute>}
+      {page === 'admin-taxonomy' && <AdminRoute isAuthenticated={isAuthenticated} isLoading={isLoading} isAdmin={permissions.canReviewTaxonomy} onLoginRequired={() => { setMfaReturnTo(window.location.hash); setPage('login'); }}><TaxonomyProposalQueue /></AdminRoute>}
+      {adminPage && <AdminRoute isAuthenticated={isAuthenticated} isLoading={isLoading} isAdmin={permissions.canAccessAdmin} onLoginRequired={() => { setMfaReturnTo(window.location.hash); setPage('login'); }}>{adminContent}</AdminRoute>}
       {page === 'contributions' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><ContributionsList onNavigate={setPage} /></AuthenticatedRoute>}
       {page === 'favorites' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><Favorites onNavigate={setPage} /></AuthenticatedRoute>}
       {page === 'notifications' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><Notifications /></AuthenticatedRoute>}

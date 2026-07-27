@@ -65,6 +65,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
               >
                 Contribuições
               </button>
+              {permissions.canReviewTaxonomy && <button onClick={() => onNavigate('admin-taxonomy')} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'admin-taxonomy' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>Taxonomia</button>}
               {permissions.canAccessAdmin && <button onClick={() => onNavigate('admin')} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'admin' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>Admin</button>}
               <button
                 onClick={() => onNavigate('account')}
