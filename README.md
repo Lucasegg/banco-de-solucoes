@@ -1,5 +1,9 @@
 # Banco de Soluções
 
+## Internacionalização (Sprint 36)
+
+A interface possui uma base tipada para Português (Brasil) e English, com detecção inicial, seletor acessível no cabeçalho, persistência local, fallback para `pt-BR` e formatação centralizada por `Intl`. Consulte [`docs/sprint36-internationalization.md`](docs/sprint36-internationalization.md) para arquitetura e fluxo de contribuição. Nenhum conteúdo de usuário ou valor canônico persistido é traduzido automaticamente.
+
 A Sprint 35 adiciona um vocabulário global e moderado para categorias e tags, com aliases, sugestões autenticadas, fila administrativa e canonicalização no banco sem quebrar os contratos de busca e recomendações. Consulte [a documentação da taxonomia](docs/sprint35-taxonomy.md).
 
 ## Busca geográfica

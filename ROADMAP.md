@@ -33,7 +33,7 @@
 
 ## Fase 5 — Escala mundial
 
-- [ ] Internacionalização.
+- [x] Internacionalização (`pt-BR` e `en-US`, Sprint 36).
 - [ ] API pública.
 - [ ] Exportação de dados abertos.
 - [ ] Integrações com ferramentas de pesquisa, governo e comunidades.
@@ -43,3 +43,10 @@
 - [x] Propostas privadas, revisão por curator/admin, auditoria append-only e RLS.
 - [x] Backfill e canonicalização compatíveis com busca, geografia e recomendações.
 - [x] Repository, hook e componentes acessíveis para seleção, sugestão e moderação.
+
+# Sprint 36 — Internacionalização
+
+- [x] Recursos tipados em `pt-BR` e `en-US`, detecção, fallback e persistência local.
+- [x] Seletor acessível no cabeçalho e atualização de idioma/metadados sem recarga.
+- [x] Formatadores `Intl` centralizados e verificação de paridade/duplicidade das traduções.
+- [ ] Fora do escopo: tradução automática, outros idiomas, preferência no perfil e RTL.
