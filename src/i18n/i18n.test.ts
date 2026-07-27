@@ -64,7 +64,7 @@ test('Intl formatters localize and safely handle invalid values', () => {
 });
 
 test('migrated screens do not regress to hard-coded interface copy', () => {
-  for (const file of ['../components/Layout.tsx', '../pages/Home.tsx', '../pages/About.tsx', '../pages/Favorites.tsx']) {
+  for (const file of ['../components/Layout.tsx', '../pages/Home.tsx', '../pages/About.tsx', '../pages/Favorites.tsx', '../components/Pagination.tsx', '../components/Cards.tsx']) {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8');
     assert.doesNotMatch(source, />\s*(Início|Entrar|Explorar problemas|Nenhum problema publicado)\s*</);
   }

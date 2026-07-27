@@ -4,11 +4,11 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 
 | Arquivo | Ocorrências | Estado |
 |---|---:|---|
-| `src/components/Cards.tsx` | 9 | pending |
+| `src/components/Cards.tsx` | 9 | migrated |
 | `src/components/CatalogToolbar.tsx` | 10 | pending |
 | `src/components/EmptyState.tsx` | 1 | pending |
 | `src/components/Layout.tsx` | 6 | migrated |
-| `src/components/Pagination.tsx` | 12 | pending |
+| `src/components/Pagination.tsx` | 12 | migrated |
 | `src/components/admin/AdminRoute.tsx` | 6 | pending |
 | `src/components/admin/AuditPanel.tsx` | 35 | pending |
 | `src/components/admin/ChangeUserRoleDialog.tsx` | 15 | pending |
