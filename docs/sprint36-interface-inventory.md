@@ -5,8 +5,8 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | Arquivo | Ocorrências | Estado |
 |---|---:|---|
 | `src/components/Cards.tsx` | 9 | migrated |
-| `src/components/CatalogToolbar.tsx` | 10 | pending |
-| `src/components/EmptyState.tsx` | 1 | pending |
+| `src/components/CatalogToolbar.tsx` | 10 | migrated |
+| `src/components/EmptyState.tsx` | 1 | migrated |
 | `src/components/Layout.tsx` | 6 | migrated |
 | `src/components/Pagination.tsx` | 12 | migrated |
 | `src/components/admin/AdminRoute.tsx` | 6 | pending |
@@ -15,7 +15,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/admin/TaxonomyProposalQueue.tsx` | 21 | pending |
 | `src/components/admin/UserAdminList.tsx` | 10 | pending |
 | `src/components/admin/content/AdminContentList.tsx` | 12 | pending |
-| `src/components/auth/AuthenticatedRoute.tsx` | 9 | pending |
+| `src/components/auth/AuthenticatedRoute.tsx` | 9 | migrated |
 | `src/components/contributions/ContributionDiff.tsx` | 5 | pending |
 | `src/components/contributions/ContributionForm.tsx` | 34 | pending |
 | `src/components/contributions/ContributionHistory.tsx` | 6 | pending |

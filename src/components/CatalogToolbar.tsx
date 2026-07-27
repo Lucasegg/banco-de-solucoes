@@ -1,4 +1,5 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { useTranslation } from '../i18n/I18nProvider';
 
 export interface SelectOption {
   value: string;
@@ -28,17 +29,18 @@ interface CatalogToolbarProps {
 }
 
 export function CatalogToolbar({ search, searchPlaceholder, filters, sort, sortOptions, resultLabel, favoritesOnly, onSearchChange, onFilterChange, onSortChange, onFavoritesOnlyChange, onClear }: CatalogToolbarProps) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-[2rem] border border-line bg-white p-4 shadow-sm md:p-5">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row">
           <label className="relative min-w-0 flex-1">
-            <span className="sr-only">Pesquisar</span>
+            <span className="sr-only">{t('toolbar.search')}</span>
             <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input value={search} onChange={(event: { target: { value: string } }) => onSearchChange(event.target.value)} placeholder={searchPlaceholder} className="h-12 w-full rounded-2xl border border-line bg-slate-50 pl-11 pr-4 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100" />
           </label>
           <label className="relative lg:w-64">
-            <span className="sr-only">Ordenação</span>
+            <span className="sr-only">{t('toolbar.sort')}</span>
             <SlidersHorizontal className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <select value={sort} onChange={(event: { target: { value: string } }) => onSortChange(event.target.value)} className="h-12 w-full appearance-none rounded-2xl border border-line bg-slate-50 pl-11 pr-4 text-sm font-medium outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100">
               {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -50,7 +52,7 @@ export function CatalogToolbar({ search, searchPlaceholder, filters, sort, sortO
             <label key={filter.key} className="space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{filter.label}</span>
               <select value={filter.value} onChange={(event: { target: { value: string } }) => onFilterChange(filter.key, event.target.value)} className="h-11 w-full rounded-2xl border border-line bg-slate-50 px-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100">
-                <option value="">Todos</option>
+                <option value="">{t('toolbar.all')}</option>
                 {filter.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
@@ -61,11 +63,11 @@ export function CatalogToolbar({ search, searchPlaceholder, filters, sort, sortO
             <p className="text-sm font-semibold text-slate-700">{resultLabel}</p>
             <label className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-slate-700">
               <input type="checkbox" checked={favoritesOnly} onChange={(event: { target: { checked: boolean } }) => onFavoritesOnlyChange(event.target.checked)} className="h-4 w-4 rounded border-line text-slate-950 focus:ring-slate-300" />
-              Somente favoritos
+              {t('toolbar.favoritesOnly')}
             </label>
           </div>
           <button type="button" onClick={onClear} className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200">
-            <X size={16} /> Limpar filtros
+            <X size={16} /> {t('toolbar.clear')}
           </button>
         </div>
       </div>
