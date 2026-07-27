@@ -17,9 +17,9 @@ export type RepositoryResult<T> = { ok: true; data: T } | { ok: false; message: 
 
 const selectColumns = 'id,author_id,author_name,title,summary,description,category,city,state,country,image_url,status,views,likes,comments,impact_level,tags,created_at,updated_at,source_type,source_name,source_url,source_published_at,source_accessed_at,source_verified_at,source_metadata,imported_from_external_source';
 const problemStatuses: ProblemStatus[] = ['Reportado', 'Em análise', 'Em vistoria', 'Planejado', 'Licitado', 'Em execução', 'Parcialmente resolvido', 'Resolvido', 'Arquivado', 'Reaberto'];
-const categories: ProblemCategory[] = ['Infraestrutura', 'Educação', 'Saúde', 'Segurança', 'Tecnologia', 'Mobilidade', 'Meio Ambiente', 'Assistência Social', 'Empreendedorismo', 'Outros'];
 const impacts: ImpactLevel[] = ['local', 'regional', 'national', 'global'];
 const safe = <T extends string>(value: string, allowed: readonly T[], fallback: T) => allowed.includes(value as T) ? value as T : fallback;
+const safeCategory = (value: string): ProblemCategory => { const normalized=value.replace(/\s+/g,' ').trim(); return normalized; };
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const isString = (value: unknown): value is string => typeof value === 'string';
 const isNullableString = (value: unknown): value is string | null => value === null || isString(value);
@@ -29,7 +29,7 @@ const errorMessage = (error: unknown, fallback: string) => safeDatabaseMessage(e
 
 export function parseProblemRow(value: unknown): ProblemRow | null {
   if (!isRecord(value)) return null;
-  if (!isString(value.id) || !isNullableString(value.author_id) || !isString(value.title) || !isString(value.description) || !isString(value.category) || !isString(value.city) || !isString(value.state) || !isString(value.country) || !isString(value.status) || !isString(value.impact_level) || !isString(value.created_at) || !isString(value.updated_at) || typeof value.imported_from_external_source !== 'boolean') return null;
+  if (!isString(value.id) || !isNullableString(value.author_id) || !isString(value.title) || !isString(value.description) || (!isString(value.category) || !value.category.trim() || value.category.trim().length > 80) || !isString(value.city) || !isString(value.state) || !isString(value.country) || !isString(value.status) || !isString(value.impact_level) || !isString(value.created_at) || !isString(value.updated_at) || typeof value.imported_from_external_source !== 'boolean') return null;
   return {
     id: value.id, author_id: value.author_id, author_name: isString(value.author_name) ? value.author_name : null,
     title: value.title, summary: isString(value.summary) ? value.summary : null, description: value.description,
@@ -50,7 +50,7 @@ export function mapProblemRowToDomain(row: ProblemRow): Problem {
   return {
     id: row.id, authorId: row.author_id ?? undefined, title: row.title,
     summary: row.summary || row.description.slice(0, 160), description: row.description,
-    category: safe(row.category, categories, 'Outros'), city: row.city, state: row.state, country: row.country,
+    category: safeCategory(row.category), city: row.city, state: row.state, country: row.country,
     image: row.image_url ?? undefined, createdAt: row.created_at,
     author: row.imported_from_external_source ? 'Registro criado a partir de informação pública' : (row.author_name || 'Usuário da plataforma'),
     status: safe(row.status, problemStatuses, 'Reportado'), views: row.views, likes: row.likes, comments: row.comments,

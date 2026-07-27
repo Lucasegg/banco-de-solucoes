@@ -5,17 +5,7 @@ export const solutionStatuses = ['Proposta', 'Em teste', 'Implementada', 'Valida
 export type SolutionStatus = typeof solutionStatuses[number];
 export type SolutionMaturityLevel = 'Ideia' | 'Protótipo' | 'Piloto' | 'Em operação' | 'Escalável';
 export type ImplementationDifficulty = 'Baixa' | 'Média' | 'Alta';
-export type ProblemCategory =
-  | 'Infraestrutura'
-  | 'Educação'
-  | 'Saúde'
-  | 'Segurança'
-  | 'Tecnologia'
-  | 'Mobilidade'
-  | 'Meio Ambiente'
-  | 'Assistência Social'
-  | 'Empreendedorismo'
-  | 'Outros';
+export type ProblemCategory = string;
 
 export type SolutionCategory = ProblemCategory;
 

@@ -38,7 +38,7 @@ create table public.taxonomy_proposals (
  check ((status='pending' and reviewer_id is null and reviewed_at is null and decision_reason is null) or
         (status in ('approved','rejected') and reviewer_id is not null and reviewed_at is not null))
 );
-create unique index taxonomy_one_pending_proposal on public.taxonomy_proposals(author_id,kind,scope,normalized_name) where status='pending';
+create unique index taxonomy_one_pending_proposal on public.taxonomy_proposals(kind,normalized_name) where status='pending';
 create table public.taxonomy_audit (
  id bigint generated always as identity primary key, proposal_id uuid not null references public.taxonomy_proposals(id) on delete restrict,
  action public.taxonomy_proposal_status not null check(action in ('approved','rejected')), actor_id uuid,
@@ -48,16 +48,24 @@ create table public.taxonomy_audit (
 create function public.taxonomy_slug(value text) returns text language sql immutable strict parallel safe set search_path=pg_catalog
 as $$ select trim(both '-' from regexp_replace(public.normalize_taxonomy_name(value),'[^a-z0-9]+','-','g')) $$;
 
--- A term occurring in both catalogs is one global `both` term; otherwise its scope is specific.
+-- Seed every official category even when the catalog has no matching row. Existing
+-- values are then folded in without inventing tags or merging distinct names.
 with raw(kind,scope,name) as (
- select 'category'::public.taxonomy_kind,'problem'::public.taxonomy_scope,btrim(category) from public.problems where nullif(btrim(category),'') is not null union all
+ select 'category'::public.taxonomy_kind,'both'::public.taxonomy_scope,name from unnest(array['Infraestrutura','Educação','Saúde','Segurança','Tecnologia','Mobilidade','Meio Ambiente','Assistência Social','Empreendedorismo','Cultura','Outros']) name union all
+ select 'category','problem',btrim(category) from public.problems where nullif(btrim(category),'') is not null union all
  select 'category','solution',btrim(category) from public.solutions where nullif(btrim(category),'') is not null union all
  select 'tag','problem',btrim(t) from public.problems cross join lateral unnest(tags) t where nullif(btrim(t),'') is not null union all
  select 'tag','solution',btrim(t) from public.solutions cross join lateral unnest(tags) t where nullif(btrim(t),'') is not null
-), grouped as (select kind,public.normalize_taxonomy_name(name) normalized,min(name collate "C") name,
- case when count(distinct scope)=2 then 'both'::public.taxonomy_scope else min(scope::text)::public.taxonomy_scope end scope from raw group by kind,public.normalize_taxonomy_name(name))
+), grouped as (
+ select kind,public.normalize_taxonomy_name(name) normalized,min(name collate "C") name,
+ case when bool_or(scope='both') or count(distinct scope)=2 then 'both'::public.taxonomy_scope else min(scope::text)::public.taxonomy_scope end scope
+ from raw group by kind,public.normalize_taxonomy_name(name)
+), prepared as (
+ select *,coalesce(nullif(public.taxonomy_slug(name),''),'term') slug_base from grouped
+)
 insert into public.taxonomy_terms(kind,scope,name,normalized_name,slug)
-select kind,scope,name,normalized,coalesce(nullif(public.taxonomy_slug(name),''),'term-'||substr(md5(normalized),1,12)) from grouped order by kind,normalized;
+select kind,scope,name,normalized,slug_base||'-'||substr(md5(kind::text||':'||normalized),1,8)
+from prepared order by kind,normalized;
 
 create function public.taxonomy_term_guard() returns trigger language plpgsql security definer set search_path=public,pg_catalog as $$
 declare k public.taxonomy_kind; s public.taxonomy_scope; n text; collision boolean;
@@ -100,6 +108,10 @@ end $$;
 create trigger problems_canonical_taxonomy before insert or update of category,tags on public.problems for each row execute function public.canonicalize_content_taxonomy();
 create trigger solutions_canonical_taxonomy before insert or update of category,tags on public.solutions for each row execute function public.canonicalize_content_taxonomy();
 
+-- Run the same validation over legacy rows after the vocabulary exists.
+update public.problems set category=category,tags=tags;
+update public.solutions set category=category,tags=tags;
+
 create function public.is_taxonomy_moderator() returns boolean language sql stable security definer set search_path=public,pg_catalog as $$
  select exists(select 1 from public.profiles where id=auth.uid() and role::text in ('curator','admin'))
 $$;
@@ -107,7 +119,13 @@ create function public.list_taxonomy_terms(p_kind public.taxonomy_kind default n
 returns table(id uuid,kind public.taxonomy_kind,scope public.taxonomy_scope,name text,slug text,total_count bigint) language sql stable security invoker set search_path=public,pg_catalog as $$
  with q as(select t.*,count(*) over() n from public.taxonomy_terms t where status='approved' and (p_kind is null or kind=p_kind) and (p_scope is null or scope=p_scope or scope='both') and (nullif(btrim(p_query),'') is null or normalized_name like '%'||public.normalize_taxonomy_name(p_query)||'%')) select id,kind,scope,name,slug,n from q order by normalized_name,id limit least(greatest(coalesce(p_limit,50),1),100) offset greatest(coalesce(p_offset,0),0)
 $$;
-create function public.submit_taxonomy_proposal(p_name text,p_kind public.taxonomy_kind,p_scope public.taxonomy_scope,p_justification text) returns uuid language plpgsql security invoker set search_path=public,pg_catalog as $$ declare result uuid; begin if auth.uid() is null then raise exception 'authentication required' using errcode='42501'; end if; insert into public.taxonomy_proposals(proposed_name,normalized_name,kind,scope,justification,author_id) values(btrim(p_name),public.normalize_taxonomy_name(p_name),p_kind,p_scope,btrim(p_justification),auth.uid()) returning id into result; return result; end $$;
+create function public.submit_taxonomy_proposal(p_name text,p_kind public.taxonomy_kind,p_scope public.taxonomy_scope,p_justification text) returns uuid language plpgsql security invoker set search_path=public,pg_catalog as $$
+declare result uuid; normalized text:=public.normalize_taxonomy_name(p_name); begin
+ if auth.uid() is null then raise exception 'authentication required' using errcode='42501'; end if;
+ perform pg_advisory_xact_lock(hashtextextended(normalized||p_kind::text,0));
+ if exists(select 1 from public.taxonomy_terms where kind=p_kind and normalized_name=normalized and status='approved') then raise exception 'term already exists' using errcode='23505'; end if;
+ insert into public.taxonomy_proposals(proposed_name,normalized_name,kind,scope,justification,author_id) values(btrim(p_name),normalized,p_kind,p_scope,btrim(p_justification),auth.uid()) returning id into result; return result;
+end $$;
 create function public.my_taxonomy_proposals(p_limit int default 50,p_offset int default 0) returns setof public.taxonomy_proposals language sql stable security invoker set search_path=public,pg_catalog as $$ select * from public.taxonomy_proposals where author_id=auth.uid() order by created_at desc,id limit least(greatest(coalesce(p_limit,50),1),100) offset greatest(coalesce(p_offset,0),0) $$;
 create function public.taxonomy_moderation_queue(p_limit int default 50,p_offset int default 0) returns setof public.taxonomy_proposals language plpgsql stable security definer set search_path=public,pg_catalog as $$ begin if auth.uid() is null or not public.is_taxonomy_moderator() then raise exception 'not authorized' using errcode='42501'; end if; return query select * from public.taxonomy_proposals where status='pending' order by created_at,id limit least(greatest(coalesce(p_limit,50),1),100) offset greatest(coalesce(p_offset,0),0); end $$;
 create function public.review_taxonomy_proposal(p_proposal_id uuid,p_decision public.taxonomy_proposal_status,p_reason text default null) returns uuid language plpgsql security definer set search_path=public,pg_catalog as $$
@@ -118,8 +136,9 @@ declare p public.taxonomy_proposals; term uuid; canonical text; begin
  if p.status<>'pending' then select term_id into term from public.taxonomy_audit where proposal_id=p.id limit 1; return term; end if;
  if p_decision='approved' then
   perform pg_advisory_xact_lock(hashtextextended(p.normalized_name||p.kind::text,0));
-  select id into term from public.taxonomy_terms where kind=p.kind and normalized_name=p.normalized_name and (scope=p.scope or scope='both' or p.scope='both') limit 1;
-  if term is null then canonical:=p.proposed_name; insert into public.taxonomy_terms(kind,scope,name,normalized_name,slug) values(p.kind,p.scope,canonical,p.normalized_name,coalesce(nullif(public.taxonomy_slug(canonical),''),'term-'||substr(md5(p.normalized_name),1,12))) returning id into term; end if;
+  select id into term from public.taxonomy_terms where kind=p.kind and normalized_name=p.normalized_name limit 1 for update;
+  if term is null then canonical:=p.proposed_name; insert into public.taxonomy_terms(kind,scope,name,normalized_name,slug) values(p.kind,p.scope,canonical,p.normalized_name,coalesce(nullif(public.taxonomy_slug(canonical),''),'term')||'-'||substr(md5(p.kind::text||':'||p.normalized_name),1,8)) returning id into term;
+  else update public.taxonomy_terms set scope=case when scope=p.scope or scope='both' then scope else 'both' end,updated_at=now() where id=term; end if;
  end if;
  update public.taxonomy_proposals set status=p_decision,reviewer_id=auth.uid(),decision_reason=nullif(btrim(p_reason),''),reviewed_at=now(),updated_at=now() where id=p.id;
  insert into public.taxonomy_audit(proposal_id,action,actor_id,term_id,reason) values(p.id,p_decision,auth.uid(),term,nullif(btrim(p_reason),'')); return term;

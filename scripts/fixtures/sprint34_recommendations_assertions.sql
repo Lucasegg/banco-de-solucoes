@@ -1,5 +1,16 @@
 begin;
 
+-- Sprint 35 runs before this compatibility fixture in CI. Register the fixture's
+-- purpose-built tag through the canonical vocabulary instead of bypassing its
+-- write guards; production data never receives this test-only term.
+do $$ begin
+ if to_regclass('public.taxonomy_terms') is not null then
+  insert into public.taxonomy_terms(kind,scope,name,normalized_name,slug)
+  values('tag','problem','livros','livros','livros-'||substr(md5('tag:livros'),1,8))
+  on conflict(kind,scope,normalized_name) do nothing;
+ end if;
+end $$;
+
 -- Purpose-built candidates: archived, unrelated/popular, category-only and tag-rich.
 insert into public.problems(id,author_id,title,summary,description,category,city,state,status,tags,likes,updated_at)
 values

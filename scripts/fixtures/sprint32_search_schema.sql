@@ -14,7 +14,7 @@ create or replace function auth.uid()
 returns uuid
 language sql
 stable
-as $$ select null::uuid $$;
+as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 
 create table public.profiles (
   id uuid primary key,
@@ -89,7 +89,7 @@ $$;
 
 insert into public.problems (id, author_id, title, summary, description, category, city, state, status, tags, latitude, longitude, geolocation_precision)
 values
-  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'Drenagem urbana', 'Alagamentos', 'Busca textual de problema.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5505, -46.6333, 'exact'),
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'Drenagem urbana', 'Alagamentos', 'Busca textual de problema.', '  infraestrutura ', 'São Paulo', 'SP', 'Aberto', array[' drenagem ','DRENAGEM',''], -23.5505, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000010', 'Drenagem próxima A', 'Alagamentos', 'Busca textual próxima.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5415, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000010', 'Drenagem próxima B', 'Alagamentos', 'Busca textual próxima.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5415, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000010', 'Drenagem distante', 'Alagamentos', 'Busca textual distante.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.3505, -46.6333, 'exact'),
