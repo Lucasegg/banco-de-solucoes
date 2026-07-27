@@ -7,6 +7,12 @@ import { formatCount, formatDate, formatNumber } from './format.ts';
 import { readStoredLocale, writeStoredLocale, type LocaleStorage } from './storage.ts';
 import { applyLocaleToDocument } from './document.ts';
 
+test('interface inventory has no pending files', () => {
+  const inventory = readFileSync(new URL('../../docs/sprint36-interface-inventory.md', import.meta.url), 'utf8');
+  const pending = inventory.split('\n').filter((line) => /^\| `[^`]+` \| \d+ \| pending \|$/.test(line)).map((line) => line.split('`')[1]);
+  assert.deepEqual(pending, [], `Pending internationalization files:\n${pending.join('\n')}`);
+});
+
 test('uses pt-BR by default and detects supported browser variants', () => {
   assert.equal(DEFAULT_LOCALE, 'pt-BR');
   assert.equal(detectLocale(null, ['fr-FR', 'en-GB']), 'en-US');
