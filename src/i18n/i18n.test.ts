@@ -43,7 +43,7 @@ test('a real locale application updates lang, title and meta description', () =>
 
 test('locale resources have exact key parity and no duplicate source keys', () => {
   assert.deepEqual(Object.keys(enUS).sort(), Object.keys(ptBR).sort());
-  for (const file of ['common.ts', 'home.ts']) {
+  for (const file of ['common.ts', 'home.ts', 'content.ts']) {
     const source = readFileSync(new URL(`./locales/${file}`, import.meta.url), 'utf8');
     const blocks = [...source.matchAll(/export const \w+ = \{([\s\S]*?)\} as const;/g)];
     assert.equal(blocks.length, 2);
@@ -64,10 +64,18 @@ test('Intl formatters localize and safely handle invalid values', () => {
 });
 
 test('migrated screens do not regress to hard-coded interface copy', () => {
-  for (const file of ['../components/Layout.tsx', '../pages/Home.tsx']) {
+  for (const file of ['../components/Layout.tsx', '../pages/Home.tsx', '../pages/About.tsx']) {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8');
     assert.doesNotMatch(source, />\s*(Início|Entrar|Explorar problemas|Nenhum problema publicado)\s*</);
   }
+});
+
+test('changing locale cannot trigger another Home catalog request', () => {
+  const home = readFileSync(new URL('../pages/Home.tsx', import.meta.url), 'utf8');
+  const loadEffect = home.match(/useEffect\(\(\) => \{([\s\S]*?ProblemRepository\.list[\s\S]*?)\}, \[(.*?)\]\);/);
+  assert.ok(loadEffect, 'catalog loading effect must remain auditable');
+  assert.equal(loadEffect[2].trim(), '', 'catalog loading must not depend on translation state');
+  assert.doesNotMatch(loadEffect[1], /\bt\(/);
 });
 
 test('language selector remains keyboard-native and accessibly named', () => {
