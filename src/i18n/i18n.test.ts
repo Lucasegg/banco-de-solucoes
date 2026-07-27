@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { DEFAULT_LOCALE, detectLocale, normalizeLocale, translate } from './core.ts';
 import { enUS, ptBR } from './resources.ts';
-import { formatCount, formatDate, formatNumber } from './format.ts';
+import { formatCount, formatDate, formatDurationClock, formatNumber } from './format.ts';
 import { readStoredLocale, writeStoredLocale, type LocaleStorage } from './storage.ts';
 import { applyLocaleToDocument } from './document.ts';
 
@@ -49,7 +49,7 @@ test('a real locale application updates lang, title and meta description', () =>
 
 test('locale resources have exact key parity and no duplicate source keys', () => {
   assert.deepEqual(Object.keys(enUS).sort(), Object.keys(ptBR).sort());
-  for (const file of ['common.ts', 'home.ts', 'content.ts', 'domain.ts', 'shared.ts']) {
+  for (const file of ['common.ts', 'home.ts', 'content.ts', 'domain.ts', 'shared.ts', 'recovery.ts']) {
     const source = readFileSync(new URL(`./locales/${file}`, import.meta.url), 'utf8');
     const blocks = [...source.matchAll(/export const \w+ = \{([\s\S]*?)\} as const;/g)];
     assert.equal(blocks.length, 2);
@@ -64,6 +64,7 @@ test('Intl formatters localize and safely handle invalid values', () => {
   assert.equal(formatNumber(1234.5, 'pt-BR'), '1.234,5');
   assert.equal(formatNumber(1234.5, 'en-US'), '1,234.5');
   assert.equal(formatDate('invalid', 'en-US'), '—');
+  assert.equal(formatDurationClock(90, 'en-US'), '01:30');
   const t = (key: Parameters<typeof translate>[1]) => translate('en-US', key);
   assert.equal(formatCount(1, 'en-US', t, 'count.result.one', 'count.result.other'), '1 result');
   assert.equal(formatCount(2, 'en-US', t, 'count.result.one', 'count.result.other'), '2 results');
