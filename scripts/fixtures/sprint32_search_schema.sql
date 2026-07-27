@@ -16,6 +16,11 @@ language sql
 stable
 as $$ select null::uuid $$;
 
+create table public.profiles (
+  id uuid primary key,
+  role text not null default 'member'
+);
+
 create table public.problems (
   id uuid primary key,
   author_id uuid not null,

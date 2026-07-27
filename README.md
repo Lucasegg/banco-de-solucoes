@@ -1,5 +1,7 @@
 # Banco de Soluções
 
+A Sprint 35 adiciona um vocabulário global e moderado para categorias e tags, com aliases, sugestões autenticadas, fila administrativa e canonicalização no banco sem quebrar os contratos de busca e recomendações. Consulte [a documentação da taxonomia](docs/sprint35-taxonomy.md).
+
 ## Busca geográfica
 
 A busca avançada oferece pesquisa textual e territorial de problemas e soluções, com raios de 1 a 100 km, ordenação por proximidade e visualização Leaflet/OpenStreetMap. Consulte a [documentação da Sprint 33](docs/sprint33-geographic-search.md) para arquitetura, privacidade, operação e testes.
