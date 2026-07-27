@@ -44,7 +44,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/pages/AdminSectionPlaceholder.tsx` | 2 | pending |
 | `src/pages/AdminSystem.tsx` | 6 | pending |
 | `src/pages/AdminUsers.tsx` | 20 | pending |
-| `src/pages/Auth.tsx` | 46 | pending |
+| `src/pages/Auth.tsx` | 46 | migrated |
 | `src/pages/Contributions.tsx` | 22 | pending |
 | `src/pages/Details.tsx` | 60 | pending |
 | `src/pages/ExploreProblems.tsx` | 11 | pending |

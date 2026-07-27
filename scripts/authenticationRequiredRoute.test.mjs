@@ -7,6 +7,7 @@ import { createServer } from 'vite';
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 const { AuthenticatedRoute, createAuthenticationPromptActions } = await vite.ssrLoadModule('/src/components/auth/AuthenticatedRoute.tsx');
 const { ProblemForm, SolutionForm } = await vite.ssrLoadModule('/src/pages/Forms.tsx');
+const { translate } = await vite.ssrLoadModule('/src/i18n/core.ts');
 
 function renderRoute({ isAuthenticated, isLoading, description, children }) {
   return renderToStaticMarkup(React.createElement(AuthenticatedRoute, {
@@ -36,13 +37,16 @@ test('regressão: visitante não monta children protegidos', () => {
   const { html, mounts } = renderWithSpy({ isAuthenticated: false, isLoading: false });
   assert.equal(mounts, 0, 'o teste falha se AuthenticatedRoute renderizar children para visitante');
   assert.doesNotMatch(html, /protected-form|name="title"/);
-  assert.match(html, /Entre ou crie uma conta para continuar/);
+  assert.match(html, /auth\.continue/);
+  assert.equal(translate('pt-BR', 'auth.continue'), 'Entre ou crie uma conta para continuar');
+  assert.equal(translate('en-US', 'auth.continue'), 'Sign in or create an account to continue');
 });
 
 test('carregamento não monta children protegidos', () => {
   const { html, mounts } = renderWithSpy({ isAuthenticated: false, isLoading: true });
   assert.equal(mounts, 0);
-  assert.match(html, /Verificando sua sessão/);
+  assert.match(html, /auth\.checking/);
+  assert.equal(translate('pt-BR', 'auth.checking'), 'Verificando sua sessão...');
   assert.doesNotMatch(html, /protected-form/);
 });
 
@@ -59,7 +63,7 @@ test('visitante não vê campos, título ou upload reais de ProblemForm', () => 
     description: 'Para registrar um problema, você precisa estar conectado à sua conta.',
     children: React.createElement(ProblemForm),
   });
-  assert.match(html, /Entre ou crie uma conta para continuar/);
+  assert.match(html, /auth\.continue/);
   assert.match(html, /Para registrar um problema/);
   assert.doesNotMatch(html, /Cadastrar problema|Imagem do problema|<input|<select|<textarea/);
 });
@@ -71,7 +75,7 @@ test('visitante não vê campos, título ou upload reais de SolutionForm', () =>
     description: 'Para cadastrar uma solução, você precisa estar conectado à sua conta.',
     children: React.createElement(SolutionForm),
   });
-  assert.match(html, /Entre ou crie uma conta para continuar/);
+  assert.match(html, /auth\.continue/);
   assert.match(html, /Para cadastrar uma solução/);
   assert.doesNotMatch(html, /Cadastrar solução|Imagem da solução|<input|<select|<textarea/);
 });
