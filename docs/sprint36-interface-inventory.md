@@ -56,6 +56,6 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/pages/MfaChallenge.tsx` | 5 | migrated |
 | `src/pages/Notifications.tsx` | 6 | pending |
 | `src/pages/PasswordRecovery.tsx` | 18 | migrated |
-| `src/pages/Profile.tsx` | 39 | pending |
+| `src/pages/Profile.tsx` | 39 | migrated |
 | `src/pages/PublicMap.tsx` | 26 | pending |
 | `src/pages/Search.tsx` | 66 | pending |

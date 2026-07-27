@@ -6,10 +6,11 @@ import { sharedEnUS, sharedPtBR } from './locales/shared.ts';
 import { recoveryEnUS, recoveryPtBR } from './locales/recovery.ts';
 import { authEnUS, authPtBR } from './locales/auth.ts';
 import { accountEnUS, accountPtBR } from './locales/account.ts';
+import { profileEnUS, profilePtBR } from './locales/profile.ts';
 
-export const ptBR = { ...commonPtBR, ...homePtBR, ...contentPtBR, ...domainPtBR, ...sharedPtBR, ...recoveryPtBR, ...authPtBR, ...accountPtBR } as const;
+export const ptBR = { ...commonPtBR, ...homePtBR, ...contentPtBR, ...domainPtBR, ...sharedPtBR, ...recoveryPtBR, ...authPtBR, ...accountPtBR, ...profilePtBR } as const;
 export type TranslationKey = keyof typeof ptBR;
 export type TranslationResource = { readonly [K in TranslationKey]: string };
-export const enUS = { ...commonEnUS, ...homeEnUS, ...contentEnUS, ...domainEnUS, ...sharedEnUS, ...recoveryEnUS, ...authEnUS, ...accountEnUS } satisfies TranslationResource;
+export const enUS = { ...commonEnUS, ...homeEnUS, ...contentEnUS, ...domainEnUS, ...sharedEnUS, ...recoveryEnUS, ...authEnUS, ...accountEnUS, ...profileEnUS } satisfies TranslationResource;
 export const resources = { 'pt-BR': ptBR, 'en-US': enUS } as const;
 export type SupportedLocale = keyof typeof resources;

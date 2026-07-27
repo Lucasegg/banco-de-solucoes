@@ -49,7 +49,7 @@ test('a real locale application updates lang, title and meta description', () =>
 
 test('locale resources have exact key parity and no duplicate source keys', () => {
   assert.deepEqual(Object.keys(enUS).sort(), Object.keys(ptBR).sort());
-  for (const file of ['common.ts', 'home.ts', 'content.ts', 'domain.ts', 'shared.ts', 'recovery.ts', 'auth.ts', 'account.ts']) {
+  for (const file of ['common.ts', 'home.ts', 'content.ts', 'domain.ts', 'shared.ts', 'recovery.ts', 'auth.ts', 'account.ts', 'profile.ts']) {
     const source = readFileSync(new URL(`./locales/${file}`, import.meta.url), 'utf8');
     const blocks = [...source.matchAll(/export const \w+ = \{([\s\S]*?)\} as const;/g)];
     assert.equal(blocks.length, 2);
