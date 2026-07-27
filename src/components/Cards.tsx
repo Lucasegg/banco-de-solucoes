@@ -3,6 +3,7 @@ import { ArrowRight, Building2, ExternalLink, Eye, Gauge, Heart, MapPin, Message
 import type { Problem, Solution, SolutionStatus } from '../types/domain';
 import { useTranslation } from '../i18n/I18nProvider';
 import { formatNumber } from '../i18n/format';
+import { problemStatusKeys, solutionStatusKeys } from '../i18n/presentation';
 
 interface CardActions {
   onOpen: (id: string) => void;
@@ -38,7 +39,7 @@ export function ProblemCard({ problem, onOpen, isFavorite, onToggleFavorite }: {
       <div className={`relative overflow-hidden ${problem.image ? 'h-48' : 'h-14 bg-slate-50'}`}>
         {problem.image && <img src={problem.image} alt={t('card.problemImage', { title: problem.title })} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
         <button type="button" onClick={(event: { stopPropagation: () => void }) => { event.stopPropagation(); onToggleFavorite?.(problem.id); }} aria-pressed={isFavorite} aria-label={t(isFavorite ? 'card.removeFavorite' : 'card.addFavorite', { title: problem.title })} className={`absolute right-4 top-4 rounded-full p-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 ${isFavorite ? 'bg-rose-600 text-white' : 'bg-white/90 text-slate-700 hover:text-rose-600'}`}><Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} /></button>
-        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${problemStatusStyles[problem.status]}`}>{problem.status}</span>
+        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${problemStatusStyles[problem.status]}`}>{t(problemStatusKeys[problem.status])}</span>
       </div>
       <div className="p-6">
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600">
@@ -72,7 +73,7 @@ export function SolutionCard({ solution, onOpen, isFavorite, onToggleFavorite }:
       <div className={`relative overflow-hidden ${solution.image ? 'h-44' : 'h-14 bg-teal-50'}`}>
         {solution.image && <img src={solution.image} alt={t('card.solutionImage', { title: solution.title })} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
         <button type="button" onClick={(event: { stopPropagation: () => void }) => { event.stopPropagation(); onToggleFavorite?.(solution.id); }} aria-pressed={isFavorite} aria-label={t(isFavorite ? 'card.removeFavorite' : 'card.addFavorite', { title: solution.title })} className={`absolute right-4 top-4 rounded-full p-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 ${isFavorite ? 'bg-rose-600 text-white' : 'bg-white/90 text-slate-700 hover:text-rose-600'}`}><Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} /></button>
-        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${solutionStatusStyles[solution.status]}`}>{solution.status}</span>
+        <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${solutionStatusStyles[solution.status]}`}>{t(solutionStatusKeys[solution.status])}</span>
       </div>
       <div className="p-6">
         <div className="mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
