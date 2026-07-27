@@ -105,6 +105,9 @@ select set_config('request.jwt.claim.sub','35000000-0000-0000-0000-000000000004'
 do $$ begin if auth.uid()<>'35000000-0000-0000-0000-000000000004'::uuid then raise exception 'auth identity mismatch: 35000000-0000-0000-0000-000000000004'; end if; end $$;
 select public.review_taxonomy_proposal((select id from public.taxonomy_proposals where normalized_name='escopo compartilhado'),'approved','Escopo confirmado');
 do $$ begin if (select scope from public.taxonomy_terms where kind='tag' and normalized_name='escopo compartilhado')<>'both' then raise exception 'scope was not promoted to both'; end if; end $$;
+reset role;
+select set_config('request.jwt.claim.sub','',false);
+do $$ begin if auth.uid() is not null then raise exception 'identity was not cleared before compatibility checks'; end if; end $$;
 
 -- Public pagination exposes approved terms only and reports the complete count.
 do $$ declare reported bigint; actual bigint; begin
@@ -121,7 +124,6 @@ select count(*) from public.search_nearby_solutions(-23.5505,-46.6333,10);
 select count(*) from public.get_related_problems('00000000-0000-0000-0000-000000000001');
 select count(*) from public.get_recommended_solutions('00000000-0000-0000-0000-000000000001');
 select count(*) from public.get_related_problems_for_solution('00000000-0000-0000-0000-000000000002');
-reset role;
 insert into public.taxonomy_aliases(alias,normalized_alias,term_id) select 'Infra','infra',id from public.taxonomy_terms where kind='category' and normalized_name='infraestrutura';
 do $$ begin begin insert into public.taxonomy_aliases(alias,normalized_alias,term_id) select 'INFRA','infra',id from public.taxonomy_terms where kind='category' and normalized_name='outros'; raise exception 'ambiguous alias accepted'; exception when unique_violation then null; end; end $$;
 update public.problems set category='INFRA',tags=array[' drenagem ','DRENAGEM',''] where id='00000000-0000-0000-0000-000000000001';
