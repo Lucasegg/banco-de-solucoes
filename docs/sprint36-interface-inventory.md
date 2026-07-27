@@ -38,7 +38,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/taxonomy/TaxonomyProposalForm.tsx` | 13 | pending |
 | `src/components/taxonomy/TaxonomySelect.tsx` | 22 | pending |
 | `src/integrations/supabase/SupabaseStatus.tsx` | 5 | pending |
-| `src/pages/Account.tsx` | 41 | pending |
+| `src/pages/Account.tsx` | 41 | migrated |
 | `src/pages/AdminContentPage.tsx` | 19 | pending |
 | `src/pages/AdminDashboard.tsx` | 6 | pending |
 | `src/pages/AdminSectionPlaceholder.tsx` | 2 | pending |
