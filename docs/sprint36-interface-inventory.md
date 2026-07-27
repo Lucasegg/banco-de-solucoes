@@ -9,7 +9,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/EmptyState.tsx` | 1 | migrated |
 | `src/components/Layout.tsx` | 6 | migrated |
 | `src/components/Pagination.tsx` | 12 | migrated |
-| `src/components/admin/AdminRoute.tsx` | 6 | pending |
+| `src/components/admin/AdminRoute.tsx` | 6 | migrated |
 | `src/components/admin/AuditPanel.tsx` | 35 | pending |
 | `src/components/admin/ChangeUserRoleDialog.tsx` | 15 | pending |
 | `src/components/admin/TaxonomyProposalQueue.tsx` | 21 | pending |
@@ -53,7 +53,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/pages/Forms.tsx` | 35 | pending |
 | `src/pages/Home.tsx` | 10 | migrated |
 | `src/pages/LegacyAdminPanel.tsx` | 65 | pending |
-| `src/pages/MfaChallenge.tsx` | 5 | pending |
+| `src/pages/MfaChallenge.tsx` | 5 | migrated |
 | `src/pages/Notifications.tsx` | 6 | pending |
 | `src/pages/PasswordRecovery.tsx` | 18 | pending |
 | `src/pages/Profile.tsx` | 39 | pending |
