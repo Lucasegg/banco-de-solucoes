@@ -3,8 +3,10 @@ import { LogOut, ShieldCheck } from 'lucide-react';
 import { TotpInput } from '../components/TotpInput';
 import { useAuth } from '../hooks/useAuth';
 import { clearMfaReturnTo, consumeMfaReturnTo } from '../repositories/users/mfaReturnTo';
+import { useTranslation } from '../i18n/I18nProvider';
 
 export function MfaChallenge({ onNavigate }: { onNavigate: (page: string) => void }) {
+  const { t } = useTranslation();
   const { mfaStatus, mfaError, verifyMfaChallenge, logout, refreshMfaStatus } = useAuth();
   const [code, setCode] = useState(''); const busy = mfaStatus === 'verifying' || mfaStatus === 'loading';
   const submit = async (event: FormEvent) => {
@@ -15,13 +17,13 @@ export function MfaChallenge({ onNavigate }: { onNavigate: (page: string) => voi
   };
   const leave = async () => { clearMfaReturnTo(); await logout(); onNavigate('login'); };
   return <section className="mx-auto max-w-lg rounded-[2rem] border border-line bg-white p-8 shadow-soft">
-    <ShieldCheck className="text-primary" aria-hidden="true" /><h1 className="mt-4 text-3xl font-semibold">Confirme sua identidade</h1>
-    <p className="mt-3 text-muted">Digite o código gerado pelo seu aplicativo autenticador.</p>
+    <ShieldCheck className="text-primary" aria-hidden="true" /><h1 className="mt-4 text-3xl font-semibold">{t('mfa.title')}</h1>
+    <p className="mt-3 text-muted">{t('mfa.description')}</p>
     <form onSubmit={submit} className="mt-6 space-y-4"><TotpInput value={code} onChange={setCode} disabled={busy} />
       <p aria-live="assertive" className="text-sm text-red-700">{mfaError}</p>
-      <button disabled={busy || code.length !== 6} className="w-full rounded-full bg-primary px-5 py-3 font-semibold text-white disabled:opacity-50">{busy ? 'Verificando…' : 'Confirmar código'}</button>
+      <button disabled={busy || code.length !== 6} className="w-full rounded-full bg-primary px-5 py-3 font-semibold text-white disabled:opacity-50">{busy ? t('mfa.verifying') : t('mfa.confirm')}</button>
     </form>
-    {mfaStatus === 'error' && <button onClick={() => void refreshMfaStatus()} className="mt-3 w-full rounded-full border px-5 py-3 font-semibold">Tentar novamente</button>}
-    <button onClick={leave} disabled={busy} className="mt-3 inline-flex w-full items-center justify-center gap-2 px-5 py-3 font-semibold"><LogOut size={16} /> Sair e voltar ao login</button>
+    {mfaStatus === 'error' && <button onClick={() => void refreshMfaStatus()} className="mt-3 w-full rounded-full border px-5 py-3 font-semibold">{t('common.retry')}</button>}
+    <button onClick={leave} disabled={busy} className="mt-3 inline-flex w-full items-center justify-center gap-2 px-5 py-3 font-semibold"><LogOut size={16} /> {t('mfa.leave')}</button>
   </section>;
 }
