@@ -16,7 +16,10 @@ export function detectLocale(stored: string | null, browserLanguages: readonly s
   return normalizeLocale(stored) ?? browserLanguages.map(normalizeLocale).find(Boolean) ?? DEFAULT_LOCALE;
 }
 
-export function translate(locale: SupportedLocale, key: TranslationKey, values: Record<string, string | number> = {}): string {
-  const template = resources[locale][key] ?? resources[DEFAULT_LOCALE][key] ?? key;
+export function translate(locale: SupportedLocale | string, key: TranslationKey | string, values: Record<string, string | number> = {}): string {
+  const safeLocale = normalizeLocale(locale) ?? DEFAULT_LOCALE;
+  const localeResource = resources[safeLocale] as Partial<Record<string, string>>;
+  const fallbackResource = resources[DEFAULT_LOCALE] as Partial<Record<string, string>>;
+  const template = localeResource[key] ?? fallbackResource[key] ?? key;
   return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), template);
 }
