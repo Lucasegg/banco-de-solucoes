@@ -9,6 +9,11 @@ do $$ declare n integer; begin
  if has_table_privilege('anon','public.taxonomy_proposals','select') then raise exception 'private proposals exposed to anon'; end if;
  if has_table_privilege('authenticated','public.taxonomy_terms','insert') then raise exception 'official terms writable by users'; end if;
  if has_table_privilege('authenticated','public.taxonomy_proposals','insert') then raise exception 'direct proposal insert grant found'; end if;
+ if not has_table_privilege('anon','public.taxonomy_terms','select') or not has_table_privilege('authenticated','public.taxonomy_terms','select') then raise exception 'taxonomy term read grants missing'; end if;
+ if not has_table_privilege('anon','public.taxonomy_aliases','select') or not has_table_privilege('authenticated','public.taxonomy_aliases','select') then raise exception 'taxonomy alias read grants missing'; end if;
+ if not has_table_privilege('authenticated','public.taxonomy_proposals','select') or has_table_privilege('anon','public.taxonomy_proposals','select') then raise exception 'taxonomy proposal read grants invalid'; end if;
+ if not has_table_privilege('authenticated','public.taxonomy_audit','select') or has_table_privilege('anon','public.taxonomy_audit','select') then raise exception 'taxonomy audit read grants invalid'; end if;
+ if has_table_privilege('authenticated','public.taxonomy_audit','insert') or has_table_privilege('authenticated','public.taxonomy_audit','update') or has_table_privilege('authenticated','public.taxonomy_audit','delete') then raise exception 'authenticated taxonomy audit write grant found'; end if;
  if (select prosecdef from pg_proc where oid='public.list_taxonomy_terms(public.taxonomy_kind,public.taxonomy_scope,text,integer,integer)'::regprocedure) then raise exception 'public list is not invoker'; end if;
  if not (select prosecdef from pg_proc where oid='public.review_taxonomy_proposal(uuid,public.taxonomy_proposal_status,text)'::regprocedure) then raise exception 'review RPC is not definer'; end if;
  if not (select prosecdef from pg_proc where oid='public.submit_taxonomy_proposal(text,public.taxonomy_kind,public.taxonomy_scope,text)'::regprocedure) then raise exception 'proposal RPC cannot inspect scoped or deprecated terms safely'; end if;
@@ -62,13 +67,16 @@ select public.review_taxonomy_proposal((select id from public.taxonomy_proposals
 do $$ begin
  if not exists(select 1 from public.taxonomy_audit where proposal_id=(select id from public.taxonomy_proposals where normalized_name='tag do usuário a') and action='approved') then raise exception 'approval audit missing'; end if;
  if public.review_taxonomy_proposal((select id from public.taxonomy_proposals where normalized_name='tag do usuário a'),'approved','Idempotente')<>(select term_id from public.taxonomy_audit where proposal_id=(select id from public.taxonomy_proposals where normalized_name='tag do usuário a')) then raise exception 'approval is not idempotent'; end if;
+ if (select count(*) from public.taxonomy_audit where proposal_id=(select id from public.taxonomy_proposals where normalized_name='tag do usuário a'))<>1 then raise exception 'idempotent review duplicated audit'; end if;
 end $$;
 select set_config('request.jwt.claim.sub','35000000-0000-0000-0000-000000000002',false);
 do $$ begin if auth.uid()<>'35000000-0000-0000-0000-000000000002'::uuid then raise exception 'auth identity mismatch: 35000000-0000-0000-0000-000000000002'; end if; end $$;
+do $$ begin if exists(select 1 from public.taxonomy_audit) then raise exception 'member can read taxonomy audit'; end if; end $$;
 select public.submit_taxonomy_proposal('Tag rejeitada','tag','solution','Justificativa válida B') as proposal_b \gset
 select set_config('request.jwt.claim.sub','35000000-0000-0000-0000-000000000004',false);
 do $$ begin if auth.uid()<>'35000000-0000-0000-0000-000000000004'::uuid then raise exception 'auth identity mismatch: 35000000-0000-0000-0000-000000000004'; end if; end $$;
 do $$ begin if not exists(select 1 from public.taxonomy_moderation_queue() where normalized_name='tag rejeitada') then raise exception 'admin cannot read queue'; end if; end $$;
+do $$ begin if not exists(select 1 from public.taxonomy_audit where action='approved') then raise exception 'admin cannot read taxonomy audit'; end if; end $$;
 do $$ begin
  begin perform public.review_taxonomy_proposal((select id from public.taxonomy_proposals where normalized_name='tag rejeitada'),'rejected',''); raise exception 'rejection without reason accepted'; exception when sqlstate '22023' then null; end;
  if (select status from public.taxonomy_proposals where id=(select id from public.taxonomy_proposals where normalized_name='tag rejeitada'))<>'pending' then raise exception 'failed review did not roll back'; end if;

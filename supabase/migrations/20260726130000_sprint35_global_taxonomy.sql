@@ -174,6 +174,7 @@ create policy proposals_own_read on public.taxonomy_proposals for select to auth
 create policy audit_moderator_read on public.taxonomy_audit for select to authenticated using(public.is_taxonomy_moderator());
 revoke all on public.taxonomy_terms,public.taxonomy_aliases,public.taxonomy_proposals,public.taxonomy_audit from public,anon,authenticated;
 grant select on public.taxonomy_terms,public.taxonomy_aliases to anon,authenticated; grant select on public.taxonomy_proposals to authenticated;
+grant select on public.taxonomy_audit to authenticated;
 revoke all on function public.list_taxonomy_terms(public.taxonomy_kind,public.taxonomy_scope,text,int,int),public.submit_taxonomy_proposal(text,public.taxonomy_kind,public.taxonomy_scope,text),public.my_taxonomy_proposals(int,int),public.taxonomy_moderation_queue(int,int),public.review_taxonomy_proposal(uuid,public.taxonomy_proposal_status,text) from public,anon,authenticated;
 grant execute on function public.list_taxonomy_terms(public.taxonomy_kind,public.taxonomy_scope,text,int,int) to anon,authenticated;
 grant execute on function public.submit_taxonomy_proposal(text,public.taxonomy_kind,public.taxonomy_scope,text),public.my_taxonomy_proposals(int,int),public.taxonomy_moderation_queue(int,int),public.review_taxonomy_proposal(uuid,public.taxonomy_proposal_status,text) to authenticated;
