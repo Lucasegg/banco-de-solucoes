@@ -16,6 +16,12 @@ language sql
 stable
 as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 
+-- Supabase grants these privileges in managed environments. The isolated
+-- PostgreSQL fixture must reproduce them so SET ROLE exercises the real RLS
+-- paths instead of failing at schema resolution.
+grant usage on schema auth to anon, authenticated;
+grant execute on function auth.uid() to anon, authenticated;
+
 create table public.profiles (
   id uuid primary key,
   role text not null default 'member'
