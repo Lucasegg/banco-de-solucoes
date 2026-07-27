@@ -14,7 +14,18 @@ create or replace function auth.uid()
 returns uuid
 language sql
 stable
-as $$ select null::uuid $$;
+as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+
+-- Supabase grants these privileges in managed environments. The isolated
+-- PostgreSQL fixture must reproduce them so SET ROLE exercises the real RLS
+-- paths instead of failing at schema resolution.
+grant usage on schema auth to anon, authenticated;
+grant execute on function auth.uid() to anon, authenticated;
+
+create table public.profiles (
+  id uuid primary key,
+  role text not null default 'member'
+);
 
 create table public.problems (
   id uuid primary key,
@@ -84,11 +95,12 @@ $$;
 
 insert into public.problems (id, author_id, title, summary, description, category, city, state, status, tags, latitude, longitude, geolocation_precision)
 values
-  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'Drenagem urbana', 'Alagamentos', 'Busca textual de problema.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5505, -46.6333, 'exact'),
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'Drenagem urbana', 'Alagamentos', 'Busca textual de problema.', '  infraestrutura ', 'São Paulo', 'SP', 'Aberto', array[' drenagem ','DRENAGEM',''], -23.5505, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000010', 'Drenagem próxima A', 'Alagamentos', 'Busca textual próxima.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5415, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000010', 'Drenagem próxima B', 'Alagamentos', 'Busca textual próxima.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.5415, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000010', 'Drenagem distante', 'Alagamentos', 'Busca textual distante.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], -23.3505, -46.6333, 'exact'),
   ('00000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000010', 'Drenagem sem coordenadas', 'Alagamentos', 'Busca textual sem coordenadas.', 'Infraestrutura', 'São Paulo', 'SP', 'Aberto', array['drenagem'], null, null, null);
+update public.problems set updated_at='2025-01-01 00:00:00+00' where id='00000000-0000-0000-0000-000000000001';
 insert into public.solutions (id, author_id, title, summary, description, category, organization, status, impact_metric, tags, evidence_links)
 values ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010', 'Jardins de chuva', 'Solução para drenagem', 'Busca textual de solução.', 'Infraestrutura', 'Prefeitura', 'Proposta', 'Redução de alagamentos', array['drenagem'], '{}');
 insert into public.solution_problems (solution_id, problem_id)

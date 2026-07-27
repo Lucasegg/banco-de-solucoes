@@ -37,3 +37,9 @@
 - [ ] API pública.
 - [ ] Exportação de dados abertos.
 - [ ] Integrações com ferramentas de pesquisa, governo e comunidades.
+# Sprint 35 — Taxonomia global e colaborativa
+
+- [x] Vocabulário canônico de categorias e tags com aliases, escopos e depreciação.
+- [x] Propostas privadas, revisão por curator/admin, auditoria append-only e RLS.
+- [x] Backfill e canonicalização compatíveis com busca, geografia e recomendações.
+- [x] Repository, hook e componentes acessíveis para seleção, sugestão e moderação.
