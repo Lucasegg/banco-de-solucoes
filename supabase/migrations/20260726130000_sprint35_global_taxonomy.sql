@@ -50,14 +50,15 @@ as $$ select trim(both '-' from regexp_replace(public.normalize_taxonomy_name(va
 
 -- Seed every official category even when the catalog has no matching row. Existing
 -- values are then folded in without inventing tags or merging distinct names.
-with raw(kind,scope,name) as (
- select 'category'::public.taxonomy_kind,'both'::public.taxonomy_scope,name from unnest(array['Infraestrutura','Educação','Saúde','Segurança','Tecnologia','Mobilidade','Meio Ambiente','Assistência Social','Empreendedorismo','Outros']) name union all
- select 'category','problem',btrim(category) from public.problems where nullif(btrim(category),'') is not null union all
- select 'category','solution',btrim(category) from public.solutions where nullif(btrim(category),'') is not null union all
- select 'tag','problem',btrim(t) from public.problems cross join lateral unnest(tags) t where nullif(btrim(t),'') is not null union all
- select 'tag','solution',btrim(t) from public.solutions cross join lateral unnest(tags) t where nullif(btrim(t),'') is not null
+with raw(kind,scope,name,curated) as (
+ select 'category'::public.taxonomy_kind,'both'::public.taxonomy_scope,name,true from unnest(array['Infraestrutura','Educação','Saúde','Segurança','Tecnologia','Mobilidade','Meio Ambiente','Assistência Social','Empreendedorismo','Outros']) name union all
+ select 'category','problem',btrim(category),false from public.problems where nullif(btrim(category),'') is not null union all
+ select 'category','solution',btrim(category),false from public.solutions where nullif(btrim(category),'') is not null union all
+ select 'tag','problem',btrim(t),false from public.problems cross join lateral unnest(tags) t where nullif(btrim(t),'') is not null union all
+ select 'tag','solution',btrim(t),false from public.solutions cross join lateral unnest(tags) t where nullif(btrim(t),'') is not null
 ), grouped as (
- select kind,public.normalize_taxonomy_name(name) normalized,min(name collate "C") name,
+ select kind,public.normalize_taxonomy_name(name) normalized,
+ coalesce(max(name) filter(where curated),case when kind='tag' then public.normalize_taxonomy_name(name) else min(name collate "C") end) name,
  case when bool_or(scope='both') or count(distinct scope)=2 then 'both'::public.taxonomy_scope else min(scope::text)::public.taxonomy_scope end scope
  from raw group by kind,public.normalize_taxonomy_name(name)
 ), prepared as (
@@ -170,10 +171,9 @@ alter table public.taxonomy_terms enable row level security; alter table public.
 create policy taxonomy_terms_read on public.taxonomy_terms for select using(status='approved');
 create policy taxonomy_aliases_read on public.taxonomy_aliases for select using(exists(select 1 from public.taxonomy_terms t where t.id=term_id and t.status='approved'));
 create policy proposals_own_read on public.taxonomy_proposals for select to authenticated using(author_id=auth.uid() or public.is_taxonomy_moderator());
-create policy proposals_own_insert on public.taxonomy_proposals for insert to authenticated with check(author_id=auth.uid() and status='pending');
 create policy audit_moderator_read on public.taxonomy_audit for select to authenticated using(public.is_taxonomy_moderator());
 revoke all on public.taxonomy_terms,public.taxonomy_aliases,public.taxonomy_proposals,public.taxonomy_audit from public,anon,authenticated;
-grant select on public.taxonomy_terms,public.taxonomy_aliases to anon,authenticated; grant select,insert on public.taxonomy_proposals to authenticated;
+grant select on public.taxonomy_terms,public.taxonomy_aliases to anon,authenticated; grant select on public.taxonomy_proposals to authenticated;
 revoke all on function public.list_taxonomy_terms(public.taxonomy_kind,public.taxonomy_scope,text,int,int),public.submit_taxonomy_proposal(text,public.taxonomy_kind,public.taxonomy_scope,text),public.my_taxonomy_proposals(int,int),public.taxonomy_moderation_queue(int,int),public.review_taxonomy_proposal(uuid,public.taxonomy_proposal_status,text) from public,anon,authenticated;
 grant execute on function public.list_taxonomy_terms(public.taxonomy_kind,public.taxonomy_scope,text,int,int) to anon,authenticated;
 grant execute on function public.submit_taxonomy_proposal(text,public.taxonomy_kind,public.taxonomy_scope,text),public.my_taxonomy_proposals(int,int),public.taxonomy_moderation_queue(int,int),public.review_taxonomy_proposal(uuid,public.taxonomy_proposal_status,text) to authenticated;
