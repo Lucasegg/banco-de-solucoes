@@ -8,10 +8,11 @@ import { authEnUS, authPtBR } from './locales/auth.ts';
 import { accountEnUS, accountPtBR } from './locales/account.ts';
 import { profileEnUS, profilePtBR } from './locales/profile.ts';
 import { adminEnUS, adminPtBR } from './locales/admin.ts';
+import { collaborationEnUS, collaborationPtBR } from './locales/collaboration.ts';
 
-export const ptBR = { ...commonPtBR, ...homePtBR, ...contentPtBR, ...domainPtBR, ...sharedPtBR, ...recoveryPtBR, ...authPtBR, ...accountPtBR, ...profilePtBR, ...adminPtBR } as const;
+export const ptBR = { ...commonPtBR, ...homePtBR, ...contentPtBR, ...domainPtBR, ...sharedPtBR, ...recoveryPtBR, ...authPtBR, ...accountPtBR, ...profilePtBR, ...adminPtBR, ...collaborationPtBR } as const;
 export type TranslationKey = keyof typeof ptBR;
 export type TranslationResource = { readonly [K in TranslationKey]: string };
-export const enUS = { ...commonEnUS, ...homeEnUS, ...contentEnUS, ...domainEnUS, ...sharedEnUS, ...recoveryEnUS, ...authEnUS, ...accountEnUS, ...profileEnUS, ...adminEnUS } satisfies TranslationResource;
+export const enUS = { ...commonEnUS, ...homeEnUS, ...contentEnUS, ...domainEnUS, ...sharedEnUS, ...recoveryEnUS, ...authEnUS, ...accountEnUS, ...profileEnUS, ...adminEnUS, ...collaborationEnUS } satisfies TranslationResource;
 export const resources = { 'pt-BR': ptBR, 'en-US': enUS } as const;
 export type SupportedLocale = keyof typeof resources;

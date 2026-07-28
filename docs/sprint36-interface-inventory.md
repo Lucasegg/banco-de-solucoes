@@ -16,14 +16,14 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/admin/UserAdminList.tsx` | 10 | migrated |
 | `src/components/admin/content/AdminContentList.tsx` | 12 | migrated |
 | `src/components/auth/AuthenticatedRoute.tsx` | 9 | migrated |
-| `src/components/contributions/ContributionDiff.tsx` | 5 | pending |
-| `src/components/contributions/ContributionForm.tsx` | 34 | pending |
-| `src/components/contributions/ContributionHistory.tsx` | 6 | pending |
-| `src/components/discussions/CommentCard.tsx` | 9 | pending |
-| `src/components/discussions/CommentEditor.tsx` | 3 | pending |
-| `src/components/discussions/DiscussionList.tsx` | 12 | pending |
-| `src/components/discussions/ItemReactionBar.tsx` | 3 | pending |
-| `src/components/discussions/ReactionBar.tsx` | 2 | pending |
+| `src/components/contributions/ContributionDiff.tsx` | 5 |migrated |
+| `src/components/contributions/ContributionForm.tsx` | 34 |migrated |
+| `src/components/contributions/ContributionHistory.tsx` | 6 |migrated |
+| `src/components/discussions/CommentCard.tsx` | 9 |migrated |
+| `src/components/discussions/CommentEditor.tsx` | 3 |migrated |
+| `src/components/discussions/DiscussionList.tsx` | 12 |migrated |
+| `src/components/discussions/ItemReactionBar.tsx` | 3 |migrated |
+| `src/components/discussions/ReactionBar.tsx` | 2 |migrated |
 | `src/components/forms/ImageUploadField.tsx` | 9 | pending |
 | `src/components/map/NearbyResultsMap.tsx` | 2 | pending |
 | `src/components/map/ProblemLocationMap.tsx` | 4 | pending |
@@ -45,7 +45,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/pages/AdminSystem.tsx` | 6 | migrated |
 | `src/pages/AdminUsers.tsx` | 20 | migrated |
 | `src/pages/Auth.tsx` | 46 | migrated |
-| `src/pages/Contributions.tsx` | 22 | pending |
+| `src/pages/Contributions.tsx` | 22 |migrated |
 | `src/pages/Details.tsx` | 60 | pending |
 | `src/pages/ExploreProblems.tsx` | 11 | pending |
 | `src/pages/ExploreSolutions.tsx` | 11 | pending |
