@@ -3,6 +3,8 @@ import { DatabaseZap, LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { NotificationBell } from './notifications/NotificationBell';
+import { useTranslation } from '../i18n/I18nProvider';
+import type { TranslationKey } from '../i18n/resources';
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,20 +12,12 @@ interface LayoutProps {
   onNavigate: (page: string) => void;
 }
 
-const links = [
-  ['home', 'Home'],
-  ['problemas', 'Problemas'],
-  ['mapa', 'Mapa'],
-  ['solucoes', 'Soluções'],
-  ['search', 'Buscar'],
-  ['novo-problema', 'Cadastrar problema'],
-  ['nova-solucao', 'Cadastrar solução'],
-  ['sobre', 'Sobre'],
-];
+const links: [string, TranslationKey][] = [['home', 'nav.home'], ['problemas', 'nav.problems'], ['mapa', 'nav.map'], ['solucoes', 'nav.solutions'], ['search', 'nav.search'], ['novo-problema', 'nav.newProblem'], ['nova-solucao', 'nav.newSolution'], ['sobre', 'nav.about']];
 
 export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   const { user, isAuthenticated } = useAuth();
   const permissions = usePermissions(user);
+  const { locale, setLocale, t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-slate-50 text-ink">
@@ -34,8 +28,8 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
               <DatabaseZap size={20} />
             </span>
             <span>
-              <strong className="block text-sm tracking-tight">Banco de Soluções</strong>
-              <span className="text-xs text-muted">Problemas conectados a ação</span>
+              <strong className="block text-sm tracking-tight">{t('app.name')}</strong>
+              <span className="text-xs text-muted">{t('app.tagline')}</span>
             </span>
           </button>
           <div className="flex flex-wrap items-center gap-2">
@@ -47,7 +41,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
                   (currentPage === id || (currentPage === 'problema' && id === 'problemas') || (currentPage === 'solucao' && id === 'solucoes')) ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
                 }`}
               >
-                {label}
+                {t(label)}
               </button>
             ))}
             {isAuthenticated && user ? (
@@ -57,28 +51,28 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
                 onClick={() => onNavigate('favorites')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'favorites' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
               >
-                Meus favoritos
+                {t('nav.favorites')}
               </button>
               <button
                 onClick={() => onNavigate('contributions')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'contributions' || currentPage === 'contribution' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
               >
-                Contribuições
+                {t('nav.contributions')}
               </button>
-              {permissions.canReviewTaxonomy && <button onClick={() => onNavigate('admin-taxonomy')} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'admin-taxonomy' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>Taxonomia</button>}
-              {permissions.canAccessAdmin && <button onClick={() => onNavigate('admin')} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'admin' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>Admin</button>}
+              {permissions.canReviewTaxonomy && <button onClick={() => onNavigate('admin-taxonomy')} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'admin-taxonomy' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>{t('nav.taxonomy')}</button>}
+              {permissions.canAccessAdmin && <button onClick={() => onNavigate('admin')} className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'admin' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>{t('nav.admin')}</button>}
               <button
                 onClick={() => onNavigate('account')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'account' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
               >
-                Conta
+                {t('nav.account')}
               </button>
               <button
                 onClick={() => onNavigate('profile')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'profile' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
               >
-                <img src={user.avatarUrl} alt={`Avatar de ${user.name}`} className="h-7 w-7 rounded-full object-cover" />
-                Perfil
+                <img src={user.avatarUrl} alt={t('a11y.avatar', { name: user.name })} className="h-7 w-7 rounded-full object-cover" />
+                {t('nav.profile')}
               </button>
               </>
             ) : (
@@ -86,17 +80,21 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
                 onClick={() => onNavigate('login')}
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${currentPage === 'login' || currentPage === 'register' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
               >
-                <LogIn size={16} /> Entrar
+                <LogIn size={16} /> {t('nav.login')}
               </button>
             )}
+            <label className="sr-only" htmlFor="language-selector">{t('language.label')}</label>
+            <select id="language-selector" aria-label={t('language.label')} value={locale} onChange={(event: { target: { value: string } }) => setLocale(event.target.value as 'pt-BR' | 'en-US')} className="rounded-full border border-line bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+              <option value="pt-BR">{t('language.pt-BR')}</option><option value="en-US">{t('language.en-US')}</option>
+            </select>
           </div>
         </nav>
       </header>
       <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
       <footer className="border-t border-line bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-8 text-sm text-muted md:flex-row md:items-center md:justify-between">
-          <span>Open source, colaborativo e preparado para dados reais.</span>
-          <span>Banco de Soluções · {new Date().getFullYear()}</span>
+          <span>{t('footer.openSource')}</span>
+          <span>{t('app.name')} · {new Date().getFullYear()}</span>
         </div>
       </footer>
     </div>
