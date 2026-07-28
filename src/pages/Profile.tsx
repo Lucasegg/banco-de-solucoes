@@ -9,7 +9,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { ImageUploadField } from '../components/forms/ImageUploadField';
 import { ImageUploadRepository, type UploadProgress } from '../repositories/images';
 import { useTranslation } from '../i18n/I18nProvider';
-import { formatDate, formatNumber } from '../i18n/format';
+import { formatCivilDateUtc, formatDate, formatNumber } from '../i18n/format';
 import { contributionStatusKeys, contributionTypeKeys, userRoleKeys } from '../i18n/presentation';
 
 export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) {
@@ -118,7 +118,7 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-muted">
                 <p><strong className="text-slate-900">{t('account.email')}:</strong> {user.email || t('profile.notInformed')}</p>
                 <p className="mt-2"><strong className="text-slate-900">{t('profile.role')}</strong> {t(userRoleKeys[user.roleKey])}</p>
-                <p className="mt-2"><strong className="text-slate-900">{t('profile.createdAt')}</strong> {formatDate(user.createdAt, locale)}</p>
+                <p className="mt-2"><strong className="text-slate-900">{t('profile.createdAt')}</strong> {formatCivilDateUtc(user.createdAt, locale)}</p>
               </div>
               <label className="grid gap-2 text-sm font-medium md:col-span-2" htmlFor="profile-bio">{t('profile.bio')}<textarea id="profile-bio" className="rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" value={editForm.bio} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => updateProfileField('bio', event.target.value)} rows={5} maxLength={500} required aria-describedby="profile-bio-count" /><span id="profile-bio-count" className="text-xs text-muted">{t('profile.characters', { count: formatNumber(editForm.bio.length, locale), max: formatNumber(500, locale) })}</span></label>
               {profileMessage && <p className={`rounded-2xl px-4 py-3 text-sm md:col-span-2 ${profileMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{profileMessage.text}</p>}
@@ -201,7 +201,7 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
             <h2 className="text-2xl font-semibold">{t('profile.about')}</h2>
             <p className="mt-4 leading-7 text-muted">{user.bio || t('profile.bioEmpty')}</p>
             {user.website && <a className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-teal-700" href={user.website} target="_blank" rel="noreferrer"><Globe2 size={16} /> {user.website}</a>}
-            <p className="mt-4 text-sm text-muted">{t('profile.memberSince', { date: formatDate(user.createdAt, locale) })}</p>
+            <p className="mt-4 text-sm text-muted">{t('profile.memberSince', { date: formatCivilDateUtc(user.createdAt, locale) })}</p>
           </section>
 
           <section className="rounded-[2rem] border border-line bg-white p-6 shadow-sm">

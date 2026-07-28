@@ -3,6 +3,7 @@ import type { SolutionStatus } from '../types/domain.ts';
 import type { TranslationKey } from './resources.ts';
 import type { UserRole } from '../types/user.ts';
 import type { ContributionStatus, ContributionType } from '../types/contribution.ts';
+import type { AdminContentKind, AdminContentStatus } from '../repositories/adminContent/AdminContentRepository.ts';
 
 export const problemStatusKeys: Record<ProblemStatus, TranslationKey> = {
   Reportado:'status.problem.Reportado','Em análise':'status.problem.Em análise','Em vistoria':'status.problem.Em vistoria',Planejado:'status.problem.Planejado',Licitado:'status.problem.Licitado','Em execução':'status.problem.Em execução','Parcialmente resolvido':'status.problem.Parcialmente resolvido',Resolvido:'status.problem.Resolvido',Arquivado:'status.problem.Arquivado',Reaberto:'status.problem.Reaberto',
@@ -20,3 +21,6 @@ export const contributionStatusKeys: Record<ContributionStatus, TranslationKey> 
 export const contributionTypeKeys: Record<ContributionType, TranslationKey> = {
   correction: 'contribution.correction', supplement: 'contribution.supplement', status_update: 'contribution.status_update', evidence: 'contribution.evidence', description_improvement: 'contribution.description_improvement', location: 'contribution.location', other: 'contribution.other',
 };
+export function adminContentStatusKey(kind: AdminContentKind, status: AdminContentStatus): TranslationKey {
+  return kind === 'problem' ? problemStatusKeys[status as ProblemStatus] : solutionStatusKeys[status as SolutionStatus];
+}

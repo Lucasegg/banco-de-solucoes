@@ -10,11 +10,11 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/Layout.tsx` | 6 | migrated |
 | `src/components/Pagination.tsx` | 12 | migrated |
 | `src/components/admin/AdminRoute.tsx` | 6 | migrated |
-| `src/components/admin/AuditPanel.tsx` | 35 | pending |
+| `src/components/admin/AuditPanel.tsx` | 35 | migrated |
 | `src/components/admin/ChangeUserRoleDialog.tsx` | 15 | migrated |
 | `src/components/admin/TaxonomyProposalQueue.tsx` | 21 | pending |
 | `src/components/admin/UserAdminList.tsx` | 10 | migrated |
-| `src/components/admin/content/AdminContentList.tsx` | 12 | pending |
+| `src/components/admin/content/AdminContentList.tsx` | 12 | migrated |
 | `src/components/auth/AuthenticatedRoute.tsx` | 9 | migrated |
 | `src/components/contributions/ContributionDiff.tsx` | 5 | pending |
 | `src/components/contributions/ContributionForm.tsx` | 34 | pending |
@@ -39,7 +39,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/taxonomy/TaxonomySelect.tsx` | 22 | pending |
 | `src/integrations/supabase/SupabaseStatus.tsx` | 5 | pending |
 | `src/pages/Account.tsx` | 41 | migrated |
-| `src/pages/AdminContentPage.tsx` | 19 | pending |
+| `src/pages/AdminContentPage.tsx` | 19 | migrated |
 | `src/pages/AdminDashboard.tsx` | 6 | migrated |
 | `src/pages/AdminSectionPlaceholder.tsx` | 2 | migrated |
 | `src/pages/AdminSystem.tsx` | 6 | migrated |

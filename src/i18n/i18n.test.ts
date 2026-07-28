@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { DEFAULT_LOCALE, detectLocale, normalizeLocale, translate } from './core.ts';
 import { enUS, ptBR } from './resources.ts';
-import { formatCount, formatDate, formatDurationClock, formatNumber } from './format.ts';
+import { formatCivilDateUtc, formatCount, formatDate, formatDurationClock, formatNumber } from './format.ts';
 import { readStoredLocale, writeStoredLocale, type LocaleStorage } from './storage.ts';
 import { applyLocaleToDocument } from './document.ts';
 
@@ -64,6 +64,7 @@ test('Intl formatters localize and safely handle invalid values', () => {
   assert.equal(formatNumber(1234.5, 'pt-BR'), '1.234,5');
   assert.equal(formatNumber(1234.5, 'en-US'), '1,234.5');
   assert.equal(formatDate('invalid', 'en-US'), '—');
+  assert.equal(formatCivilDateUtc('2026-07-28T00:30:00.000Z', 'pt-BR'), '28/07/2026');
   assert.equal(formatDurationClock(90, 'en-US'), '01:30');
   const t = (key: Parameters<typeof translate>[1]) => translate('en-US', key);
   assert.equal(formatCount(1, 'en-US', t, 'count.result.one', 'count.result.other'), '1 result');
