@@ -42,13 +42,19 @@ test('safe navigation accepts canonical paths and rejects malformed destinations
   for (const path of [`/problems/${uuid.slice(0, 8)}`, `/problems/${uuid}/extra`, `/problems/${uuid}/`, `//problems/${uuid}`, `/problems/${uuid}?next=x`, `/problems/${uuid}#x`, 'https://example.test/x', 'javascript:alert(1)', 'data:text/plain,x', '/admin', `/problems/${uuid}\\x`]) assert.equal(safeNotificationActionUrl(path), null, path);
   assert.match(navigation, /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{12\}/i);
   assert.match(page, /await notifications\.markRead/);
-  assert.match(page, /notificationMessages\.unavailable/);
+  assert.match(page, /t\('notifications\.unavailable'\)/);
+  const resources = readFileSync('src/i18n/locales/engagement.ts', 'utf8');
+  assert.match(resources, /'notifications\.unavailable':'Este conteúdo não está mais disponível\.'/);
+  assert.match(resources, /'notifications\.unavailable':'This content is no longer available\.'/);
 });
 
 test('components stay repository-driven and accessible', () => {
   assert.match(page, /NotificationFilters/);
   assert.match(page, /role="status" aria-live="polite"/);
-  assert.match(page, /Você não possui novas notificações/);
-  assert.match(badge, /99\+/);
+  assert.match(page, /t\('notifications\.empty'\)/);
+  const resources = readFileSync('src/i18n/locales/engagement.ts', 'utf8');
+  assert.match(resources, /'notifications\.empty':'Você não possui novas notificações\.'/);
+  assert.match(resources, /'notifications\.empty':'You have no new notifications\.'/);
+  assert.match(badge, /formatNumber\(99, locale\)/);
   for (const source of [page, bell]) assert.doesNotMatch(source, /\.rpc\(|\.from\(/);
 });

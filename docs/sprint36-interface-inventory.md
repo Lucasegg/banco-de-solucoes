@@ -12,7 +12,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/admin/AdminRoute.tsx` | 6 | migrated |
 | `src/components/admin/AuditPanel.tsx` | 35 | migrated |
 | `src/components/admin/ChangeUserRoleDialog.tsx` | 15 | migrated |
-| `src/components/admin/TaxonomyProposalQueue.tsx` | 21 | pending |
+| `src/components/admin/TaxonomyProposalQueue.tsx` | 21 |migrated |
 | `src/components/admin/UserAdminList.tsx` | 10 | migrated |
 | `src/components/admin/content/AdminContentList.tsx` | 12 | migrated |
 | `src/components/auth/AuthenticatedRoute.tsx` | 9 | migrated |
@@ -28,15 +28,15 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/map/NearbyResultsMap.tsx` | 2 | pending |
 | `src/components/map/ProblemLocationMap.tsx` | 4 | pending |
 | `src/components/map/PublicProblemMap.tsx` | 8 | pending |
-| `src/components/notifications/NotificationBadge.tsx` | 1 | pending |
-| `src/components/notifications/NotificationBell.tsx` | 11 | pending |
-| `src/components/notifications/NotificationFilters.tsx` | 2 | pending |
-| `src/components/notifications/NotificationItem.tsx` | 4 | pending |
-| `src/components/notifications/NotificationList.tsx` | 1 | pending |
+| `src/components/notifications/NotificationBadge.tsx` | 1 |migrated |
+| `src/components/notifications/NotificationBell.tsx` | 11 |migrated |
+| `src/components/notifications/NotificationFilters.tsx` | 2 |migrated |
+| `src/components/notifications/NotificationItem.tsx` | 4 |migrated |
+| `src/components/notifications/NotificationList.tsx` | 1 |migrated |
 | `src/components/problems/ProblemTimeline.tsx` | 27 | pending |
-| `src/components/recommendations/RecommendationSection.tsx` | 12 | pending |
-| `src/components/taxonomy/TaxonomyProposalForm.tsx` | 13 | pending |
-| `src/components/taxonomy/TaxonomySelect.tsx` | 22 | pending |
+| `src/components/recommendations/RecommendationSection.tsx` | 12 |migrated |
+| `src/components/taxonomy/TaxonomyProposalForm.tsx` | 13 |migrated |
+| `src/components/taxonomy/TaxonomySelect.tsx` | 22 |migrated |
 | `src/integrations/supabase/SupabaseStatus.tsx` | 5 | pending |
 | `src/pages/Account.tsx` | 41 | migrated |
 | `src/pages/AdminContentPage.tsx` | 19 | migrated |
@@ -54,7 +54,7 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/pages/Home.tsx` | 10 | migrated |
 | `src/pages/LegacyAdminPanel.tsx` | 65 | pending |
 | `src/pages/MfaChallenge.tsx` | 5 | migrated |
-| `src/pages/Notifications.tsx` | 6 | pending |
+| `src/pages/Notifications.tsx` | 6 |migrated |
 | `src/pages/PasswordRecovery.tsx` | 18 | migrated |
 | `src/pages/Profile.tsx` | 39 | migrated |
 | `src/pages/PublicMap.tsx` | 26 | pending |
