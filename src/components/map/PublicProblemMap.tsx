@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MapBounds, MapProblem } from "../../types/map";
+import { useTranslation } from "../../i18n/I18nProvider";
+import { formatDate, formatMessageCount } from "../../i18n/format";
+import { adminContentStatusKey } from "../../i18n/presentation";
+import type { AdminContentStatus } from "../../repositories/adminContent";
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
 
@@ -12,6 +16,7 @@ export function PublicProblemMap({ problems, bounds, onBoundsChange, onOpen, com
   onOpen: (id: string) => void;
   compact?: boolean;
 }) {
+  const { locale, t } = useTranslation();
   const containerRef = useRef<HTMLElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
@@ -70,7 +75,7 @@ export function PublicProblemMap({ problems, bounds, onBoundsChange, onOpen, com
       const longitude = group.reduce((total, item) => total + item.location.longitude, 0) / group.length;
       if (group.length > 1) {
         const cluster = L.marker([latitude, longitude], { icon: L.divIcon({ className: "map-cluster", html: `<span>${group.length}</span>`, iconSize: [42, 42] }) });
-        cluster.bindTooltip(`Grupo com ${group.length} problemas`);
+        cluster.bindTooltip(formatMessageCount(group.length, locale, t, 'map.cluster.one', 'map.cluster.other'));
         cluster.on("click", () => map.setView([latitude, longitude], Math.min(map.getZoom() + 2, 19)));
         cluster.addTo(layer);
         continue;
@@ -78,17 +83,17 @@ export function PublicProblemMap({ problems, bounds, onBoundsChange, onOpen, com
       const problem = group[0];
       const recent = Date.now() - Date.parse(problem.updatedAt) <= 30 * 86_400_000;
       const popup = document.createElement("div");
-      popup.innerHTML = `<strong>${escapeHtml(problem.title)}</strong><p>${escapeHtml(problem.category)} · ${escapeHtml(problem.status)}</p><p>${escapeHtml(problem.city)}, ${escapeHtml(problem.state)}</p><p>Atualizado em ${new Date(problem.updatedAt).toLocaleDateString("pt-BR")}${recent ? " · <b>Atualizado recentemente</b>" : ""}</p>`;
+      popup.innerHTML = `<strong>${escapeHtml(problem.title)}</strong><p>${escapeHtml(problem.category)} · ${escapeHtml(t(adminContentStatusKey('problem', problem.status as AdminContentStatus)))}</p><p>${escapeHtml(problem.city)}, ${escapeHtml(problem.state)}</p><p>${escapeHtml(t('map.updatedAt', { date: formatDate(problem.updatedAt, locale) }))}${recent ? ` · <b>${escapeHtml(t('map.recentlyUpdated'))}</b>` : ''}</p>`;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "map-popup-button";
-      button.textContent = "Abrir problema";
-      button.setAttribute("aria-label", `Abrir problema ${problem.title}`);
+      button.textContent = t('map.openProblem');
+      button.setAttribute('aria-label', t('map.openProblemA11y', { title: problem.title }));
       button.addEventListener("click", () => onOpenRef.current(problem.id));
       popup.appendChild(button);
-      L.marker([problem.location.latitude, problem.location.longitude], { title: problem.title, keyboard: true, alt: `Problema: ${problem.title}` }).bindPopup(popup).addTo(layer);
+      L.marker([problem.location.latitude, problem.location.longitude], { title: problem.title, keyboard: true, alt: t('map.problemMarker', { title: problem.title }) }).bindPopup(popup).addTo(layer);
     }
-  }, [problems, mapRevision]);
+  }, [locale, mapRevision, problems, t]);
 
-  return <div ref={containerRef} className={`public-problem-map rounded-3xl ${compact ? "public-problem-map--compact" : ""}`} role="application" aria-label="Mapa geográfico de problemas" />;
+  return <div ref={containerRef} className={`public-problem-map rounded-3xl ${compact ? "public-problem-map--compact" : ""}`} role="application" aria-label={t('map.problemMap')} />;
 }

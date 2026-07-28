@@ -15,3 +15,6 @@ export const formatDurationClock = (seconds: number | null | undefined, locale: 
 export const formatMessageCount = (value: number | null | undefined, locale: SupportedLocale, translate: (key: TranslationKey, values?: Record<string, string | number>) => string, oneKey: TranslationKey, otherKey: TranslationKey, fallback = '—') => Number.isFinite(value)
   ? translate(new Intl.PluralRules(locale).select(value as number) === 'one' ? oneKey : otherKey, { count: formatNumber(value, locale) })
   : fallback;
+export const formatMegabytes = (bytes: number | null | undefined, locale: SupportedLocale, fallback = '—') => Number.isFinite(bytes) && (bytes as number) >= 0
+  ? new Intl.NumberFormat(locale, { minimumFractionDigits: (bytes as number) > 1024 * 1024 ? 1 : 3, maximumFractionDigits: (bytes as number) > 1024 * 1024 ? 1 : 3 }).format((bytes as number) / 1024 / 1024)
+  : fallback;

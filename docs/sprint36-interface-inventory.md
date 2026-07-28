@@ -24,20 +24,20 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/components/discussions/DiscussionList.tsx` | 12 |migrated |
 | `src/components/discussions/ItemReactionBar.tsx` | 3 |migrated |
 | `src/components/discussions/ReactionBar.tsx` | 2 |migrated |
-| `src/components/forms/ImageUploadField.tsx` | 9 | pending |
-| `src/components/map/NearbyResultsMap.tsx` | 2 | pending |
-| `src/components/map/ProblemLocationMap.tsx` | 4 | pending |
-| `src/components/map/PublicProblemMap.tsx` | 8 | pending |
+| `src/components/forms/ImageUploadField.tsx` | 9 |migrated |
+| `src/components/map/NearbyResultsMap.tsx` | 2 |migrated |
+| `src/components/map/ProblemLocationMap.tsx` | 4 |migrated |
+| `src/components/map/PublicProblemMap.tsx` | 8 |migrated |
 | `src/components/notifications/NotificationBadge.tsx` | 1 |migrated |
 | `src/components/notifications/NotificationBell.tsx` | 11 |migrated |
 | `src/components/notifications/NotificationFilters.tsx` | 2 |migrated |
 | `src/components/notifications/NotificationItem.tsx` | 4 |migrated |
 | `src/components/notifications/NotificationList.tsx` | 1 |migrated |
-| `src/components/problems/ProblemTimeline.tsx` | 27 | pending |
+| `src/components/problems/ProblemTimeline.tsx` | 27 |migrated |
 | `src/components/recommendations/RecommendationSection.tsx` | 12 |migrated |
 | `src/components/taxonomy/TaxonomyProposalForm.tsx` | 13 |migrated |
 | `src/components/taxonomy/TaxonomySelect.tsx` | 22 |migrated |
-| `src/integrations/supabase/SupabaseStatus.tsx` | 5 | pending |
+| `src/integrations/supabase/SupabaseStatus.tsx` | 5 |migrated |
 | `src/pages/Account.tsx` | 41 | migrated |
 | `src/pages/AdminContentPage.tsx` | 19 | migrated |
 | `src/pages/AdminDashboard.tsx` | 6 | migrated |
@@ -57,5 +57,5 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/pages/Notifications.tsx` | 6 |migrated |
 | `src/pages/PasswordRecovery.tsx` | 18 | migrated |
 | `src/pages/Profile.tsx` | 39 | migrated |
-| `src/pages/PublicMap.tsx` | 26 | pending |
+| `src/pages/PublicMap.tsx` | 26 |migrated |
 | `src/pages/Search.tsx` | 66 | pending |

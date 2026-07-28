@@ -4,6 +4,7 @@ import type { TranslationKey } from './resources.ts';
 import type { UserRole } from '../types/user.ts';
 import type { ContributionStatus, ContributionType } from '../types/contribution.ts';
 import type { AdminContentKind, AdminContentStatus } from '../repositories/adminContent/AdminContentRepository.ts';
+import type { ImpactLevel, ImplementationDifficulty, SolutionMaturityLevel } from '../types/domain.ts';
 
 export const problemStatusKeys: Record<ProblemStatus, TranslationKey> = {
   Reportado:'status.problem.Reportado','Em análise':'status.problem.Em análise','Em vistoria':'status.problem.Em vistoria',Planejado:'status.problem.Planejado',Licitado:'status.problem.Licitado','Em execução':'status.problem.Em execução','Parcialmente resolvido':'status.problem.Parcialmente resolvido',Resolvido:'status.problem.Resolvido',Arquivado:'status.problem.Arquivado',Reaberto:'status.problem.Reaberto',
@@ -24,3 +25,7 @@ export const contributionTypeKeys: Record<ContributionType, TranslationKey> = {
 export function adminContentStatusKey(kind: AdminContentKind, status: AdminContentStatus): TranslationKey {
   return kind === 'problem' ? problemStatusKeys[status as ProblemStatus] : solutionStatusKeys[status as SolutionStatus];
 }
+export const impactLevelKeys: Record<ImpactLevel, TranslationKey> = { local: 'impact.local', regional: 'impact.regional', national: 'impact.national', global: 'impact.global' };
+export const maturityLevelKeys: Record<SolutionMaturityLevel, TranslationKey> = { Ideia: 'maturity.Ideia', 'Protótipo': 'maturity.Protótipo', Piloto: 'maturity.Piloto', 'Em operação': 'maturity.Em operação', 'Escalável': 'maturity.Escalável' };
+export const difficultyKeys: Record<ImplementationDifficulty, TranslationKey> = { Baixa: 'difficulty.Baixa', 'Média': 'difficulty.Média', Alta: 'difficulty.Alta' };
+export const knownCategoryKeys = { Infraestrutura: 'category.Infraestrutura', 'Educação': 'category.Educação', 'Saúde': 'category.Saúde', 'Segurança': 'category.Segurança', Tecnologia: 'category.Tecnologia', Mobilidade: 'category.Mobilidade', 'Meio Ambiente': 'category.Meio Ambiente', 'Assistência Social': 'category.Assistência Social', Empreendedorismo: 'category.Empreendedorismo', Outros: 'category.Outros' } as const satisfies Record<string, TranslationKey>;
