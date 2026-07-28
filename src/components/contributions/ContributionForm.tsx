@@ -8,7 +8,6 @@ import { TaxonomyMultiSelect, TaxonomySelect } from '../taxonomy/TaxonomySelect'
 import { TaxonomyProposalForm } from '../taxonomy/TaxonomyProposalForm';
 import type { ContributionChange, ContributionTargetType, ContributionType, SerializableValue } from '../../types/contribution';
 import { useTranslation } from '../../i18n/I18nProvider';
-import { contributionTypeKeys } from '../../i18n/presentation';
 
 type Field = { field: string; label: string; value: SerializableValue };
 export function ContributionForm({ targetType, targetId, fields, onClose }: { targetType: ContributionTargetType; targetId: string; fields: Field[]; onClose: () => void }) {

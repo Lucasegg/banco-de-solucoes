@@ -46,16 +46,16 @@ Inventário auditável das páginas e componentes com cópia visível, atributos
 | `src/pages/AdminUsers.tsx` | 20 | migrated |
 | `src/pages/Auth.tsx` | 46 | migrated |
 | `src/pages/Contributions.tsx` | 22 |migrated |
-| `src/pages/Details.tsx` | 60 | pending |
-| `src/pages/ExploreProblems.tsx` | 11 | pending |
-| `src/pages/ExploreSolutions.tsx` | 11 | pending |
+| `src/pages/Details.tsx` | 60 | migrated |
+| `src/pages/ExploreProblems.tsx` | 11 | migrated |
+| `src/pages/ExploreSolutions.tsx` | 11 | migrated |
 | `src/pages/Favorites.tsx` | 14 | migrated |
-| `src/pages/Forms.tsx` | 35 | pending |
+| `src/pages/Forms.tsx` | 35 | migrated |
 | `src/pages/Home.tsx` | 10 | migrated |
-| `src/pages/LegacyAdminPanel.tsx` | 65 | pending |
+| `src/pages/LegacyAdminPanel.tsx` | 65 | migrated |
 | `src/pages/MfaChallenge.tsx` | 5 | migrated |
 | `src/pages/Notifications.tsx` | 6 |migrated |
 | `src/pages/PasswordRecovery.tsx` | 18 | migrated |
 | `src/pages/Profile.tsx` | 39 | migrated |
 | `src/pages/PublicMap.tsx` | 26 |migrated |
-| `src/pages/Search.tsx` | 66 | pending |
+| `src/pages/Search.tsx` | 66 | migrated |

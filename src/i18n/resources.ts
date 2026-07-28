@@ -11,10 +11,14 @@ import { adminEnUS, adminPtBR } from './locales/admin.ts';
 import { collaborationEnUS, collaborationPtBR } from './locales/collaboration.ts';
 import { engagementEnUS, engagementPtBR } from './locales/engagement.ts';
 import { catalogEnUS, catalogPtBR } from './locales/catalog.ts';
+import { searchEnUS, searchPtBR } from './locales/search.ts';
+import { formsEnUS, formsPtBR } from './locales/forms.ts';
+import { detailsEnUS, detailsPtBR } from './locales/details.ts';
+import { legacyAdminEnUS, legacyAdminPtBR } from './locales/legacyAdmin.ts';
 
-export const ptBR = { ...commonPtBR, ...homePtBR, ...contentPtBR, ...domainPtBR, ...sharedPtBR, ...recoveryPtBR, ...authPtBR, ...accountPtBR, ...profilePtBR, ...adminPtBR, ...collaborationPtBR, ...engagementPtBR, ...catalogPtBR } as const;
+export const ptBR = { ...commonPtBR, ...homePtBR, ...contentPtBR, ...domainPtBR, ...sharedPtBR, ...recoveryPtBR, ...authPtBR, ...accountPtBR, ...profilePtBR, ...adminPtBR, ...collaborationPtBR, ...engagementPtBR, ...catalogPtBR, ...searchPtBR, ...formsPtBR, ...detailsPtBR, ...legacyAdminPtBR } as const;
 export type TranslationKey = keyof typeof ptBR;
 export type TranslationResource = { readonly [K in TranslationKey]: string };
-export const enUS = { ...commonEnUS, ...homeEnUS, ...contentEnUS, ...domainEnUS, ...sharedEnUS, ...recoveryEnUS, ...authEnUS, ...accountEnUS, ...profileEnUS, ...adminEnUS, ...collaborationEnUS, ...engagementEnUS, ...catalogEnUS } satisfies TranslationResource;
+export const enUS = { ...commonEnUS, ...homeEnUS, ...contentEnUS, ...domainEnUS, ...sharedEnUS, ...recoveryEnUS, ...authEnUS, ...accountEnUS, ...profileEnUS, ...adminEnUS, ...collaborationEnUS, ...engagementEnUS, ...catalogEnUS, ...searchEnUS, ...formsEnUS, ...detailsEnUS, ...legacyAdminEnUS } satisfies TranslationResource;
 export const resources = { 'pt-BR': ptBR, 'en-US': enUS } as const;
 export type SupportedLocale = keyof typeof resources;

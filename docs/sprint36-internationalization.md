@@ -8,7 +8,7 @@ Na primeira visita, a primeira preferência compatível de `navigator.languages`
 
 ## Como adicionar traduções
 
-1. Adicione uma chave semântica a `ptBR` em `resources.ts`.
+1. Adicione uma chave semântica ao módulo de domínio adequado em `src/i18n/locales`.
 2. Adicione a mesma chave a `enUS`; o TypeScript e `npm run test:sprint36` rejeitam chaves ausentes.
 3. Use `useTranslation().t('namespace.key')` na interface, sem traduzir valores livres recebidos do repositório.
 4. Use `formatDate`, `formatDateTime`, `formatNumber` ou `formatCount`; nunca monte datas ou números manualmente.
@@ -16,6 +16,6 @@ Na primeira visita, a primeira preferência compatível de `navigator.languages`
 
 ## Compatibilidade e limitações
 
-Conteúdo criado por usuários permanece integralmente no idioma original. Categorias, tags, status e papéis mantêm seus nomes canônicos persistidos; traduções futuras desses valores devem ser mapas apenas de apresentação. Não foram alterados banco, RPCs, contratos públicos nem migrations.
+Conteúdo criado por usuários permanece integralmente no idioma original. Categorias, tags, status e papéis mantêm seus nomes canônicos persistidos; valores conhecidos são traduzidos exclusivamente por mapas tipados de apresentação em `src/i18n/presentation.ts`. Não foram alterados banco, RPCs, contratos públicos nem migrations.
 
-Nesta revisão, a cobertura confirmada compreende o shell global (cabeçalho, navegação, seletor e rodapé), metadados e página inicial. As demais telas legadas ainda não possuem cobertura integral; por isso a internacionalização permanece aberta no ROADMAP. Ficam explicitamente fora do escopo: tradução automática de conteúdo, idiomas adicionais, persistência da preferência no perfil e suporte a escrita RTL.
+A cobertura inclui o shell global e todas as interfaces inventariadas: autenticação, conta e perfil; problemas, soluções, detalhes e formulários; busca textual e geográfica, mapas e paginação; favoritos, contribuições, discussões, notificações e recomendações; taxonomia; administração, moderação, auditoria e diagnóstico do Supabase. O gate automatizado rejeita qualquer linha `pending` no inventário. Conteúdo livre continua no idioma de autoria. Ficam explicitamente fora do escopo: tradução automática de conteúdo, idiomas adicionais, persistência da preferência no perfil e suporte a escrita RTL.

@@ -33,7 +33,7 @@
 
 ## Fase 5 — Escala mundial
 
-- [ ] Internacionalização completa (`pt-BR` e `en-US`; infraestrutura e telas iniciais entregues na Sprint 36).
+- [x] Internacionalização completa (`pt-BR` e `en-US`; infraestrutura e toda a interface existente cobertas na Sprint 36).
 - [ ] API pública.
 - [ ] Exportação de dados abertos.
 - [ ] Integrações com ferramentas de pesquisa, governo e comunidades.
@@ -49,5 +49,5 @@
 - [x] Recursos tipados e modulares em `pt-BR` e `en-US`, detecção, fallback e persistência local resiliente.
 - [x] Seletor acessível no cabeçalho e atualização de idioma/metadados sem recarga.
 - [x] Formatadores `Intl` centralizados e verificação de paridade/duplicidade das traduções.
-- [ ] Migrar as telas legadas restantes para concluir a cobertura integral da interface.
-- [ ] Fora do escopo: tradução automática, outros idiomas, preferência no perfil e RTL.
+- [x] Interface pública, autenticada e administrativa integralmente migrada, incluindo formulários, busca, mapas, notificações, taxonomia e moderação.
+- [x] Escopo e limitações documentados; tradução automática, outros idiomas, preferência no perfil e RTL permanecem fora do escopo.
