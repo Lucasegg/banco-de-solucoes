@@ -28,6 +28,7 @@ import { AdminSolutions } from './pages/AdminSolutions';
 import { AuthenticatedRoute } from './components/auth/AuthenticatedRoute';
 import { Search } from './pages/Search';
 import { TaxonomyProposalQueue } from './components/admin/TaxonomyProposalQueue';
+import { Contact } from './pages/Contact';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -58,6 +59,7 @@ const pageToHashPath: Record<string, string> = {
   notifications: '/notifications',
   mapa: '/mapa',
   search: '/search',
+  contact: '/contact',
 };
 
 function normalizeHash(hash: string) {
@@ -93,6 +95,7 @@ function pageFromHash(hash: string) {
   if (path === '/notifications' || path === '/notificacoes') return 'notifications';
   if (path === '/mapa') return 'mapa';
   if (path === '/search') return 'search';
+  if (path === '/contact') return 'contact';
   if (path === '/contributions') return 'contributions';
   if (path === '/favorites') return 'favorites';
   if (path === '/diagnostics') return 'diagnostics';
@@ -165,6 +168,7 @@ export function App() {
       {page === 'novo-problema' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin} authPrompt={{ description: 'Para registrar um problema, você precisa estar conectado à sua conta.', onRegisterRequired: redirectToRegister, onBack: () => setPage('problemas') }}><ProblemForm /></AuthenticatedRoute>}
       {page === 'nova-solucao' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin} authPrompt={{ description: 'Para cadastrar uma solução, você precisa estar conectado à sua conta.', onRegisterRequired: redirectToRegister, onBack: () => setPage('solucoes') }}><SolutionForm /></AuthenticatedRoute>}
       {page === 'sobre' && <About />}
+      {page === 'contact' && <Contact />}
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
       {page === 'mfa-challenge' && mfaRequired && <MfaChallenge onNavigate={setPage} />}

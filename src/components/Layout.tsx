@@ -94,6 +94,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
       <footer className="border-t border-line bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-8 text-sm text-muted md:flex-row md:items-center md:justify-between">
           <span>{t('footer.openSource')}</span>
+          <button className="text-left underline underline-offset-4 hover:text-slate-950" onClick={() => onNavigate('contact')}>{t('nav.contact')}</button>
           <span>{t('app.name')} · {new Date().getFullYear()}</span>
         </div>
       </footer>

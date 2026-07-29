@@ -164,6 +164,8 @@ jobs:
         run: npm run test:sprint35
       - name: Sprint 36 internationalization tests
         run: npm run test:sprint36
+      - name: Sprint 37 contact tests
+        run: npm run test:sprint37
       - name: Check patch formatting
         run: git diff --check
       - name: Build
@@ -306,6 +308,8 @@ jobs:
         run: npm run test:pending-migrations
       - name: Apply database migrations after baseline
         run: npx --yes supabase@2.39.2 db push
+      - name: Deploy contact Edge Function
+        run: npx --yes supabase@2.39.2 functions deploy contact-request --no-verify-jwt
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
