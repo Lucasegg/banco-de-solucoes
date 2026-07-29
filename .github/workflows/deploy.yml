@@ -188,6 +188,8 @@ jobs:
         run: npm run test:sprint39
       - name: Sprint 40 performance and Actions tests
         run: npm run test:sprint40
+      - name: Sprint 41 route resilience tests
+        run: npm run test:sprint41
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:

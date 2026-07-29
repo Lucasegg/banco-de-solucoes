@@ -29,7 +29,8 @@
     "test:sprint37": "node --experimental-strip-types --test src/contact/validation.test.ts supabase/functions/contact-request/core.test.ts supabase/functions/contact-request/handler.test.ts scripts/validateSupabaseContactSecrets.test.ts",
     "test:sprint38": "node --experimental-strip-types --test scripts/sprint38LegalPages.test.ts",
     "test:sprint39": "node --experimental-strip-types --test scripts/sprint39LegalConsent.test.ts",
-    "test:sprint40": "node --experimental-strip-types --test scripts/sprint40PerformanceActions.test.ts"
+    "test:sprint40": "node --experimental-strip-types --test scripts/sprint40PerformanceActions.test.ts",
+    "test:sprint41": "node --experimental-strip-types --test scripts/sprint41RouteResilience.test.ts"
   },
   "dependencies": {
     "vite": "latest",
