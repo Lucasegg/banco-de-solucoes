@@ -1,14 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseClient } from '../../integrations/supabase/client';
-import { safeDatabaseMessage } from '../errors';
-import type { ContentReport, ContentReportReason, ContentReportStatus, ContentReportTarget } from '../../types/contentReport';
-type Result<T>={ok:true;data:T}|{ok:false;message:string};
-const map=(row:Record<string,unknown>):ContentReport=>({id:String(row.id),targetType:row.target_type as ContentReportTarget,targetId:String(row.target_id),targetTitle:row.target_title?String(row.target_title):null,reason:row.reason as ContentReportReason,description:row.description?String(row.description):null,status:row.status as ContentReportStatus,moderatorNote:row.moderator_note?String(row.moderator_note):null,createdAt:String(row.created_at),updatedAt:String(row.updated_at),reviewedAt:row.reviewed_at?String(row.reviewed_at):null,totalCount:row.total_count===undefined?undefined:Number(row.total_count)});
-export class SupabaseContentReportRepository {
- constructor(private readonly client:SupabaseClient){}
- async create(targetType:ContentReportTarget,targetId:string,reason:ContentReportReason,description:string):Promise<Result<ContentReport>>{const {data,error}=await this.client.rpc('report_content',{p_target_type:targetType,p_target_id:targetId,p_reason:reason,p_description:description.trim()||null});return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível enviar a denúncia.')}:{ok:true,data:map((data as Record<string,unknown>[])[0])};}
- async listMine():Promise<Result<ContentReport[]>>{const {data,error}=await this.client.rpc('get_my_content_reports');return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível carregar suas denúncias.')}:{ok:true,data:((data??[]) as Record<string,unknown>[]).map(map)};}
- async listAdmin(filters:{status?:ContentReportStatus;targetType?:ContentReportTarget;reason?:ContentReportReason;page:number;limit:number}):Promise<Result<{items:ContentReport[];total:number}>>{const {data,error}=await this.client.rpc('get_admin_content_reports',{p_status:filters.status??null,p_target_type:filters.targetType??null,p_reason:filters.reason??null,p_limit:filters.limit,p_offset:filters.page*filters.limit});if(error)return{ok:false,message:safeDatabaseMessage(error,'Não foi possível carregar a fila de denúncias.')};const items=((data??[]) as Record<string,unknown>[]).map(map);return{ok:true,data:{items,total:items[0]?.totalCount??0}};}
- async moderate(id:string,status:'reviewing'|'resolved'|'dismissed',note:string):Promise<Result<ContentReport>>{const {data,error}=await this.client.rpc('moderate_content_report',{p_report_id:id,p_status:status,p_moderator_note:note.trim()||null});return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível moderar a denúncia.')}:{ok:true,data:map((data as Record<string,unknown>[])[0])};}
-}
+import { SupabaseContentReportRepository } from './ContentReportRepositoryCore';
+export * from './ContentReportRepositoryCore';
 export const ContentReportRepository=supabaseClient?new SupabaseContentReportRepository(supabaseClient):null;
