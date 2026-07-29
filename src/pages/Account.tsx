@@ -4,9 +4,12 @@ import { TotpInput } from '../components/TotpInput';
 import { useAuth } from '../hooks/useAuth';
 import { useFavorites, type Favorite, type FavoriteKind } from '../hooks/useFavorites';
 import { useTranslation } from '../i18n/I18nProvider';
+import { useLegalConsent } from '../context/LegalConsentContext';
+import type { LegalDocumentType } from '../legal/versions';
 
 export function Account({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
+  const legal = useLegalConsent();
   const { user, session, authMessage, logout, mfaStatus, mfaError, mfaMessage, mfaEnrollment, enrollTotp, verifyTotpEnrollment, cancelTotpEnrollment, disableTotp, refreshMfaStatus, currentAssuranceLevel } = useAuth();
   const [code, setCode] = useState(''); const [copied, setCopied] = useState(false); const [confirmDisable, setConfirmDisable] = useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState('');
@@ -35,6 +38,11 @@ export function Account({ onNavigate }: { onNavigate: (page: string) => void }) 
         <Info label={t('account.email')} value={session?.user.email ?? user?.email ?? '—'} />
       </div>
       <section className="rounded-[2rem] border border-line bg-white p-6 shadow-soft">
+        <h2 className="text-2xl font-semibold">{t('account.legalTitle')}</h2><p className="mt-2 text-muted">{t('account.legalDescription')}</p>
+        {legal.state === 'loading' && <p className="mt-4">{t('account.legalLoading')}</p>}{legal.state === 'error' && <p className="mt-4 text-red-700">{t('account.legalError')}</p>}
+        {legal.status && <div className="mt-5 grid gap-4 md:grid-cols-2"><LegalDocument type="terms" label={t('account.termsVersion')} href="#/terms" link={t('account.viewTerms')} /><LegalDocument type="privacy" label={t('account.privacyVersion')} href="#/privacy" link={t('account.viewPrivacy')} /></div>}
+      </section>
+      <section className="rounded-[2rem] border border-line bg-white p-6 shadow-soft">
         <div className="flex items-center gap-2"><Heart size={20} aria-hidden="true" /><h2 className="text-2xl font-semibold">{t('account.favorites')}</h2></div>
         {favorites.error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{favorites.error}</p>}
         {favoriteMessage && <p aria-live="polite" className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-700">{favoriteMessage}</p>}
@@ -54,6 +62,8 @@ export function Account({ onNavigate }: { onNavigate: (page: string) => void }) 
     </section>
   );
 }
+
+function LegalDocument({ type, label, href, link }: { type: LegalDocumentType; label: string; href: string; link: string }) { const { t, locale } = useTranslation(); const { status } = useLegalConsent(); const acceptance = status?.acceptances.find((item) => item.documentType === type); return <article className="rounded-2xl bg-slate-50 p-4"><h3 className="font-semibold">{label}</h3><p className="mt-2">{acceptance?.documentVersion ?? t('account.notAccepted')}</p>{acceptance && <p className="mt-1 text-sm text-muted">{t('account.acceptedAt', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(acceptance.acceptedAt)) })}</p>}<a className="mt-3 inline-block font-semibold text-primary underline" href={href}>{link}</a></article>; }
 
 function FavoriteGroup({ title, kind, items, emptyMessage, onNavigate, onRemove }: { title: string; kind: FavoriteKind; items: Favorite[]; emptyMessage: string; onNavigate: (page: string) => void; onRemove: (id: string, kind: FavoriteKind) => Promise<void> }) {
   const { t } = useTranslation();

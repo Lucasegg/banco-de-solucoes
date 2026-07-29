@@ -33,6 +33,7 @@ import { Privacy } from './pages/Privacy';
 import { Terms } from './pages/Terms';
 import { Lgpd } from './pages/Lgpd';
 import { hashFromPage, pageFromHash } from './routing/hashRouter';
+import { LegalConsentGate } from './components/legal/LegalConsentGate';
 
 export function App() {
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
@@ -70,6 +71,7 @@ export function App() {
 
   const adminPages = new Set(['admin', 'admin-system', 'admin-users', 'admin-problems', 'admin-solutions', 'admin-comments', 'admin-reports', 'admin-audit', 'admin-contributions']);
   const adminPage = adminPages.has(page);
+  const consentBypass = !isAuthenticated || mfaRequired || ['home', 'contact', 'privacy', 'terms', 'lgpd', 'login', 'register', 'password-recovery', 'mfa-challenge'].includes(page);
   const adminContent = page === 'admin' ? <AdminDashboard onNavigate={setPage} />
     : page === 'admin-system' ? <AdminSystem />
       : page === 'admin-users' ? <AdminUsers onBack={() => setPage('admin')} />
@@ -81,7 +83,7 @@ export function App() {
       : <AdminSectionPlaceholder title={({ 'admin-users': 'Usuários', 'admin-problems': 'Problemas', 'admin-solutions': 'Soluções', 'admin-comments': 'Comentários', 'admin-reports': 'Denúncias', 'admin-audit': 'Auditoria' } as Record<string, string>)[page]} onBack={() => setPage('admin')} />;
 
   return (
-    <Layout currentPage={kind} onNavigate={setPage}>
+    <Layout currentPage={kind} onNavigate={setPage}><LegalConsentGate bypass={consentBypass} onLogout={() => setPage('login')}>
       {page === 'home' && <Home onNavigate={setPage} />}
       {page === 'problemas' && <ExploreProblems onNavigate={setPage} onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
       {page === 'mapa' && <PublicMap onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
@@ -109,6 +111,6 @@ export function App() {
       {page === 'notifications' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><Notifications /></AuthenticatedRoute>}
       {page === 'diagnostics' && <SupabaseStatus />}
       {kind === 'contribution' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><ContributionDetails id={id} /></AuthenticatedRoute>}
-    </Layout>
+    </LegalConsentGate></Layout>
   );
 }

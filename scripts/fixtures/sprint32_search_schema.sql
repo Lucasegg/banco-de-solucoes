@@ -16,12 +16,14 @@ returns uuid
 language sql
 stable
 as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+create or replace function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $$;
 
 -- Supabase grants these privileges in managed environments. The isolated
 -- PostgreSQL fixture must reproduce them so SET ROLE exercises the real RLS
 -- paths instead of failing at schema resolution.
 grant usage on schema auth to anon, authenticated;
 grant execute on function auth.uid() to anon, authenticated;
+grant execute on function auth.jwt() to anon, authenticated;
 
 create table public.profiles (
   id uuid primary key,
