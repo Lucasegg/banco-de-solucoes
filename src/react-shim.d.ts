@@ -10,6 +10,7 @@ declare namespace JSX {
 
 declare module 'react' {
   export type ReactNode = unknown;
+  export type ComponentType<P = Record<string, unknown>> = (props: P) => JSX.Element;
   export type FormEvent<T = Element> = { preventDefault(): void; currentTarget: T };
   export type ChangeEvent<T = Element> = { target: T; currentTarget: T };
   export type ContextType<T> = T extends { Provider: (props: { value: infer V; children?: ReactNode }) => JSX.Element } ? V : never;
@@ -20,6 +21,8 @@ declare module 'react' {
   export function useRef<T>(initialValue: T): { current: T };
   export function createContext<T>(defaultValue: T): { Provider: (props: { value: T; children?: ReactNode }) => JSX.Element };
   export function useContext<T>(context: { Provider: unknown }): T;
+  export function lazy<T extends ComponentType<any>>(loader: () => Promise<{ default: T }>): T;
+  export const Suspense: (props: { fallback: ReactNode; children?: ReactNode }) => JSX.Element;
   const React: { StrictMode: (props: { children?: ReactNode }) => JSX.Element };
   export default React;
   export const StrictMode: (props: { children?: ReactNode }) => JSX.Element;
