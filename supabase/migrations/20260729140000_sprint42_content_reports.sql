@@ -51,9 +51,13 @@ begin
   if p_reason not in ('spam','misleading','offensive','personal_information','illegal','duplicate','other') then raise exception 'Invalid report reason' using errcode = '22023'; end if;
   if char_length(coalesce(v_description,'')) > 1000 or (p_reason = 'other' and v_description is null) then raise exception 'Invalid report description' using errcode = '22023'; end if;
   if p_target_type = 'problem' then
-    select author_id into v_owner from public.problems where problems.id = p_target_id and status <> 'Arquivado';
+    select p.author_id into v_owner
+    from public.problems p
+    where p.id = p_target_id and p.status <> 'Arquivado';
   else
-    select author_id into v_owner from public.solutions where solutions.id = p_target_id and status <> 'Arquivada';
+    select s.author_id into v_owner
+    from public.solutions s
+    where s.id = p_target_id and s.status <> 'Arquivada';
   end if;
   if not found then raise exception 'Content is not available' using errcode = 'P0002'; end if;
   if v_owner = v_actor then raise exception 'Own content cannot be reported' using errcode = '42501'; end if;
