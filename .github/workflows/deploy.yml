@@ -90,6 +90,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260726130000_sprint35_global_taxonomy.sql
+      - name: Apply the Sprint 37 distributed rate limit migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260729120000_sprint37_contact_rate_limit.sql
       - name: Verify Sprint 32 indexes and public search RPCs
         shell: bash
         env:
@@ -134,6 +138,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint35_taxonomy_assertions.sql
+      - name: Verify Sprint 37 atomic rate limiting, RLS and privileges
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint37_contact_rate_limit_assertions.sql
 
   verify:
     if: github.event_name != 'workflow_dispatch'
@@ -164,6 +172,14 @@ jobs:
         run: npm run test:sprint35
       - name: Sprint 36 internationalization tests
         run: npm run test:sprint36
+      - name: Sprint 37 contact tests
+        run: npm run test:sprint37
+      - name: Setup Deno for Edge Function
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.2.12
+      - name: Type check Supabase Edge Function
+        run: deno check supabase/functions/contact-request/index.ts
       - name: Check patch formatting
         run: git diff --check
       - name: Build
@@ -224,6 +240,22 @@ jobs:
           done
       - name: Link Supabase project
         run: npx --yes supabase@2.39.2 link --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Validate contact secret names in Supabase
+        shell: bash
+        run: |
+          set +x
+          secrets_file="$(mktemp)"
+          errors_file="$(mktemp)"
+          trap 'rm -f "$secrets_file" "$errors_file"' EXIT
+          # Legacy link/migration gates remain on 2.39.2. Secrets use 2.110.0,
+          # whose structured JSON output is validated before names are inspected.
+          if ! npm_config_loglevel=error npx --yes supabase@2.110.0 secrets list --output json >"$secrets_file" 2>"$errors_file"; then
+            echo "Failed to query Supabase secrets." >&2
+            exit 1
+          fi
+          if ! node --experimental-strip-types scripts/checkSupabaseContactSecrets.ts <"$secrets_file"; then
+            exit 1
+          fi
       - name: Check migration baseline
         run: npm run check:migration-baseline
       - name: List local and remote migrations
@@ -306,6 +338,8 @@ jobs:
         run: npm run test:pending-migrations
       - name: Apply database migrations after baseline
         run: npx --yes supabase@2.39.2 db push
+      - name: Deploy contact Edge Function
+        run: npx --yes supabase@2.39.2 functions deploy contact-request --no-verify-jwt
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

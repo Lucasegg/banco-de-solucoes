@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { buildEmail, hmacIdentifier, validatePayload } from './core.ts';
+
+const valid = { name: '  Ana  Silva ', email: ' ANA@example.com ', subject: ' Preciso de ajuda ', category: 'support', message: 'Mensagem suficientemente longa', consent: true, website: '' };
+test('validates, normalizes and rejects manipulated fields', () => { assert.deepEqual(validatePayload(valid), { name: 'Ana Silva', email: 'ana@example.com', subject: 'Preciso de ajuda', category: 'support', message: valid.message }); assert.equal(validatePayload({ ...valid, category: 'admin' }), null); assert.equal(validatePayload({ ...valid, consent: false }), null); assert.equal(validatePayload({ ...valid, website: 'bot' }), null); assert.deepEqual(validatePayload({ ...valid, to: 'attacker@example.com' } as typeof valid), validatePayload(valid)); });
+test('escapes HTML and strips header newlines', () => { const contact = validatePayload({ ...valid, name: '<img onerror=x>', subject: 'hello\r\nBcc: bad' }); assert.ok(contact); const email = buildEmail(contact, new Date('2026-07-29T00:00:00Z')); assert.match(email.html, /&lt;img onerror=x&gt;/); assert.doesNotMatch(email.html, /<img/); assert.doesNotMatch(email.subject, /[\r\n]/); });
+test('derives a stable, secret-dependent HMAC without retaining the IP', async () => { const first = await hmacIdentifier('203.0.113.9', 'secret-a'); assert.match(first, /^[0-9a-f]{64}$/); assert.equal(first, await hmacIdentifier('203.0.113.9', 'secret-a')); assert.notEqual(first, await hmacIdentifier('203.0.113.9', 'secret-b')); assert.doesNotMatch(first, /203/); });
