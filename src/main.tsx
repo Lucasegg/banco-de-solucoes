@@ -6,14 +6,17 @@ import { PersistenceProvider } from './integrations/supabase/PersistenceProvider
 import { NotificationsProvider } from './context/NotificationsContext';
 import './styles.css';
 import { I18nProvider } from './i18n/I18nProvider';
+import { LegalConsentProvider } from './context/LegalConsentContext';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <I18nProvider><PersistenceProvider>
       <AuthProvider>
+        <LegalConsentProvider>
         <NotificationsProvider>
           <App />
         </NotificationsProvider>
+        </LegalConsentProvider>
       </AuthProvider>
     </PersistenceProvider></I18nProvider>
   </React.StrictMode>,

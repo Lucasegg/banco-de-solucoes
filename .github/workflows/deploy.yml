@@ -94,6 +94,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260729120000_sprint37_contact_rate_limit.sql
+      - name: Apply the Sprint 39 legal consent migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260729130000_sprint39_legal_consent.sql
       - name: Verify Sprint 32 indexes and public search RPCs
         shell: bash
         env:
@@ -142,6 +146,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint37_contact_rate_limit_assertions.sql
+      - name: Verify Sprint 39 legal consent security and behavior
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint39_legal_consent_assertions.sql
 
   verify:
     if: github.event_name != 'workflow_dispatch'
@@ -176,6 +184,8 @@ jobs:
         run: npm run test:sprint37
       - name: Sprint 38 legal pages tests
         run: npm run test:sprint38
+      - name: Sprint 39 legal consent tests
+        run: npm run test:sprint39
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:
