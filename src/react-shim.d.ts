@@ -10,6 +10,14 @@ declare namespace JSX {
 
 declare module 'react' {
   export type ReactNode = unknown;
+  export type ErrorInfo = { componentStack?: string };
+  export class Component<P = Record<string, unknown>, S = Record<string, unknown>> {
+    constructor(props: P);
+    props: Readonly<P>;
+    state: Readonly<S>;
+    setState(state: S | Partial<S> | ((current: Readonly<S>, props: Readonly<P>) => S | Partial<S>)): void;
+    render(): ReactNode;
+  }
   export type ComponentType<P = Record<string, unknown>> = (props: P) => JSX.Element;
   export type FormEvent<T = Element> = { preventDefault(): void; currentTarget: T };
   export type ChangeEvent<T = Element> = { target: T; currentTarget: T };

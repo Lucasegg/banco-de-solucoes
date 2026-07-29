@@ -9,6 +9,7 @@ import { AdminRoute } from './components/admin/AdminRoute';
 import { hashFromPage, pageFromHash } from './routing/hashRouter';
 import { LegalConsentGate } from './components/legal/LegalConsentGate';
 import { RouteLoadingFallback } from './components/RouteLoadingFallback';
+import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 
 const About = lazy(() => import('./pages/About').then((m) => ({ default: m.About })));
 const ProblemDetails = lazy(() => import('./pages/Details').then((m) => ({ default: m.ProblemDetails })));
@@ -92,7 +93,7 @@ export function App() {
       : <AdminSectionPlaceholder title={({ 'admin-users': 'Usuários', 'admin-problems': 'Problemas', 'admin-solutions': 'Soluções', 'admin-comments': 'Comentários', 'admin-reports': 'Denúncias', 'admin-audit': 'Auditoria' } as Record<string, string>)[page]} onBack={() => setPage('admin')} />;
 
   return (
-    <Layout currentPage={kind} onNavigate={setPage}><LegalConsentGate bypass={consentBypass} onLogout={() => setPage('login')}><Suspense fallback={<RouteLoadingFallback />}>
+    <Layout currentPage={kind} onNavigate={setPage}><LegalConsentGate bypass={consentBypass} onLogout={() => setPage('login')}><RouteErrorBoundary route={kind} onHome={() => setPage('home')}><Suspense fallback={<RouteLoadingFallback />}>
       {page === 'home' && <Home onNavigate={setPage} />}
       {page === 'problemas' && <ExploreProblems onNavigate={setPage} onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
       {page === 'mapa' && <PublicMap onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
@@ -120,6 +121,6 @@ export function App() {
       {page === 'notifications' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><Notifications /></AuthenticatedRoute>}
       {page === 'diagnostics' && <SupabaseStatus />}
       {kind === 'contribution' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><ContributionDetails id={id} /></AuthenticatedRoute>}
-    </Suspense></LegalConsentGate></Layout>
+    </Suspense></RouteErrorBoundary></LegalConsentGate></Layout>
   );
 }

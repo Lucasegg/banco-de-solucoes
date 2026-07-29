@@ -9,6 +9,10 @@ export const commonPtBR = {
   'footer.openSource': 'Open source, colaborativo e preparado para dados reais.',
   'count.result.one': 'resultado', 'count.result.other': 'resultados',
   'route.loading': 'Carregando página…',
+  'route.error.title': 'Não foi possível abrir esta página',
+  'route.error.chunk': 'A página não pôde ser carregada. Verifique sua conexão e tente novamente.',
+  'route.error.generic': 'Ocorreu uma falha inesperada nesta página. Tente novamente ou volte ao início.',
+  'route.error.retry': 'Tentar novamente', 'route.error.home': 'Voltar ao início',
 } as const;
 
 export const commonEnUS = {
@@ -22,4 +26,8 @@ export const commonEnUS = {
   'footer.openSource': 'Open source, collaborative, and ready for real data.',
   'count.result.one': 'result', 'count.result.other': 'results',
   'route.loading': 'Loading page…',
+  'route.error.title': 'We could not open this page',
+  'route.error.chunk': 'The page could not be loaded. Check your connection and try again.',
+  'route.error.generic': 'An unexpected problem occurred on this page. Try again or return home.',
+  'route.error.retry': 'Try again', 'route.error.home': 'Return home',
 } as const;
