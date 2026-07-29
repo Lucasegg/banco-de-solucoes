@@ -1,39 +1,48 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Layout } from './components/Layout';
-import { About } from './pages/About';
-import { ProblemDetails, SolutionDetails } from './pages/Details';
-import { ExploreProblems } from './pages/ExploreProblems';
-import { ExploreSolutions } from './pages/ExploreSolutions';
-import { ProblemForm, SolutionForm } from './pages/Forms';
-import { Home } from './pages/Home';
-import { Favorites } from './pages/Favorites';
-import { Login, Register } from './pages/Auth';
-import { Profile } from './pages/Profile';
-import { ContributionDetails, ContributionsList } from './pages/Contributions';
 import { useAuth } from './hooks/useAuth';
 import { usePermissions } from './hooks/usePermissions';
-import { AdminDashboard, AdminPanel, AdminRoute, AdminSectionPlaceholder } from './pages/Admin';
-import { SupabaseStatus } from './integrations/supabase/SupabaseStatus';
-import { Account } from './pages/Account';
-import { PasswordRecovery } from './pages/PasswordRecovery';
-import { MfaChallenge } from './pages/MfaChallenge';
-import { Notifications } from './pages/Notifications';
-import { PublicMap } from './pages/PublicMap';
 import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaReturnTo';
 import { isPasswordRecoveryCallbackUrl } from './repositories/users/passwordRecoveryCallback';
-import { AdminSystem } from './pages/AdminSystem';
-import { AdminUsers } from './pages/AdminUsers';
-import { AdminProblems } from './pages/AdminProblems';
-import { AdminSolutions } from './pages/AdminSolutions';
 import { AuthenticatedRoute } from './components/auth/AuthenticatedRoute';
-import { Search } from './pages/Search';
-import { TaxonomyProposalQueue } from './components/admin/TaxonomyProposalQueue';
-import { Contact } from './pages/Contact';
-import { Privacy } from './pages/Privacy';
-import { Terms } from './pages/Terms';
-import { Lgpd } from './pages/Lgpd';
+import { AdminRoute } from './components/admin/AdminRoute';
 import { hashFromPage, pageFromHash } from './routing/hashRouter';
 import { LegalConsentGate } from './components/legal/LegalConsentGate';
+import { RouteLoadingFallback } from './components/RouteLoadingFallback';
+
+const About = lazy(() => import('./pages/About').then((m) => ({ default: m.About })));
+const ProblemDetails = lazy(() => import('./pages/Details').then((m) => ({ default: m.ProblemDetails })));
+const SolutionDetails = lazy(() => import('./pages/Details').then((m) => ({ default: m.SolutionDetails })));
+const ExploreProblems = lazy(() => import('./pages/ExploreProblems').then((m) => ({ default: m.ExploreProblems })));
+const ExploreSolutions = lazy(() => import('./pages/ExploreSolutions').then((m) => ({ default: m.ExploreSolutions })));
+const ProblemForm = lazy(() => import('./pages/Forms').then((m) => ({ default: m.ProblemForm })));
+const SolutionForm = lazy(() => import('./pages/Forms').then((m) => ({ default: m.SolutionForm })));
+const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
+const Favorites = lazy(() => import('./pages/Favorites').then((m) => ({ default: m.Favorites })));
+const Login = lazy(() => import('./pages/Auth').then((m) => ({ default: m.Login })));
+const Register = lazy(() => import('./pages/Auth').then((m) => ({ default: m.Register })));
+const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
+const ContributionDetails = lazy(() => import('./pages/Contributions').then((m) => ({ default: m.ContributionDetails })));
+const ContributionsList = lazy(() => import('./pages/Contributions').then((m) => ({ default: m.ContributionsList })));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const AdminPanel = lazy(() => import('./pages/LegacyAdminPanel').then((m) => ({ default: m.AdminPanel })));
+const AdminSectionPlaceholder = lazy(() => import('./pages/AdminSectionPlaceholder').then((m) => ({ default: m.AdminSectionPlaceholder })));
+const SupabaseStatus = lazy(() => import('./integrations/supabase/SupabaseStatus').then((m) => ({ default: m.SupabaseStatus })));
+const Account = lazy(() => import('./pages/Account').then((m) => ({ default: m.Account })));
+const PasswordRecovery = lazy(() => import('./pages/PasswordRecovery').then((m) => ({ default: m.PasswordRecovery })));
+const MfaChallenge = lazy(() => import('./pages/MfaChallenge').then((m) => ({ default: m.MfaChallenge })));
+const Notifications = lazy(() => import('./pages/Notifications').then((m) => ({ default: m.Notifications })));
+const PublicMap = lazy(() => import('./pages/PublicMap').then((m) => ({ default: m.PublicMap })));
+const AdminSystem = lazy(() => import('./pages/AdminSystem').then((m) => ({ default: m.AdminSystem })));
+const AdminUsers = lazy(() => import('./pages/AdminUsers').then((m) => ({ default: m.AdminUsers })));
+const AdminProblems = lazy(() => import('./pages/AdminProblems').then((m) => ({ default: m.AdminProblems })));
+const AdminSolutions = lazy(() => import('./pages/AdminSolutions').then((m) => ({ default: m.AdminSolutions })));
+const Search = lazy(() => import('./pages/Search').then((m) => ({ default: m.Search })));
+const TaxonomyProposalQueue = lazy(() => import('./components/admin/TaxonomyProposalQueue').then((m) => ({ default: m.TaxonomyProposalQueue })));
+const Contact = lazy(() => import('./pages/Contact').then((m) => ({ default: m.Contact })));
+const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.Privacy })));
+const Terms = lazy(() => import('./pages/Terms').then((m) => ({ default: m.Terms })));
+const Lgpd = lazy(() => import('./pages/Lgpd').then((m) => ({ default: m.Lgpd })));
 
 export function App() {
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
@@ -83,7 +92,7 @@ export function App() {
       : <AdminSectionPlaceholder title={({ 'admin-users': 'Usuários', 'admin-problems': 'Problemas', 'admin-solutions': 'Soluções', 'admin-comments': 'Comentários', 'admin-reports': 'Denúncias', 'admin-audit': 'Auditoria' } as Record<string, string>)[page]} onBack={() => setPage('admin')} />;
 
   return (
-    <Layout currentPage={kind} onNavigate={setPage}><LegalConsentGate bypass={consentBypass} onLogout={() => setPage('login')}>
+    <Layout currentPage={kind} onNavigate={setPage}><LegalConsentGate bypass={consentBypass} onLogout={() => setPage('login')}><Suspense fallback={<RouteLoadingFallback />}>
       {page === 'home' && <Home onNavigate={setPage} />}
       {page === 'problemas' && <ExploreProblems onNavigate={setPage} onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
       {page === 'mapa' && <PublicMap onOpen={(problemId) => setPage(`problema:${problemId}`)} />}
@@ -111,6 +120,6 @@ export function App() {
       {page === 'notifications' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><Notifications /></AuthenticatedRoute>}
       {page === 'diagnostics' && <SupabaseStatus />}
       {kind === 'contribution' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><ContributionDetails id={id} /></AuthenticatedRoute>}
-    </LegalConsentGate></Layout>
+    </Suspense></LegalConsentGate></Layout>
   );
 }

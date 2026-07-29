@@ -8,6 +8,7 @@ export const commonPtBR = {
   'nav.account': 'Conta', 'nav.profile': 'Perfil', 'nav.login': 'Entrar', 'a11y.avatar': 'Avatar de {{name}}',
   'footer.openSource': 'Open source, colaborativo e preparado para dados reais.',
   'count.result.one': 'resultado', 'count.result.other': 'resultados',
+  'route.loading': 'Carregando página…',
 } as const;
 
 export const commonEnUS = {
@@ -20,4 +21,5 @@ export const commonEnUS = {
   'nav.account': 'Account', 'nav.profile': 'Profile', 'nav.login': 'Sign in', 'a11y.avatar': '{{name}}\'s avatar',
   'footer.openSource': 'Open source, collaborative, and ready for real data.',
   'count.result.one': 'result', 'count.result.other': 'results',
+  'route.loading': 'Loading page…',
 } as const;
