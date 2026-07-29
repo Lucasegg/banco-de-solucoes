@@ -22,10 +22,9 @@ export function buildEmail(contact: ValidContact, date: Date) {
   return { subject: `[Contato: ${contact.category}] ${contact.subject}`.replace(/[\r\n]/g, ' '), html: [row('Nome', contact.name), row('E-mail', contact.email), row('Categoria', contact.category), row('Assunto', contact.subject), row('Mensagem', contact.message).replace(/\n/g, '<br>'), row('Data (UTC)', date.toISOString())].join('') };
 }
 
-export class RateLimiter {
-  private readonly requests = new Map<string, number[]>();
-  private readonly limit: number;
-  private readonly windowMs: number;
-  constructor(limit = 5, windowMs = 60 * 60 * 1000) { this.limit = limit; this.windowMs = windowMs; }
-  allow(key: string, now = Date.now()) { const recent = (this.requests.get(key) ?? []).filter((time) => now - time < this.windowMs); if (recent.length >= this.limit) return false; recent.push(now); this.requests.set(key, recent); return true; }
+export async function hmacIdentifier(value: string, secret: string, cryptoApi: Crypto = crypto): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await cryptoApi.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await cryptoApi.subtle.sign('HMAC', key, encoder.encode(value));
+  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
