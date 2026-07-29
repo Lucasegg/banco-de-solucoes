@@ -244,15 +244,18 @@ jobs:
         shell: bash
         run: |
           set +x
-          secrets_json="$(npx --yes supabase@2.39.2 secrets list --output json)"
-          for required in RESEND_API_KEY CONTACT_ADMIN_EMAIL CONTACT_FROM_EMAIL CONTACT_ALLOWED_ORIGINS CONTACT_RATE_LIMIT_SECRET
-          do
-            if ! jq -e --arg name "$required" 'any(.[]; .name == $name)' <<<"$secrets_json" >/dev/null; then
-              echo "Missing required Supabase secret: $required" >&2
-              exit 1
-            fi
-          done
-          unset secrets_json
+          secrets_file="$(mktemp)"
+          errors_file="$(mktemp)"
+          trap 'rm -f "$secrets_file" "$errors_file"' EXIT
+          # CLI 2.39.2 is retained for compatibility with link/migration gates.
+          # npm and CLI diagnostics are isolated so they cannot corrupt JSON or leak into logs.
+          if ! npm_config_loglevel=error npx --yes supabase@2.39.2 secrets list --output json >"$secrets_file" 2>"$errors_file"; then
+            echo "Failed to query Supabase secrets." >&2
+            exit 1
+          fi
+          if ! node --experimental-strip-types scripts/checkSupabaseContactSecrets.ts <"$secrets_file"; then
+            exit 1
+          fi
       - name: Check migration baseline
         run: npm run check:migration-baseline
       - name: List local and remote migrations
