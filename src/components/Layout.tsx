@@ -5,6 +5,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { NotificationBell } from './notifications/NotificationBell';
 import { useTranslation } from '../i18n/I18nProvider';
 import type { TranslationKey } from '../i18n/resources';
+import { InstitutionalFooter } from './InstitutionalFooter';
 
 interface LayoutProps {
   children: ReactNode;
@@ -20,7 +21,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   const { locale, setLocale, t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-slate-50 text-ink">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-white/85 backdrop-blur">
         <nav className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
           <button className="flex items-center gap-3 text-left" onClick={() => onNavigate('home')}>
@@ -90,14 +91,8 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
           </div>
         </nav>
       </header>
-      <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
-      <footer className="border-t border-line bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-8 text-sm text-muted md:flex-row md:items-center md:justify-between">
-          <span>{t('footer.openSource')}</span>
-          <button className="text-left underline underline-offset-4 hover:text-slate-950" onClick={() => onNavigate('contact')}>{t('nav.contact')}</button>
-          <span>{t('app.name')} · {new Date().getFullYear()}</span>
-        </div>
-      </footer>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">{children}</main>
+      <InstitutionalFooter onNavigate={onNavigate} />
     </div>
   );
 }

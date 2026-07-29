@@ -29,6 +29,9 @@ import { AuthenticatedRoute } from './components/auth/AuthenticatedRoute';
 import { Search } from './pages/Search';
 import { TaxonomyProposalQueue } from './components/admin/TaxonomyProposalQueue';
 import { Contact } from './pages/Contact';
+import { Privacy } from './pages/Privacy';
+import { Terms } from './pages/Terms';
+import { Lgpd } from './pages/Lgpd';
 
 const pageToHashPath: Record<string, string> = {
   home: '/',
@@ -60,6 +63,9 @@ const pageToHashPath: Record<string, string> = {
   mapa: '/mapa',
   search: '/search',
   contact: '/contact',
+  privacy: '/privacy',
+  terms: '/terms',
+  lgpd: '/lgpd',
 };
 
 function normalizeHash(hash: string) {
@@ -96,6 +102,9 @@ function pageFromHash(hash: string) {
   if (path === '/mapa') return 'mapa';
   if (path === '/search') return 'search';
   if (path === '/contact') return 'contact';
+  if (path === '/privacy') return 'privacy';
+  if (path === '/terms') return 'terms';
+  if (path === '/lgpd') return 'lgpd';
   if (path === '/contributions') return 'contributions';
   if (path === '/favorites') return 'favorites';
   if (path === '/diagnostics') return 'diagnostics';
@@ -169,6 +178,9 @@ export function App() {
       {page === 'nova-solucao' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin} authPrompt={{ description: 'Para cadastrar uma solução, você precisa estar conectado à sua conta.', onRegisterRequired: redirectToRegister, onBack: () => setPage('solucoes') }}><SolutionForm /></AuthenticatedRoute>}
       {page === 'sobre' && <About />}
       {page === 'contact' && <Contact />}
+      {page === 'privacy' && <Privacy onNavigate={setPage} />}
+      {page === 'terms' && <Terms onNavigate={setPage} />}
+      {page === 'lgpd' && <Lgpd onNavigate={setPage} />}
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
       {page === 'mfa-challenge' && mfaRequired && <MfaChallenge onNavigate={setPage} />}
