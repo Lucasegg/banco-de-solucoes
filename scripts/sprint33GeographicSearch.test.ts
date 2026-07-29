@@ -71,6 +71,6 @@ test('PostgreSQL 15 workflow applies both real migrations and blocks on runtime 
 test('frontend sends coordinates and exposes every supported radius and map',()=>{
   assert.match(repository,/\.rpc\('search_nearby_problems'/); assert.match(repository,/\.rpc\('search_nearby_solutions'/);
   for(const radius of [1,5,10,25,50,100]) assert.match(page,new RegExp(`(?:\\[|, )${radius}(?:,|\\])`));
-  assert.match(page,/Perto de mim/); assert.match(page,/navigator\.geolocation/);
+  assert.match(page,/t\(locating \? 'search\.locating' : 'search\.nearMe'\)/); const locale=readFileSync(new URL('../src/i18n/locales/search.ts',import.meta.url),'utf8'); assert.match(locale,/'search\.nearMe':'Perto de mim'/); assert.match(locale,/'search\.nearMe':'Near me'/); assert.match(page,/navigator\.geolocation/);
   assert.match(map,/tile\.openstreetmap\.org/); assert.match(map,/distance_km/);
 });

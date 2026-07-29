@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { checkSupabaseHealth } from './client';
 import { supabaseConfig } from './config';
 import { usePersistence } from './PersistenceProvider';
+import { useTranslation } from '../../i18n/I18nProvider';
 
 const appVersion = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
 
 type HealthStatus = 'pending' | 'ok' | 'error';
 
 export function SupabaseStatus() {
+  const { t } = useTranslation();
   const { activeAdapterName, mode } = usePersistence();
-  const [health, setHealth] = useState<{ status: HealthStatus; message: string }>({ status: 'pending', message: 'Verificando...' });
+  const [health, setHealth] = useState<{ status: HealthStatus; message: string }>({ status: 'pending', message: t('supabase.checking') });
 
   useEffect(() => {
     let isMounted = true;
@@ -23,21 +25,21 @@ export function SupabaseStatus() {
   }, []);
 
   const items = [
-    ['Adapter ativo', activeAdapterName],
-    ['Supabase configurado', supabaseConfig.isConfigured ? 'Sim' : 'Não'],
-    ['URL configurada', supabaseConfig.url ? supabaseConfig.url : 'Não informada'],
-    ['Health check', `${health.status === 'pending' ? 'Pendente' : health.status === 'ok' ? 'OK' : 'Erro'} — ${health.message}`],
-    ['Versão da aplicação', appVersion],
-    ['Modo', mode === 'local' ? 'Local' : 'Supabase'],
+    [t('supabase.activeAdapter'), activeAdapterName],
+    [t('supabase.configured'), supabaseConfig.isConfigured ? t('common.yes') : t('common.no')],
+    [t('supabase.urlConfigured'), supabaseConfig.url ? supabaseConfig.url : t('profile.notInformed')],
+    [t('supabase.health'), `${health.status === 'pending' ? t('supabase.pending') : health.status === 'ok' ? 'OK' : t('common.error')} — ${health.message}`],
+    [t('supabase.appVersion'), appVersion],
+    [t('supabase.mode'), mode === 'local' ? t('supabase.local') : 'Supabase'],
   ];
 
   return (
     <section className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">Diagnósticos</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Infraestrutura Supabase</h1>
+        <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">{t('supabase.diagnostics')}</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">{t('supabase.title')}</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
-          Esta tela valida apenas a infraestrutura preparada. A aplicação permanece usando armazenamento local e nenhuma funcionalidade foi migrada para Supabase.
+          {t('supabase.description')}
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">

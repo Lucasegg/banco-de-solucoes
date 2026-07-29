@@ -9,6 +9,10 @@ import type { ImplementationDifficulty, Solution, SolutionCategory, SolutionMatu
 import { useFavorites } from '../hooks/useFavorites';
 import { readHashQuery, updateHashQuery, parseBooleanParam, parseEnumParam, parsePositiveInteger } from '../utils/hashQuery';
 import { applyFilters, compareNewest, compareTitleAsc, getUniqueOptions, matchesSearch, sortItems, type FilterConfig, type SortOption } from '../utils/catalog';
+import { useTranslation } from '../i18n/I18nProvider';
+import { formatMessageCount } from '../i18n/format';
+import { difficultyKeys, knownCategoryKeys, maturityLevelKeys, solutionStatusKeys } from '../i18n/presentation';
+import type { TranslationKey } from '../i18n/resources';
 
 type SolutionFilters = Record<'category' | 'status' | 'maturity' | 'difficulty' | 'organization', string>;
 type SolutionSort = 'recent' | 'liked' | 'viewed' | 'alphabetical';
@@ -17,11 +21,11 @@ const defaultFilters: SolutionFilters = { category: '', status: '', maturity: ''
 const itemsPerPage = 9;
 const solutionSortValues: readonly SolutionSort[] = ['recent', 'liked', 'viewed', 'alphabetical'];
 
-const solutionSortOptions: Array<SortOption<Solution> & { value: SolutionSort }> = [
-  { value: 'recent', label: 'Mais recentes', compare: compareNewest },
-  { value: 'liked', label: 'Mais curtidas', compare: (a, b) => b.likes - a.likes },
-  { value: 'viewed', label: 'Mais visualizações', compare: (a, b) => b.views - a.views },
-  { value: 'alphabetical', label: 'Ordem alfabética', compare: compareTitleAsc },
+const solutionSortOptions: Array<Omit<SortOption<Solution>, 'label'> & { value: SolutionSort; label: TranslationKey }> = [
+  { value: 'recent', label: 'sort.recent', compare: compareNewest },
+  { value: 'liked', label: 'sort.mostLikedFemale', compare: (a, b) => b.likes - a.likes },
+  { value: 'viewed', label: 'sort.mostViewed', compare: (a, b) => b.views - a.views },
+  { value: 'alphabetical', label: 'sort.alphabetical', compare: compareTitleAsc },
 ];
 
 const filterConfig: FilterConfig<Solution, SolutionFilters> = {
@@ -33,6 +37,7 @@ const filterConfig: FilterConfig<Solution, SolutionFilters> = {
 };
 
 export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) => void; onNavigate: (page: string) => void }) {
+  const { locale, t } = useTranslation();
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<SolutionFilters>(defaultFilters);
   const [sort, setSort] = useState<SolutionSort>('recent');
@@ -42,13 +47,14 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [repositoryUnavailable, setRepositoryUnavailable] = useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState('');
 
   useEffect(() => {
     let active = true;
     async function loadSolutions() {
       setLoading(true);
-      if (!SolutionRepository) { setError('Não foi possível carregar as soluções no momento.'); setLoading(false); return; }
+      if (!SolutionRepository) { setRepositoryUnavailable(true); setLoading(false); return; }
       const result = await SolutionRepository.list();
       if (!active) return;
       if (result.ok) { setSolutions(result.data); setError(''); } else setError(result.message);
@@ -93,11 +99,11 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
   const paginatedSolutions = filteredSolutions.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const filterSelects: FilterSelectConfig[] = [
-    { key: 'category', label: 'Categoria', value: filters.category, options: getUniqueOptions(solutions, (solution) => solution.category).map((value) => ({ value: value as SolutionCategory, label: value })) },
-    { key: 'status', label: 'Status', value: filters.status, options: getUniqueOptions(solutions, (solution) => solution.status).map((value) => ({ value: value as SolutionStatus, label: value })) },
-    { key: 'maturity', label: 'Maturidade', value: filters.maturity, options: getUniqueOptions(solutions, (solution) => solution.maturityLevel).map((value) => ({ value: value as SolutionMaturityLevel, label: value })) },
-    { key: 'difficulty', label: 'Dificuldade', value: filters.difficulty, options: getUniqueOptions(solutions, (solution) => solution.implementationDifficulty).map((value) => ({ value: value as ImplementationDifficulty, label: value })) },
-    { key: 'organization', label: 'Organização', value: filters.organization, options: getUniqueOptions(solutions, (solution) => solution.organization).map((value) => ({ value, label: value })) },
+    { key: 'category', label: t('filter.category'), value: filters.category, options: getUniqueOptions(solutions, (solution) => solution.category).map((value) => ({ value: value as SolutionCategory, label: value in knownCategoryKeys ? t(knownCategoryKeys[value as keyof typeof knownCategoryKeys]) : value })) },
+    { key: 'status', label: t('filter.status'), value: filters.status, options: getUniqueOptions(solutions, (solution) => solution.status).map((value) => ({ value: value as SolutionStatus, label: t(solutionStatusKeys[value as SolutionStatus]) })) },
+    { key: 'maturity', label: t('filter.maturity'), value: filters.maturity, options: getUniqueOptions(solutions, (solution) => solution.maturityLevel).map((value) => ({ value: value as SolutionMaturityLevel, label: t(maturityLevelKeys[value as SolutionMaturityLevel]) })) },
+    { key: 'difficulty', label: t('filter.difficulty'), value: filters.difficulty, options: getUniqueOptions(solutions, (solution) => solution.implementationDifficulty).map((value) => ({ value: value as ImplementationDifficulty, label: t(difficultyKeys[value as ImplementationDifficulty]) })) },
+    { key: 'organization', label: t('filter.organization'), value: filters.organization, options: getUniqueOptions(solutions, (solution) => solution.organization).map((value) => ({ value, label: value })) },
   ];
 
   const resetPage = () => setPage(1);
@@ -114,17 +120,17 @@ export function ExploreSolutions({ onOpen, onNavigate }: { onOpen: (id: string) 
     <section className="space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight">Banco de Soluções</h1>
-          <p className="mt-3 max-w-2xl text-muted">Ideias, pilotos e iniciativas validadas conectadas por ID aos problemas que pretendem resolver.</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight">{t('explore.solutionTitle')}</h1>
+          <p className="mt-3 max-w-2xl text-muted">{t('explore.solutionDescription')}</p>
         </div>
-        <button onClick={() => onNavigate('nova-solucao')} className="inline-flex items-center justify-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400"><Plus size={16} /> Nova solução</button>
+        <button onClick={() => onNavigate('nova-solucao')} className="inline-flex items-center justify-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400"><Plus size={16} /> {t('explore.newSolution')}</button>
       </div>
-      <CatalogToolbar search={search} searchPlaceholder="Pesquisar soluções por título, descrição ou tags" filters={filterSelects} sort={sort} sortOptions={solutionSortOptions} resultLabel={`${filteredSolutions.length} ${filteredSolutions.length === 1 ? 'solução encontrada' : 'soluções encontradas'}`} favoritesOnly={favoritesOnly} onSearchChange={(value) => { resetPage(); setSearch(value); }} onFilterChange={updateFilter} onSortChange={(value) => { resetPage(); setSort(value as SolutionSort); }} onFavoritesOnlyChange={(value) => { resetPage(); setFavoritesOnly(value); }} onClear={clearFilters} />
-      {error && <div className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+      <CatalogToolbar search={search} searchPlaceholder={t('explore.solutionSearch')} filters={filterSelects} sort={sort} sortOptions={solutionSortOptions.map((option) => ({ ...option, label: t(option.label) }))} resultLabel={formatMessageCount(filteredSolutions.length, locale, t, 'explore.solutionCount.one', 'explore.solutionCount.other')} favoritesOnly={favoritesOnly} onSearchChange={(value) => { resetPage(); setSearch(value); }} onFilterChange={updateFilter} onSortChange={(value) => { resetPage(); setSort(value as SolutionSort); }} onFavoritesOnlyChange={(value) => { resetPage(); setFavoritesOnly(value); }} onClear={clearFilters} />
+      {(error || repositoryUnavailable) && <div className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">{repositoryUnavailable ? t('explore.solutionLoadFailed') : error}</div>}
       {favoriteMessage && <div className="rounded-3xl border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-800">{favoriteMessage}</div>}
-      {loading ? <EmptyState title="Carregando soluções" message="Buscando soluções..." /> : filteredSolutions.length === 0 ? <EmptyState title={favoritesOnly ? 'Nenhum favorito encontrado' : 'Nenhum resultado encontrado'} message={favoritesOnly ? 'Favorite soluções para encontrá-las rapidamente neste filtro.' : solutions.length === 0 ? 'Ainda não há registros publicados nesta seção.' : 'Tente ajustar a busca, os filtros ou a ordenação para encontrar outras soluções.'} actionLabel="Limpar filtros" onAction={clearFilters} /> : <>
+      {loading ? <EmptyState title={t('explore.loadingSolutions')} message={t('explore.fetchingSolutions')} /> : filteredSolutions.length === 0 ? <EmptyState title={favoritesOnly ? t('explore.noFavorite') : t('common.noResults')} message={favoritesOnly ? t('explore.favoriteSolutionsHint') : solutions.length === 0 ? t('explore.noPublished') : t('explore.adjustSolutions')} actionLabel={t('toolbar.clear')} onAction={clearFilters} /> : <>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {paginatedSolutions.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={onOpen} isFavorite={favorites.isFavorite(solution.id)} onToggleFavorite={(id) => { void favorites.toggleFavorite(id).then((result) => setFavoriteMessage(result.ok ? '' : (result.message ?? 'Não foi possível alterar o favorito.'))); }} />)}
+          {paginatedSolutions.map((solution) => <SolutionCard key={solution.id} solution={solution} onOpen={onOpen} isFavorite={favorites.isFavorite(solution.id)} onToggleFavorite={(id) => { void favorites.toggleFavorite(id).then((result) => setFavoriteMessage(result.ok ? '' : (result.message ?? t('explore.favoriteFailed')))); }} />)}
         </div>
         <Pagination currentPage={page} totalItems={filteredSolutions.length} itemsPerPage={itemsPerPage} onPageChange={setPage} />
       </>}

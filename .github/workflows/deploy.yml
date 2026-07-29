@@ -162,6 +162,8 @@ jobs:
         run: npm run test:sprint34
       - name: Sprint 35 taxonomy tests
         run: npm run test:sprint35
+      - name: Sprint 36 internationalization tests
+        run: npm run test:sprint36
       - name: Check patch formatting
         run: git diff --check
       - name: Build

@@ -22,16 +22,16 @@ import { problemStatuses } from '../types/problemTimeline';
 import { ProblemLocationMap } from '../components/map/ProblemLocationMap';
 import { saveAuthReturnTo } from '../components/auth/authReturnTo';
 import { RecommendationSection } from '../components/recommendations/RecommendationSection';
+import { useTranslation } from '../i18n/I18nProvider';
+import { formatCivilDateUtc, formatNumber } from '../i18n/format';
+import { problemStatusKeys, solutionStatusKeys, maturityLevelKeys, difficultyKeys } from '../i18n/presentation';
 import { useRecommendedSolutions, useRelatedProblems, useRelatedProblemsForSolution } from '../hooks/useRecommendations';
 
 
-function getShareMessage(status: ShareStatus, url: string) {
-  if (status === 'shared') return 'Link compartilhado.';
-  if (status === 'copied') return 'Link copiado.';
-  return `Não foi possível copiar automaticamente. Copie o link: ${url}`;
-}
+function getShareMessage(status: ShareStatus, url: string, t: ReturnType<typeof useTranslation>['t']) { if (status === 'shared') return t('details.share.shared'); if (status === 'copied') return t('details.share.copied'); return t('details.share.failed', { url }); }
 
 export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
+  const { locale, t } = useTranslation();
   const similarProblems = useRelatedProblems(id);
   const recommendedSolutions = useRecommendedSolutions(id);
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -59,10 +59,10 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   useEffect(() => {
     let active = true;
     async function loadProblem() {
-      if (!ProblemRepository || !SolutionRepository) { setLoadError('Não foi possível carregar este conteúdo no momento.'); return; }
+      if (!ProblemRepository || !SolutionRepository) { setLoadError(t('details.loadError')); return; }
       const problemResult = await ProblemRepository.findById(id);
       if (!active) return;
-      if (!problemResult.ok || !problemResult.data) { setLoadError(problemResult.ok ? 'Problema não encontrado.' : problemResult.message); return; }
+      if (!problemResult.ok || !problemResult.data) { setLoadError(problemResult.ok ? t('details.problemNotFound') : problemResult.message); return; }
       setProblem(problemResult.data);
       setEditTitle(problemResult.data.title);
       setEditSummary(problemResult.data.summary);
@@ -84,18 +84,18 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
   const share = async () => {
     if (!problem) return;
     const result = await shareCurrentHashUrl(problem.title, problem.summary);
-    setFeedback(getShareMessage(result.status, result.url));
+    setFeedback(getShareMessage(result.status, result.url, t));
   };
 
   const toggleFavorite = async () => {
     if (!problem) return;
-    if (!user) { saveAuthReturnTo(undefined, true); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
+    if (!user) { saveAuthReturnTo(undefined, true); setFeedback(t('details.authRequired')); onNavigate('login'); return; }
     const result = await favorites.toggleFavorite(problem.id);
-    setFeedback(result.ok ? (isFavorite ? 'Problema removido dos favoritos.' : 'Problema adicionado aos favoritos.') : result.message);
+    setFeedback(result.ok ? (isFavorite ? t('details.problemFavoriteRemoved') : t('details.problemFavoriteAdded')) : result.message);
   };
 
   const proposeContribution = () => {
-    if (!user) { saveAuthReturnTo(undefined, true); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
+    if (!user) { saveAuthReturnTo(undefined, true); setFeedback(t('details.authRequired')); onNavigate('login'); return; }
     setShowContributionForm(true);
   };
 
@@ -106,7 +106,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
       setEditImageError('');
       let nextImage = problem.image;
       if (editImageFile) {
-        if (!ImageUploadRepository || !user) { setEditImageError('Não foi possível enviar a imagem no momento.'); return; }
+        if (!ImageUploadRepository || !user) { setEditImageError(t('details.uploadError')); return; }
         const upload = await ImageUploadRepository.uploadImage('problem-images', user.id, editImageFile, setEditImageProgress);
         if (!upload.ok) { setEditImageError(upload.message); setEditImageProgress(null); return; }
         nextImage = upload.url;
@@ -130,7 +130,7 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
       setEditImageRemoved(false);
       setEditImageProgress(null);
       setIsEditing(false);
-      setFeedback(`Problema atualizado.${cleanupWarning}`);
+      setFeedback(`${t('details.problemUpdated')}${cleanupWarning}`);
     } finally {
       setIsSavingEdit(false);
     }
@@ -138,58 +138,59 @@ export function ProblemDetails({ id, onNavigate }: { id: string; onNavigate: (pa
 
   const deleteProblem = async () => {
     if (!problem || !ProblemRepository || !canDelete) return;
-    if (!window.confirm('Excluir este problema? Esta ação não pode ser desfeita.')) return;
+    if (!window.confirm(t('details.deleteProblemConfirm'))) return;
     const result = await ProblemRepository.delete(problem.id);
-    if (result.ok) { setFeedback('Problema excluído.'); onNavigate('problemas'); } else setFeedback(result.message);
+    if (result.ok) { setFeedback(t('details.problemDeleted')); onNavigate('problemas'); } else setFeedback(result.message);
   };
 
-  if (!problem) return <EmptyDetail message={loadError || 'Carregando problema...'} />;
+  if (!problem) return <EmptyDetail message={loadError || t('details.loadingProblem')} />;
   const problemFields = [
-    { field: 'title', label: 'Título', value: problem.title },
-    { field: 'summary', label: 'Resumo', value: problem.summary },
-    { field: 'description', label: 'Descrição', value: problem.description },
-    { field: 'category', label: 'Categoria', value: problem.category },
-    { field: 'status', label: 'Status', value: problem.status },
-    { field: 'tags', label: 'Tags', value: problem.tags },
+    { field: 'title', label: t('details.title'), value: problem.title },
+    { field: 'summary', label: t('details.summary'), value: problem.summary },
+    { field: 'description', label: t('details.description'), value: problem.description },
+    { field: 'category', label: t('details.category'), value: problem.category },
+    { field: 'status', label: t('details.status'), value: problem.status },
+    { field: 'tags', label: t('details.tags'), value: problem.tags },
   ];
 
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <article className="overflow-hidden rounded-[2rem] border border-line bg-white shadow-sm">
-        {problem.image && <img src={problem.image} alt={`Imagem do problema ${problem.title}`} className="h-72 w-full object-cover md:h-96" />}
+        {problem.image && <img src={problem.image} alt={t('details.problemImage', { title: problem.title })} className="h-72 w-full object-cover md:h-96" />}
         <div className="p-8">
-          <div className="flex flex-wrap gap-2 text-sm"><Badge>{problem.category}</Badge><Badge>{problem.status}</Badge><Badge>{problem.city}, {problem.state}</Badge></div>
+          <div className="flex flex-wrap gap-2 text-sm"><Badge>{problem.category}</Badge><Badge>{t(problemStatusKeys[problem.status])}</Badge><Badge>{problem.city}, {problem.state}</Badge></div>
           <h1 className="mt-5 text-4xl font-semibold tracking-tight">{problem.title}</h1>
-          {problem.importedFromExternalSource && <div className="mt-6 rounded-3xl border border-teal-100 bg-teal-50 p-5 text-sm text-teal-950"><strong>Fonte externa verificada</strong><p className="mt-2">Registro criado a partir de informação pública</p><dl className="mt-3 space-y-1"><div><dt className="inline font-semibold">Fonte: </dt><dd className="inline">{problem.sourceName}</dd></div>{problem.sourcePublishedAt && <div><dt className="inline font-semibold">Publicação: </dt><dd className="inline">{formatDate(problem.sourcePublishedAt)}</dd></div>}{problem.sourceVerifiedAt && <div><dt className="inline font-semibold">Última verificação: </dt><dd className="inline">{formatDate(problem.sourceVerifiedAt)}</dd></div>}</dl>{problem.sourceUrl && <a href={problem.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 font-semibold underline">Consultar fonte original <ExternalLink size={16} /></a>}</div>}
+          {problem.importedFromExternalSource && <div className="mt-6 rounded-3xl border border-teal-100 bg-teal-50 p-5 text-sm text-teal-950"><strong>{t('details.externalVerified')}</strong><p className="mt-2">{t('details.publicRecord')}</p><dl className="mt-3 space-y-1"><div><dt className="inline font-semibold">{t('details.source')} </dt><dd className="inline">{problem.sourceName}</dd></div>{problem.sourcePublishedAt && <div><dt className="inline font-semibold">{t('details.published')} </dt><dd className="inline">{formatCivilDateUtc(problem.sourcePublishedAt, locale)}</dd></div>}{problem.sourceVerifiedAt && <div><dt className="inline font-semibold">{t('details.verified')} </dt><dd className="inline">{formatCivilDateUtc(problem.sourceVerifiedAt, locale)}</dd></div>}</dl>{problem.sourceUrl && <a href={problem.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 font-semibold underline">{t('details.originalSource')} <ExternalLink size={16} /></a>}</div>}
           <p className="mt-5 text-lg leading-8 text-muted">{problem.description}</p>
           <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Info icon={<MapPin size={18} />} label="Cidade" value={`${problem.city}, ${problem.state}`} />
-            <Info icon={<Calendar size={18} />} label="Data" value={formatDate(problem.createdAt)} />
-            <Info icon={<UsersRound size={18} />} label="Autor" value={problem.author} />
-            <Info icon={<Heart size={18} />} label="Curtidas" value={String(problem.likes)} />
+            <Info icon={<MapPin size={18} />} label={t('details.city')} value={`${problem.city}, ${problem.state}`} />
+            <Info icon={<Calendar size={18} />} label={t('details.date')} value={formatCivilDateUtc(problem.createdAt, locale)} />
+            <Info icon={<UsersRound size={18} />} label={t('details.author')} value={problem.author} />
+            <Info icon={<Heart size={18} />} label={t('details.likes')} value={String(problem.likes)} />
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar problema ${problem.title}`} />
-            <Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritado' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${problem.title} dos favoritos` : `Adicionar ${problem.title} aos favoritos`} />
-            <Action icon={<GitBranch size={16} />} label="Contribuir" onClick={proposeContribution} ariaLabel={`Contribuir para o problema ${problem.title}`} />
-            <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400"><Sparkles size={16} /> Encontrar Soluções</button>
-            {canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}
-            {canDelete && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteProblem} />}
+            <Action icon={<Share2 size={16} />} label={t('details.share')} onClick={share} ariaLabel={t('details.shareProblemA11y', { title: problem.title })} />
+            <Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={t(isFavorite ? 'details.favorited' : 'details.favorite')} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={t(isFavorite ? 'details.removeFavoriteA11y' : 'details.addFavoriteA11y', { title: problem.title })} />
+            <Action icon={<GitBranch size={16} />} label={t('details.contribute')} onClick={proposeContribution} ariaLabel={t('details.contributeProblemA11y', { title: problem.title })} />
+            <button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-slate-400"><Sparkles size={16} /> {t('details.findSolutions')}</button>
+            {canManage && <Action icon={<GitBranch size={16} />} label={t(isEditing ? 'details.cancelEdit' : 'details.edit')} onClick={() => setIsEditing((current) => !current)} />}
+            {canDelete && <Action icon={<Bookmark size={16} />} label={t('details.delete')} onClick={deleteProblem} />}
           </div>
-          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><ImageUploadField label="Imagem do problema" currentUrl={problem.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem do problema ${problem.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}>{problemStatuses.map((status) => <option key={status}>{status}</option>)}</select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
+          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-slate-50 p-4"><ImageUploadField label={t('forms.problemImage')} currentUrl={problem.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={t('details.problemImage', { title: problem.title })} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as ProblemStatus)}>{problemStatuses.map((status) => <option key={status} value={status}>{t(problemStatusKeys[status])}</option>)}</select><button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" onClick={saveProblemEdit} disabled={isSavingEdit}>{t(isSavingEdit ? 'details.saving' : 'details.saveEdit')}</button></div>}
           <Feedback message={feedback} />
           <ProblemLocationMap problemId={problem.id} onOpen={() => undefined} />
           {showContributionForm && <ContributionForm targetType="problem" targetId={problem.id} fields={problemFields} onClose={() => setShowContributionForm(false)} />}
         </div>
       </article>
-      <aside className="space-y-4"><h2 className="text-xl font-semibold">Soluções relacionadas</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {solution.status} · {solution.maturityLevel}</p></button>)}</aside>
-      <div className="lg:col-span-2"><RecommendationSection title="Problemas semelhantes" state={similarProblems} onOpen={(itemId) => onNavigate(`problema:${itemId}`)} /><RecommendationSection title="Soluções recomendadas" state={recommendedSolutions} onOpen={(itemId) => onNavigate(`solucao:${itemId}`)} /></div>
-      <div className="lg:col-span-2 space-y-6"><ProblemTimeline problemId={problem.id} canPublish={permissions.canPublishOfficialUpdate} onStatusChange={(status) => setProblem((current) => current ? { ...current, status } : current)} /><ContributionHistory targetType="problem" targetId={problem.id} /><ItemReactionBar target={{ kind: 'problem', id: problem.id }} /><DiscussionList title="Discussão do problema" comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
+      <aside className="space-y-4"><h2 className="text-xl font-semibold">{t('details.relatedSolutions')}</h2>{related.map((solution) => <button key={solution.id} onClick={() => onNavigate(`solucao:${solution.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{solution.title}</strong><p className="mt-2 text-sm text-muted">{solution.category} · {t(solutionStatusKeys[solution.status])} · {t(maturityLevelKeys[solution.maturityLevel])}</p></button>)}</aside>
+      <div className="lg:col-span-2"><RecommendationSection title={t('details.similarProblems')} state={similarProblems} onOpen={(itemId) => onNavigate(`problema:${itemId}`)} /><RecommendationSection title={t('details.recommendedSolutions')} state={recommendedSolutions} onOpen={(itemId) => onNavigate(`solucao:${itemId}`)} /></div>
+      <div className="lg:col-span-2 space-y-6"><ProblemTimeline problemId={problem.id} canPublish={permissions.canPublishOfficialUpdate} onStatusChange={(status) => setProblem((current) => current ? { ...current, status } : current)} /><ContributionHistory targetType="problem" targetId={problem.id} /><ItemReactionBar target={{ kind: 'problem', id: problem.id }} /><DiscussionList title={t('details.problemDiscussion')} comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
     </section>
   );
 }
 
 export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
+  const { locale, t } = useTranslation();
   const recommendedProblems = useRelatedProblemsForSolution(id);
   const [solution, setSolution] = useState<Solution | null>(null);
   const [related, setRelated] = useState<Problem[]>([]);
@@ -215,10 +216,10 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   useEffect(() => {
     let active = true;
     async function loadSolution() {
-      if (!SolutionRepository || !ProblemRepository) { setLoadError('Não foi possível carregar este conteúdo no momento.'); return; }
+      if (!SolutionRepository || !ProblemRepository) { setLoadError(t('details.loadError')); return; }
       const solutionResult = await SolutionRepository.findById(id);
       if (!active) return;
-      if (!solutionResult.ok || !solutionResult.data) { setLoadError(solutionResult.ok ? 'Solução não encontrada.' : solutionResult.message); return; }
+      if (!solutionResult.ok || !solutionResult.data) { setLoadError(solutionResult.ok ? t('details.solutionNotFound') : solutionResult.message); return; }
       setSolution(solutionResult.data);
       setEditTitle(solutionResult.data.title);
       setEditSummary(solutionResult.data.summary);
@@ -240,17 +241,17 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
   const share = async () => {
     if (!solution) return;
     const result = await shareCurrentHashUrl(solution.title, solution.summary);
-    setFeedback(getShareMessage(result.status, result.url));
+    setFeedback(getShareMessage(result.status, result.url, t));
   };
 
   const toggleFavorite = async () => {
     if (!solution) return;
     const result = await favorites.toggleFavorite(solution.id);
-    setFeedback(result.ok ? (isFavorite ? 'Solução removida dos favoritos.' : 'Solução adicionada aos favoritos.') : result.message);
+    setFeedback(result.ok ? (isFavorite ? t('details.solutionFavoriteRemoved') : t('details.solutionFavoriteAdded')) : result.message);
   };
 
   const proposeContribution = () => {
-    if (!user) { saveAuthReturnTo(undefined, true); setFeedback('Você precisa entrar ou criar uma conta para realizar esta ação.'); onNavigate('login'); return; }
+    if (!user) { saveAuthReturnTo(undefined, true); setFeedback(t('details.authRequired')); onNavigate('login'); return; }
     setShowContributionForm(true);
   };
 
@@ -261,7 +262,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
       setEditImageError('');
       let nextImage = solution.image;
       if (editImageFile) {
-        if (!ImageUploadRepository || !user) { setEditImageError('Não foi possível enviar a imagem no momento.'); return; }
+        if (!ImageUploadRepository || !user) { setEditImageError(t('details.uploadError')); return; }
         const upload = await ImageUploadRepository.uploadImage('solution-images', user.id, editImageFile, setEditImageProgress);
         if (!upload.ok) { setEditImageError(upload.message); setEditImageProgress(null); return; }
         nextImage = upload.url;
@@ -285,7 +286,7 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
       setEditImageRemoved(false);
       setEditImageProgress(null);
       setIsEditing(false);
-      setFeedback(`Solução atualizada.${cleanupWarning}`);
+      setFeedback(`${t('details.solutionUpdated')}${cleanupWarning}`);
     } finally {
       setIsSavingEdit(false);
     }
@@ -293,58 +294,58 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
 
   const deleteSolution = async () => {
     if (!solution || !SolutionRepository || !canDelete) return;
-    if (!window.confirm('Excluir esta solução? Esta ação não pode ser desfeita.')) return;
+    if (!window.confirm(t('details.deleteSolutionConfirm'))) return;
     const result = await SolutionRepository.delete(solution.id);
-    if (result.ok) { setFeedback('Solução excluída.'); onNavigate('solucoes'); } else setFeedback(result.message);
+    if (result.ok) { setFeedback(t('details.solutionDeleted')); onNavigate('solucoes'); } else setFeedback(result.message);
   };
 
-  if (!solution) return <EmptyDetail message={loadError || 'Carregando solução...'} />;
+  if (!solution) return <EmptyDetail message={loadError || t('details.loadingSolution')} />;
   const versions: SolutionVersion[] = [];
   const references: Evidence[] = [];
   const realCases: CaseStudy[] = [];
   const solutionImprovements: Improvement[] = [];
   const solutionFields = [
-    { field: 'title', label: 'Título', value: solution.title },
-    { field: 'summary', label: 'Resumo', value: solution.summary },
-    { field: 'description', label: 'Descrição', value: solution.description },
-    { field: 'category', label: 'Categoria', value: solution.category },
-    { field: 'status', label: 'Status', value: solution.status },
-    { field: 'maturityLevel', label: 'Maturidade', value: solution.maturityLevel },
-    { field: 'impactMetric', label: 'Métrica de impacto', value: solution.impactMetric },
-    { field: 'tags', label: 'Tags', value: solution.tags },
-    { field: 'relatedProblemIds', label: 'Problemas relacionados', value: solution.relatedProblemIds },
+    { field: 'title', label: t('details.title'), value: solution.title },
+    { field: 'summary', label: t('details.summary'), value: solution.summary },
+    { field: 'description', label: t('details.description'), value: solution.description },
+    { field: 'category', label: t('details.category'), value: solution.category },
+    { field: 'status', label: t('details.status'), value: solution.status },
+    { field: 'maturityLevel', label: t('details.maturity'), value: solution.maturityLevel },
+    { field: 'impactMetric', label: t('details.impactMetric'), value: solution.impactMetric },
+    { field: 'tags', label: t('details.tags'), value: solution.tags },
+    { field: 'relatedProblemIds', label: t('details.relatedProblems'), value: solution.relatedProblemIds },
   ];
 
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <article className="overflow-hidden rounded-[2rem] border border-teal-100 bg-white shadow-sm">
-        {solution.image && <img src={solution.image} alt={`Imagem da solução ${solution.title}`} className="h-72 w-full object-cover md:h-96" />}
+        {solution.image && <img src={solution.image} alt={t('details.solutionImage', { title: solution.title })} className="h-72 w-full object-cover md:h-96" />}
         <div className="p-8">
-          <div className="flex flex-wrap gap-2 text-sm"><Badge>{solution.category}</Badge><Badge>{solution.status}</Badge><Badge>{solution.maturityLevel}</Badge><Badge>{solution.implementationDifficulty}</Badge></div>
+          <div className="flex flex-wrap gap-2 text-sm"><Badge>{solution.category}</Badge><Badge>{t(solutionStatusKeys[solution.status])}</Badge><Badge>{t(maturityLevelKeys[solution.maturityLevel])}</Badge><Badge>{t(difficultyKeys[solution.implementationDifficulty])}</Badge></div>
           <h1 className="mt-5 text-4xl font-semibold tracking-tight">{solution.title}</h1>
           <p className="mt-5 text-lg leading-8 text-muted">{solution.description}</p>
           <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Info label="Organização responsável" value={solution.organization} />
-            <Info label="Autor" value={solution.author} />
-            <Info label="Localização" value={`${solution.location}, ${solution.country}`} />
-            <Info label="Custo estimado" value={solution.estimatedCost} />
-            <Info label="Tempo" value={solution.implementationTime} />
-            <Info label="Impacto" value={solution.impactMetric} />
-            <Info label="Criada em" value={formatDate(solution.createdAt)} />
-            <Info label="Atualizada em" value={formatDate(solution.updatedAt)} />
+            <Info label={t('details.organization')} value={solution.organization} />
+            <Info label={t('details.author')} value={solution.author} />
+            <Info label={t('details.location')} value={`${solution.location}, ${solution.country}`} />
+            <Info label={t('details.cost')} value={solution.estimatedCost} />
+            <Info label={t('details.time')} value={solution.implementationTime} />
+            <Info label={t('details.impact')} value={solution.impactMetric} />
+            <Info label={t('details.created')} value={formatCivilDateUtc(solution.createdAt, locale)} />
+            <Info label={t('details.updated')} value={formatCivilDateUtc(solution.updatedAt, locale)} />
           </div>
           <div className="mt-8 flex flex-wrap gap-2">{solution.tags.map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
-          <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label="curtidas" /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label="comentários" /><Metric icon={<Eye size={16} />} value={solution.views} label="visualizações" /></div>
-          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label="Compartilhar" onClick={share} ariaLabel={`Compartilhar solução ${solution.title}`} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={isFavorite ? 'Favoritada' : 'Favoritar'} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={isFavorite ? `Remover ${solution.title} dos favoritos` : `Adicionar ${solution.title} aos favoritos`} /><Action icon={<Bookmark size={16} />} label="Salvar" /><Action icon={<Lightbulb size={16} />} label="Contribuir" onClick={proposeContribution} ariaLabel={`Contribuir para a solução ${solution.title}`} />{canManage && <Action icon={<GitBranch size={16} />} label={isEditing ? 'Cancelar edição' : 'Editar'} onClick={() => setIsEditing((current) => !current)} />}{canDelete && <Action icon={<Bookmark size={16} />} label="Excluir" onClick={deleteSolution} />}<button onClick={() => onNavigate(related[0] ? `problema:${related[0].id}` : 'problemas')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">Ver problemas relacionados</button></div>
-          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-teal-50 p-4"><ImageUploadField label="Imagem da solução" currentUrl={solution.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={`Pré-visualização da imagem da solução ${solution.title}`} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as SolutionStatus)}><option>Proposta</option><option>Em teste</option><option>Implementada</option><option>Validada</option><option>Arquivada</option></select><button className="rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white" onClick={saveSolutionEdit} disabled={isSavingEdit}>{isSavingEdit ? 'Salvando...' : 'Salvar edição'}</button></div>}
+          <div className="mt-8 grid gap-3 text-sm text-muted sm:grid-cols-3"><Metric icon={<Heart size={16} />} value={solution.likes} label={t('details.likesLower')} /><Metric icon={<MessageCircle size={16} />} value={solution.comments} label={t('details.commentsLower')} /><Metric icon={<Eye size={16} />} value={solution.views} label={t('details.viewsLower')} /></div>
+          <div className="mt-8 flex flex-wrap gap-3"><Action icon={<Share2 size={16} />} label={t('details.share')} onClick={share} ariaLabel={t('details.shareSolutionA11y', { title: solution.title })} /><Action icon={<Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />} label={t(isFavorite ? 'details.favoritedFemale' : 'details.favorite')} onClick={toggleFavorite} pressed={isFavorite} ariaLabel={t(isFavorite ? 'details.removeFavoriteA11y' : 'details.addFavoriteA11y', { title: solution.title })} /><Action icon={<Bookmark size={16} />} label={t('details.save')} /><Action icon={<Lightbulb size={16} />} label={t('details.contribute')} onClick={proposeContribution} ariaLabel={t('details.contributeSolutionA11y', { title: solution.title })} />{canManage && <Action icon={<GitBranch size={16} />} label={t(isEditing ? 'details.cancelEdit' : 'details.edit')} onClick={() => setIsEditing((current) => !current)} />}{canDelete && <Action icon={<Bookmark size={16} />} label={t('details.delete')} onClick={deleteSolution} />}<button onClick={() => onNavigate(related[0] ? `problema:${related[0].id}` : 'problemas')} className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-teal-400">{t('details.viewRelated')}</button></div>
+          {isEditing && <div className="mt-6 grid gap-3 rounded-3xl border border-line bg-teal-50 p-4"><ImageUploadField label={t('forms.solutionImage')} currentUrl={solution.image} value={editImageFile} removed={editImageRemoved} uploading={isSavingEdit || Boolean(editImageProgress)} progress={editImageProgress?.progress} error={editImageError} alt={t('details.solutionImage', { title: solution.title })} onChange={(file) => { setEditImageFile(file); setEditImageRemoved(false); }} onRemove={() => { setEditImageFile(null); setEditImageRemoved(true); }} /><input className="rounded-2xl border border-line px-4 py-3 text-sm" value={editTitle} onChange={(event: { target: { value: string } }) => setEditTitle(event.target.value)} /><textarea className="min-h-24 rounded-2xl border border-line px-4 py-3 text-sm" value={editSummary} onChange={(event: { target: { value: string } }) => setEditSummary(event.target.value)} /><select className="rounded-2xl border border-line px-4 py-3 text-sm" value={editStatus} onChange={(event: { target: { value: string } }) => setEditStatus(event.target.value as SolutionStatus)}>{(['Proposta','Em teste','Implementada','Validada','Arquivada'] as SolutionStatus[]).map((status) => <option key={status} value={status}>{t(solutionStatusKeys[status])}</option>)}</select><button className="rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white" onClick={saveSolutionEdit} disabled={isSavingEdit}>{t(isSavingEdit ? 'details.saving' : 'details.saveEdit')}</button></div>}
           <Feedback message={feedback} />
           {showContributionForm && <ContributionForm targetType="solution" targetId={solution.id} fields={solutionFields} onClose={() => setShowContributionForm(false)} />}
           <SolutionKnowledgeTabs solution={solution} versions={versions} cases={realCases} references={references} improvements={solutionImprovements} />
         </div>
       </article>
-      <aside className="space-y-4"><h2 className="text-xl font-semibold">Problemas relacionados</h2>{related.map((problem) => <button key={problem.id} onClick={() => onNavigate(`problema:${problem.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{problem.title}</strong><p className="mt-2 text-sm text-muted">{problem.category} · {problem.city}, {problem.state} · {problem.status}</p></button>)}</aside>
+      <aside className="space-y-4"><h2 className="text-xl font-semibold">{t('details.relatedProblems')}</h2>{related.map((problem) => <button key={problem.id} onClick={() => onNavigate(`problema:${problem.id}`)} className="w-full rounded-3xl border border-line bg-white p-5 text-left shadow-sm hover:shadow-soft focus:outline-none focus:ring-2 focus:ring-teal-400"><strong>{problem.title}</strong><p className="mt-2 text-sm text-muted">{problem.category} · {problem.city}, {problem.state} · {t(problemStatusKeys[problem.status])}</p></button>)}</aside>
       <div className="lg:col-span-2"><RecommendationSection title="Problemas relacionados" state={recommendedProblems} onOpen={(itemId) => onNavigate(`problema:${itemId}`)} /></div>
-      <div className="lg:col-span-2 space-y-6"><ContributionHistory targetType="solution" targetId={solution.id} /><ItemReactionBar target={{ kind: 'solution', id: solution.id }} /><DiscussionList title="Discussão da solução" comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
+      <div className="lg:col-span-2 space-y-6"><ContributionHistory targetType="solution" targetId={solution.id} /><ItemReactionBar target={{ kind: 'solution', id: solution.id }} /><DiscussionList title={t('details.solutionDiscussion')} comments={discussion.comments} currentUserId={discussion.currentUserId} storageError={discussion.storageError} onComment={(content) => discussion.addComment(content)} onEdit={discussion.editComment} onDelete={discussion.deleteComment} /></div>
     </section>
   );
 }
@@ -352,14 +353,15 @@ export function SolutionDetails({ id, onNavigate }: { id: string; onNavigate: (p
 type KnowledgeTab = 'Resumo' | 'Versões' | 'Casos reais' | 'Referências';
 
 function SolutionKnowledgeTabs({ solution, versions, cases, references, improvements }: { solution: Solution; versions: SolutionVersion[]; cases: CaseStudy[]; references: Evidence[]; improvements: Improvement[] }) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<KnowledgeTab>('Resumo');
   const tabs: KnowledgeTab[] = ['Resumo', 'Versões', 'Casos reais', 'Referências'];
 
   return (
     <div className="mt-10 rounded-[1.75rem] border border-teal-100 bg-teal-50/40 p-2">
-      <div className="grid gap-2 sm:grid-cols-4" role="tablist" aria-label="Conhecimento da solução">
+      <div className="grid gap-2 sm:grid-cols-4" role="tablist" aria-label={t('details.tabsA11y')}>
         {tabs.map((tab) => (
-          <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${activeTab === tab ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}>{tab}</button>
+          <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${activeTab === tab ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}>{t(({ 'Resumo':'details.tab.summary','Versões':'details.tab.versions','Casos reais':'details.tab.cases','Referências':'details.tab.references' } as const)[tab])}</button>
         ))}
       </div>
       <div className="p-5">
@@ -373,15 +375,13 @@ function SolutionKnowledgeTabs({ solution, versions, cases, references, improvem
 }
 
 function KnowledgeSummary({ solution, versions, cases, references, improvements }: { solution: Solution; versions: SolutionVersion[]; cases: CaseStudy[]; references: Evidence[]; improvements: Improvement[] }) {
-  return <div className="space-y-5"><div><h2 className="text-xl font-semibold">Histórico vivo da solução</h2><p className="mt-2 text-sm leading-6 text-muted">{solution.summary} O histórico conecta melhorias, evidências, versões e casos reais para apoiar evolução contínua.</p></div><div className="grid gap-3 md:grid-cols-4"><Info label="Versões" value={String(versions.length)} /><Info label="Melhorias" value={String(improvements.length)} /><Info label="Casos reais" value={String(cases.length)} /><Info label="Referências" value={String(references.length)} /></div>{improvements.map((improvement) => <div key={improvement.id} className="rounded-3xl bg-white p-5 shadow-sm"><h3 className="flex items-center gap-2 font-semibold"><GitBranch size={18} />{improvement.title}</h3><p className="mt-2 text-sm leading-6 text-muted">{improvement.summary}</p></div>)}</div>;
+  const { locale, t } = useTranslation(); return <div className="space-y-5"><div><h2 className="text-xl font-semibold">{t('details.history')}</h2><p className="mt-2 text-sm leading-6 text-muted">{solution.summary} {t('details.historyDescription')}</p></div><div className="grid gap-3 md:grid-cols-4"><Info label={t('details.tab.versions')} value={formatNumber(versions.length, locale)} /><Info label={t('details.improvements')} value={formatNumber(improvements.length, locale)} /><Info label={t('details.tab.cases')} value={formatNumber(cases.length, locale)} /><Info label={t('details.tab.references')} value={formatNumber(references.length, locale)} /></div>{improvements.map((improvement) => <div key={improvement.id} className="rounded-3xl bg-white p-5 shadow-sm"><h3 className="flex items-center gap-2 font-semibold"><GitBranch size={18} />{improvement.title}</h3><p className="mt-2 text-sm leading-6 text-muted">{improvement.summary}</p></div>)}</div>;
 }
 
-function VersionTimeline({ versions }: { versions: SolutionVersion[] }) {
-  return <div className="space-y-4">{versions.map((version, index) => <div key={version.id} className="grid gap-4 md:grid-cols-[90px_1fr]"><div className="flex items-start gap-3 md:block"><span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-teal-700 text-sm font-bold text-white">{version.version}</span>{index < versions.length - 1 && <span className="hidden h-full min-h-16 w-px bg-teal-200 md:mx-6 md:block" />}</div><div className="rounded-3xl bg-white p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{version.summary}</h3><span className="text-xs font-semibold uppercase tracking-wide text-teal-700">{formatDate(version.createdAt)}</span></div><p className="mt-1 text-sm text-muted">Autor: {version.author}</p><ul className="mt-3 grid gap-2 text-sm text-slate-700 md:grid-cols-3">{version.changes.map((change) => <li key={change} className="rounded-2xl bg-slate-50 px-3 py-2">{change}</li>)}</ul></div></div>)}</div>;
+function VersionTimeline({ versions }: { versions: SolutionVersion[] }) { const { locale, t } = useTranslation(); return <div className="space-y-4">{versions.map((version, index) => <div key={version.id} className="grid gap-4 md:grid-cols-[90px_1fr]"><div className="flex items-start gap-3 md:block"><span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-teal-700 text-sm font-bold text-white">{version.version}</span>{index < versions.length - 1 && <span className="hidden h-full min-h-16 w-px bg-teal-200 md:mx-6 md:block" />}</div><div className="rounded-3xl bg-white p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{version.summary}</h3><span className="text-xs font-semibold uppercase tracking-wide text-teal-700">{formatCivilDateUtc(version.createdAt, locale)}</span></div><p className="mt-1 text-sm text-muted">{t('details.versionAuthor', { author: version.author })}</p><ul className="mt-3 grid gap-2 text-sm text-slate-700 md:grid-cols-3">{version.changes.map((change) => <li key={change} className="rounded-2xl bg-slate-50 px-3 py-2">{change}</li>)}</ul></div></div>)}</div>;
 }
 
-function CaseStudyGrid({ cases }: { cases: CaseStudy[] }) {
-  return <div className="grid gap-4">{cases.map((study) => <article key={study.id} className="overflow-hidden rounded-3xl bg-white shadow-sm"><div className="grid gap-0 md:grid-cols-[220px_1fr]"><img src={study.photos[0]} alt={`Foto do caso real em ${study.city}`} className="h-52 w-full object-cover md:h-full" /><div className="p-5"><Badge>{study.city}, {study.country}</Badge><h3 className="mt-3 text-lg font-semibold">{study.organization}</h3><p className="mt-2 text-sm font-semibold text-teal-800">{study.results}</p><div className="mt-4 grid gap-3 md:grid-cols-2"><Info label="Antes" value={study.before} /><Info label="Depois" value={study.after} /></div></div></div></article>)}</div>;
+function CaseStudyGrid({ cases }: { cases: CaseStudy[] }) { const { t } = useTranslation(); return <div className="grid gap-4">{cases.map((study) => <article key={study.id} className="overflow-hidden rounded-3xl bg-white shadow-sm"><div className="grid gap-0 md:grid-cols-[220px_1fr]"><img src={study.photos[0]} alt={t('details.casePhoto', { city: study.city })} className="h-52 w-full object-cover md:h-full" /><div className="p-5"><Badge>{study.city}, {study.country}</Badge><h3 className="mt-3 text-lg font-semibold">{study.organization}</h3><p className="mt-2 text-sm font-semibold text-teal-800">{study.results}</p><div className="mt-4 grid gap-3 md:grid-cols-2"><Info label={t('details.before')} value={study.before} /><Info label={t('details.after')} value={study.after} /></div></div></div></article>)}</div>;
 }
 
 function EvidenceList({ references }: { references: Evidence[] }) {
@@ -394,4 +394,3 @@ function Action({ icon, label, onClick, pressed, ariaLabel }: { icon: ReactNode;
 function Feedback({ message }: { message: string }) { return <p aria-live="polite" className="mt-4 break-words text-sm font-semibold text-slate-700">{message}</p>; }
 function Info({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) { return <div className="rounded-2xl bg-slate-50 p-4"><span className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted">{icon}{label}</span><p className="mt-2 text-sm font-semibold text-slate-800">{value}</p></div>; }
 function Metric({ icon, value, label }: { icon: ReactNode; value: number; label: string }) { return <span className="inline-flex items-center gap-2 rounded-2xl bg-teal-50 px-3 py-2 text-teal-800">{icon}{value} {label}</span>; }
-function formatDate(date: string) { return new Date(date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }); }

@@ -58,7 +58,10 @@ test('real SQL assertions cover recommendation behavior and privileges',()=>{
 test('pagination error keeps existing cards and offers retry',()=>{
  assert.match(card,/state\.error && !state\.items\.length/);
  assert.match(card,/state\.items\.map/);
- assert.match(card,/state\.error && <p role=\"alert\"[\s\S]*Não foi possível carregar mais recomendações/);
+ assert.match(card,/state\.error && <p role=\"alert\"[\s\S]*t\('recommendation\.moreError'\)/);
+ const resources=readFileSync('src/i18n/locales/engagement.ts','utf8');
+ assert.match(resources,/'recommendation\.moreError':'Não foi possível carregar mais recomendações\. Tente novamente\.'/);
+ assert.match(resources,/'recommendation\.moreError':'Unable to load more recommendations\. Try again\.'/);
  assert.match(card,/state\.items\.length < state\.total[\s\S]*onClick=\{state\.loadMore\}/);
  assert.doesNotMatch(card,/state\.error\?[^:]+:[^:]*state\.items\.map/);
 });

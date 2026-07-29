@@ -24,7 +24,8 @@
     "test:sprint32": "node --experimental-strip-types --test scripts/sprint32Search.test.ts",
     "test:sprint33": "node --experimental-strip-types --test scripts/sprint33GeographicSearch.test.ts",
     "test:sprint34": "node --experimental-strip-types --test scripts/sprint34Recommendations.test.ts",
-    "test:sprint35": "node --experimental-strip-types --test scripts/sprint35Taxonomy.test.ts"
+    "test:sprint35": "node --experimental-strip-types --test scripts/sprint35Taxonomy.test.ts",
+    "test:sprint36": "node --experimental-strip-types --test src/i18n/i18n.test.ts"
   },
   "dependencies": {
     "vite": "latest",

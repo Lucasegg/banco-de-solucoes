@@ -4,8 +4,11 @@ import { useNotificationsContext } from '../../context/NotificationsContext';
 import { formatNotificationDate } from '../../utils/formatNotificationDate';
 import { safeNotificationActionUrl } from '../../notifications/navigation';
 import { NotificationBadge } from './NotificationBadge';
+import { useTranslation } from '../../i18n/I18nProvider';
+import { formatNumber } from '../../i18n/format';
 
 export function NotificationBell({ onNavigate }: { onNavigate: (page: string) => void }) {
+  const { locale, t } = useTranslation();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement | null>(null);
   const {
@@ -37,7 +40,7 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        aria-label={`Notificações: ${unreadCount} não lidas`}
+        aria-label={t('notifications.bellLabel', { count: formatNumber(unreadCount, locale) })}
         aria-expanded={open}
         className="relative rounded-full p-2 text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
       >
@@ -46,11 +49,11 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
       </button>
       {open && (
         <section
-          aria-label="Notificações recentes"
+          aria-label={t('notifications.recent')}
           className="absolute right-0 top-12 z-30 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
         >
           <div className="flex items-center justify-between border-b px-4 py-3">
-            <strong>Notificações</strong>
+            <strong>{t('notifications.title')}</strong>
             <button
               onClick={() => {
                 setOpen(false);
@@ -58,14 +61,14 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
               }}
               className="text-sm font-semibold text-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
             >
-              Ver todas
+              {t('notifications.viewAll')}
             </button>
           </div>
           <div aria-live="polite">
-            {loading && <p className="p-4 text-sm text-muted">Carregando...</p>}
+            {loading && <p className="p-4 text-sm text-muted">{t('common.loadingDots')}</p>}
             {error && <p className="p-4 text-sm text-rose-700">{error}</p>}
             {!loading && !error && recentItems.length === 0 && (
-              <p className="p-4 text-sm text-muted">Você ainda não possui notificações.</p>
+              <p className="p-4 text-sm text-muted">{t('notifications.noNotifications')}</p>
             )}
             {recentItems.map((item) => (
               <button
@@ -76,13 +79,13 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
               >
                 <span className="flex items-start gap-2">
                   {!item.readAt && (
-                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-600" aria-label="Não lida" />
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-600" aria-label={t('notifications.unread')} />
                   )}
                   <span>
                     <strong className="block text-sm">{item.title}</strong>
                     <span className="line-clamp-2 block text-xs text-muted">{item.message}</span>
                     <time className="mt-1 block text-xs text-slate-500">
-                      {formatNotificationDate(item.createdAt)}
+                      {formatNotificationDate(item.createdAt, locale, t)}
                     </time>
                   </span>
                 </span>
