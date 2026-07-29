@@ -12,9 +12,11 @@ O fluxo segue **UI → contexto/hook de domínio → repository → Supabase**. 
 
 ## Fluxos novos e existentes
 
-Depois que Auth conclui a sessão e, quando aplicável, o desafio MFA, o provider consulta o status. Versões pendentes bloqueiam somente conteúdo protegido e mostram links reais, confirmação desmarcada e logout. Home, Fale Conosco, documentos legais e LGPD permanecem públicos. Callback OAuth, recuperação de senha e MFA estão na lista de bypass. A tela é removida sem redirecionamento depois do aceite, preservando o destino pretendido. Usuários existentes verão a solicitação uma vez; a unicidade evita repetições.
+Depois que Auth conclui a sessão e, quando aplicável, o desafio MFA, o provider consulta o status. A allowlist de bypass contém exatamente as rotas `home`, `contact`, `privacy`, `terms`, `lgpd`, `login`, `register`, `password-recovery` e `mfa-challenge`; sessões não autenticadas e o estado de desafio MFA também ignoram a verificação legal. Nas demais rotas, estados idle, loading, error ou status ausente falham fechados; versões pendentes mostram links reais, confirmação desmarcada e logout. A tela é removida sem redirecionamento depois do aceite, preservando o destino pretendido. Usuários existentes verão a solicitação uma vez; a unicidade evita repetições.
 
 Minha Conta mostra versões e datas aceitas, em modo somente leitura, com links aos documentos vigentes. Erros de consulta bloqueiam o conteúdo protegido e exibem mensagem genérica, nunca texto técnico do Supabase.
+
+O gate é apenas controle de navegação e experiência no navegador. Ele não substitui autorização no banco: RLS, privilégios mínimos e validação das RPCs continuam sendo a fronteira de segurança para dados e operações.
 
 ## Publicar nova versão
 

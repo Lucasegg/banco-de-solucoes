@@ -6,6 +6,7 @@ import { useFavorites, type Favorite, type FavoriteKind } from '../hooks/useFavo
 import { useTranslation } from '../i18n/I18nProvider';
 import { useLegalConsent } from '../context/LegalConsentContext';
 import type { LegalDocumentType } from '../legal/versions';
+import { selectCurrentLegalAcceptance } from '../legal/selectCurrentAcceptance';
 
 export function Account({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
@@ -63,7 +64,7 @@ export function Account({ onNavigate }: { onNavigate: (page: string) => void }) 
   );
 }
 
-function LegalDocument({ type, label, href, link }: { type: LegalDocumentType; label: string; href: string; link: string }) { const { t, locale } = useTranslation(); const { status } = useLegalConsent(); const acceptance = status?.acceptances.find((item) => item.documentType === type); return <article className="rounded-2xl bg-slate-50 p-4"><h3 className="font-semibold">{label}</h3><p className="mt-2">{acceptance?.documentVersion ?? t('account.notAccepted')}</p>{acceptance && <p className="mt-1 text-sm text-muted">{t('account.acceptedAt', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(acceptance.acceptedAt)) })}</p>}<a className="mt-3 inline-block font-semibold text-primary underline" href={href}>{link}</a></article>; }
+function LegalDocument({ type, label, href, link }: { type: LegalDocumentType; label: string; href: string; link: string }) { const { t, locale } = useTranslation(); const { status } = useLegalConsent(); const acceptance = selectCurrentLegalAcceptance(status, type); return <article className="rounded-2xl bg-slate-50 p-4"><h3 className="font-semibold">{label}</h3><p className="mt-2">{acceptance?.documentVersion ?? t('account.notAccepted')}</p>{acceptance && <p className="mt-1 text-sm text-muted">{t('account.acceptedAt', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(acceptance.acceptedAt)) })}</p>}<a className="mt-3 inline-block font-semibold text-primary underline" href={href}>{link}</a></article>; }
 
 function FavoriteGroup({ title, kind, items, emptyMessage, onNavigate, onRemove }: { title: string; kind: FavoriteKind; items: Favorite[]; emptyMessage: string; onNavigate: (page: string) => void; onRemove: (id: string, kind: FavoriteKind) => Promise<void> }) {
   const { t } = useTranslation();
