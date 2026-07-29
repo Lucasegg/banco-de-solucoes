@@ -1,6 +1,15 @@
 -- Sprint 42: secure reports for problems and solutions.
 begin;
 
+do $$
+begin
+  if to_regprocedure('public.is_admin()') is null then
+    raise exception 'Sprint 42 requires public.is_admin() from the administrative authorization baseline'
+      using errcode = '55000';
+  end if;
+end
+$$;
+
 create table public.content_reports (
   id uuid primary key default gen_random_uuid(),
   reporter_id uuid not null,

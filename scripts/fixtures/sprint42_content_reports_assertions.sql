@@ -36,6 +36,7 @@ insert into public.solutions(id,author_id,title,summary,description,category,org
 set role authenticated;
 select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000001',false);
 do $$ begin
+  if public.is_admin() then raise exception 'member recognized as administrator'; end if;
   begin perform * from public.content_reports; raise exception 'authenticated SELECT accepted'; exception when insufficient_privilege then null; end;
   begin insert into public.content_reports(reporter_id,target_type,target_id,reason) values(auth.uid(),'problem',gen_random_uuid(),'spam'); raise exception 'direct INSERT accepted'; exception when insufficient_privilege then null; end;
   begin update public.content_reports set status='dismissed'; raise exception 'direct UPDATE accepted'; exception when insufficient_privilege then null; end;
@@ -66,6 +67,7 @@ select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000099'
 do $$
 declare first_row record; second_row record; problem_report uuid; solution_report uuid;
 begin
+  if not public.is_admin() then raise exception 'administrator not recognized'; end if;
   if (select count(*) from public.get_admin_content_reports())<>2 then raise exception 'admin queue failed';end if;
   select * into first_row from public.get_admin_content_reports(null,null,null,1,0);
   select * into second_row from public.get_admin_content_reports(null,null,null,1,1);

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { loadMyContentReports } from '../src/components/reports/myContentReportsState.ts';
@@ -20,3 +21,5 @@ test('my and admin lists reject malformed responses and preserve pagination para
 test('public objects never contain reporter or moderator identities',()=>{for(const parsed of [parseCreatedContentReport(created),parseMyContentReport(mine),parseAdminContentReport(admin),parseModeratedContentReport(moderated)]){assert.ok(parsed);assert.equal('reporterId' in parsed,false);assert.equal('moderatorId' in parsed,false);assert.doesNotMatch(JSON.stringify(parsed),/undefined/)}});
 
 test('my reports loader always ends loading with safe unavailable and repository errors',async()=>{assert.deepEqual(await loadMyContentReports(null,'Indisponível'),{loading:false,items:[],error:'Indisponível'});assert.deepEqual(await loadMyContentReports({listMine:async()=>({ok:false,message:'Falha segura'})},'Indisponível'),{loading:false,items:[],error:'Falha segura'});assert.deepEqual(await loadMyContentReports({listMine:async()=>({ok:true,data:[]})},'Indisponível'),{loading:false,items:[],error:''})});
+
+test('isolated PostgreSQL installs the production-compatible admin contract before Sprint 42',()=>{const compatibility=readFileSync('scripts/fixtures/sprint42_admin_compatibility.sql','utf8');const migration=readFileSync('supabase/migrations/20260729140000_sprint42_content_reports.sql','utf8');const workflow=readFileSync('.github/workflows/deploy.yml','utf8');assert.match(compatibility,/auth\.uid\(\)[\s\S]*public\.profiles[\s\S]*role = 'admin'/);assert.match(compatibility,/security definer[\s\S]*search_path = pg_catalog, public/i);assert.doesNotMatch(compatibility,/\(p?_?user_id uuid\)/i);assert.match(migration,/to_regprocedure\('public\.is_admin\(\)'\)[\s\S]*requires public\.is_admin/);assert.ok(workflow.indexOf('sprint42_admin_compatibility.sql')<workflow.indexOf('20260729140000_sprint42_content_reports.sql'))});

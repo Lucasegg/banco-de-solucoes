@@ -98,6 +98,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260729130000_sprint39_legal_consent.sql
+      - name: Install Sprint 42 administrative compatibility contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint42_admin_compatibility.sql
       - name: Apply the Sprint 42 content reports migration
         env:
           PGPASSWORD: postgres
