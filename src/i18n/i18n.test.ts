@@ -6,6 +6,7 @@ import { enUS, ptBR } from './resources.ts';
 import { formatCivilDateUtc, formatCount, formatDate, formatDurationClock, formatNumber } from './format.ts';
 import { readStoredLocale, writeStoredLocale, type LocaleStorage } from './storage.ts';
 import { applyLocaleToDocument } from './document.ts';
+import { getKnownCategoryKey } from './presentation.ts';
 
 test('interface inventory has no pending files', () => {
   const inventory = readFileSync(new URL('../../docs/sprint36-interface-inventory.md', import.meta.url), 'utf8');
@@ -69,6 +70,17 @@ test('Intl formatters localize and safely handle invalid values', () => {
   const t = (key: Parameters<typeof translate>[1]) => translate('en-US', key);
   assert.equal(formatCount(1, 'en-US', t, 'count.result.one', 'count.result.other'), '1 result');
   assert.equal(formatCount(2, 'en-US', t, 'count.result.one', 'count.result.other'), '2 results');
+});
+
+test('known categories are translated and dynamic categories are preserved', () => {
+  const knownKey = getKnownCategoryKey('Educação');
+  assert.equal(knownKey, 'category.Educação');
+  assert.equal(knownKey ? translate('en-US', knownKey) : 'Educação', 'Education');
+
+  const dynamicCategory = 'Agricultura urbana';
+  const dynamicKey = getKnownCategoryKey(dynamicCategory);
+  assert.equal(dynamicKey, undefined);
+  assert.equal(dynamicKey ? translate('en-US', dynamicKey) : dynamicCategory, dynamicCategory);
 });
 
 test('migrated screens do not regress to hard-coded interface copy', () => {

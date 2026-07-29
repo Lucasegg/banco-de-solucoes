@@ -8,8 +8,8 @@ import { TaxonomyMultiSelect, TaxonomySelect } from '../components/taxonomy/Taxo
 import { useTranslation } from '../i18n/I18nProvider';
 import { formatCount, formatDate, formatNumber } from '../i18n/format';
 import type { TranslationKey } from '../i18n/resources';
-import { knownCategoryKeys, problemStatusKeys, solutionStatusKeys } from '../i18n/presentation';
-import type { ProblemCategory, ProblemStatus, SolutionStatus } from '../types/domain';
+import { getKnownCategoryKey, problemStatusKeys, solutionStatusKeys } from '../i18n/presentation';
+import type { ProblemStatus, SolutionStatus } from '../types/domain';
 
 const sorts: SearchSort[] = ['relevance', 'recent', 'oldest', 'favorites', 'comments', 'updated'];
 const radii: GeoSearch['radiusKm'][] = [1, 5, 10, 25, 50, 100];
@@ -25,7 +25,8 @@ export function SearchResultCard({ item, query, tab, onOpen }: { item: SearchRes
   const metadata = [item.author_name, formatDate(item.created_at, locale), formatCount(item.favorites, locale, t, 'search.favorite.one', 'search.favorite.other'), formatCount(item.comments, locale, t, 'search.comment.one', 'search.comment.other')];
   if (typeof item.distance_km === 'number') metadata.push(`${formatNumber(item.distance_km, locale, { maximumFractionDigits: 1 })} km`);
   if (tab === 'problems') metadata.push(formatCount(item.solution_count ?? 0, locale, t, 'search.solution.one', 'search.solution.other'));
-  const category = knownCategoryKeys[item.category as ProblemCategory] ? t(knownCategoryKeys[item.category as ProblemCategory]) : item.category;
+  const categoryKey = getKnownCategoryKey(item.category);
+  const category = categoryKey ? t(categoryKey) : item.category;
   const statusKey = tab === 'problems' ? problemStatusKeys[item.status as ProblemStatus] : solutionStatusKeys[item.status as SolutionStatus];
   return <article className="rounded-3xl border border-line bg-white p-5 shadow-sm"><button className="text-left text-xl font-semibold underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-slate-900" onClick={() => onOpen(item.id)}>{highlight(item.title, query)}</button><p className="mt-2 text-sm text-muted">{highlight(item.summary, query)}</p><div className="mt-4 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-slate-100 px-2 py-1">{category}</span>{item.status && <span className="rounded-full bg-slate-100 px-2 py-1">{statusKey ? t(statusKey) : item.status}</span>}{item.city && <span className="rounded-full bg-slate-100 px-2 py-1">{item.city}, {item.state}</span>}{item.tags.slice(0,5).map((tag) => <span key={tag} className="rounded-full bg-slate-100 px-2 py-1">#{tag}</span>)}</div><p className="mt-4 text-xs text-muted">{metadata.join(' · ')}</p></article>;
 }

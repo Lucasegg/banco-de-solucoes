@@ -29,3 +29,9 @@ export const impactLevelKeys: Record<ImpactLevel, TranslationKey> = { local: 'im
 export const maturityLevelKeys: Record<SolutionMaturityLevel, TranslationKey> = { Ideia: 'maturity.Ideia', 'Protótipo': 'maturity.Protótipo', Piloto: 'maturity.Piloto', 'Em operação': 'maturity.Em operação', 'Escalável': 'maturity.Escalável' };
 export const difficultyKeys: Record<ImplementationDifficulty, TranslationKey> = { Baixa: 'difficulty.Baixa', 'Média': 'difficulty.Média', Alta: 'difficulty.Alta' };
 export const knownCategoryKeys = { Infraestrutura: 'category.Infraestrutura', 'Educação': 'category.Educação', 'Saúde': 'category.Saúde', 'Segurança': 'category.Segurança', Tecnologia: 'category.Tecnologia', Mobilidade: 'category.Mobilidade', 'Meio Ambiente': 'category.Meio Ambiente', 'Assistência Social': 'category.Assistência Social', Empreendedorismo: 'category.Empreendedorismo', Outros: 'category.Outros' } as const satisfies Record<string, TranslationKey>;
+
+export function getKnownCategoryKey(category: string): TranslationKey | undefined {
+  return category in knownCategoryKeys
+    ? knownCategoryKeys[category as keyof typeof knownCategoryKeys]
+    : undefined;
+}
