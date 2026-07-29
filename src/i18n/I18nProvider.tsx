@@ -7,8 +7,8 @@ import { applyLocaleToDocument } from './document';
 type I18nContextValue = { locale: SupportedLocale; setLocale: (locale: SupportedLocale) => void; t: (key: TranslationKey, values?: Record<string, string | number>) => string };
 const I18nContext = createContext<I18nContextValue>({ locale: DEFAULT_LOCALE, setLocale: () => undefined, t: (key) => key });
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<SupportedLocale>(() => detectLocale(readStoredLocale(browserLocaleStorage()), navigator.languages));
+export function I18nProvider({ children, initialLocale }: { children: ReactNode; initialLocale?: SupportedLocale }) {
+  const [locale, setLocaleState] = useState<SupportedLocale>(() => initialLocale ?? detectLocale(readStoredLocale(browserLocaleStorage()), typeof navigator === 'undefined' ? [] : navigator.languages));
   const setLocale = useCallback((next: SupportedLocale) => {
     const safeLocale = normalizeLocale(next) ?? DEFAULT_LOCALE;
     writeStoredLocale(browserLocaleStorage(), safeLocale);

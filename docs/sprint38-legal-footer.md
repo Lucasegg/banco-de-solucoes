@@ -2,9 +2,11 @@
 
 ## Entrega e navegação
 
-O `InstitutionalFooter` é parte do `Layout`, portanto aparece de forma consistente nas telas públicas e permanece ao fim da viewport em páginas curtas. Seus controles usam o roteador hash existente para abrir `#/contact`, `#/privacy`, `#/terms` e `#/lgpd`; assim, links copiados e atualizações do navegador continuam compatíveis com o deploy estático no GitHub Pages. O ano é calculado no navegador. As páginas usam `article`, `header`, seções nomeadas e navegação rotulada, além do foco visível global.
+O `InstitutionalFooter` é parte do `Layout`, portanto aparece de forma consistente nas telas públicas e permanece ao fim da viewport em páginas curtas. Seus links nativos usam `href` para abrir `#/contact`, `#/privacy`, `#/terms` e `#/lgpd`; assim, funcionam sem JavaScript de clique, podem ser copiados ou abertos em nova aba e continuam compatíveis com o deploy estático no GitHub Pages. Atalhos das páginas legais para o Fale Conosco também são âncoras nativas. O ano é calculado no navegador. As páginas usam `article`, `header`, seções nomeadas e navegação rotulada, além do foco visível global.
 
 Toda a interface nova está nos recursos `pt-BR` e `en-US`, com paridade verificada automaticamente. A data exibida identifica a versão do conteúdo e deve ser revista quando houver alteração material nas práticas ou nos textos.
+
+Os testes da Sprint 38 carregam os componentes TSX pelo modo SSR do Vite e usam `react-dom/server` para verificar o HTML realmente renderizado em ambos os idiomas. As asserções cobrem o landmark do rodapé, `href`s nativos, ano dinâmico, títulos e seções legais, atalhos de contato e o link externo seguro da ANPD. O roteador hash foi extraído para funções puras e é exercitado diretamente com rotas legais, query string e fallback; a paridade integral dos recursos de tradução continua validada.
 
 ## Auditoria de privacidade e armazenamento
 

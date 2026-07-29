@@ -32,92 +32,7 @@ import { Contact } from './pages/Contact';
 import { Privacy } from './pages/Privacy';
 import { Terms } from './pages/Terms';
 import { Lgpd } from './pages/Lgpd';
-
-const pageToHashPath: Record<string, string> = {
-  home: '/',
-  problemas: '/problems',
-  solucoes: '/solutions',
-  'novo-problema': '/problems/new',
-  'nova-solucao': '/solutions/new',
-  sobre: '/about',
-  login: '/login',
-  register: '/register',
-  'password-recovery': '/password-recovery',
-  profile: '/profile',
-  contributions: '/contributions',
-  favorites: '/favorites',
-  diagnostics: '/diagnostics',
-  account: '/account',
-  'mfa-challenge': '/mfa-challenge',
-  admin: '/admin',
-  'admin-system': '/admin/system',
-  'admin-users': '/admin/users',
-  'admin-problems': '/admin/problems',
-  'admin-solutions': '/admin/solutions',
-  'admin-comments': '/admin/comments',
-  'admin-reports': '/admin/reports',
-  'admin-audit': '/admin/audit',
-  'admin-contributions': '/admin/contributions',
-  'admin-taxonomy': '/admin/taxonomy',
-  notifications: '/notifications',
-  mapa: '/mapa',
-  search: '/search',
-  contact: '/contact',
-  privacy: '/privacy',
-  terms: '/terms',
-  lgpd: '/lgpd',
-};
-
-function normalizeHash(hash: string) {
-  return hash.replace(/^#/, '') || '/';
-}
-
-function pageFromHash(hash: string) {
-  const path = normalizeHash(hash).split('?')[0];
-
-  if (path === '/problems') return 'problemas';
-  if (path === '/problems/new') return 'novo-problema';
-  if (path.startsWith('/problems/')) return `problema:${path.replace('/problems/', '')}`;
-  if (path === '/solutions') return 'solucoes';
-  if (path === '/solutions/new') return 'nova-solucao';
-  if (path.startsWith('/solutions/')) return `solucao:${path.replace('/solutions/', '')}`;
-  if (path === '/about') return 'sobre';
-  if (path === '/login') return 'login';
-  if (path === '/register') return 'register';
-  if (path === '/password-recovery') return 'password-recovery';
-  if (path === '/profile') return 'profile';
-  if (path === '/account') return 'account';
-  if (path === '/mfa-challenge') return 'mfa-challenge';
-  if (path === '/admin/system') return 'admin-system';
-  if (path === '/admin/users') return 'admin-users';
-  if (path === '/admin/problems') return 'admin-problems';
-  if (path === '/admin/solutions') return 'admin-solutions';
-  if (path === '/admin/comments') return 'admin-comments';
-  if (path === '/admin/reports') return 'admin-reports';
-  if (path === '/admin/audit') return 'admin-audit';
-  if (path === '/admin/contributions') return 'admin-contributions';
-  if (path === '/admin/taxonomy') return 'admin-taxonomy';
-  if (path === '/admin') return 'admin';
-  if (path === '/notifications' || path === '/notificacoes') return 'notifications';
-  if (path === '/mapa') return 'mapa';
-  if (path === '/search') return 'search';
-  if (path === '/contact') return 'contact';
-  if (path === '/privacy') return 'privacy';
-  if (path === '/terms') return 'terms';
-  if (path === '/lgpd') return 'lgpd';
-  if (path === '/contributions') return 'contributions';
-  if (path === '/favorites') return 'favorites';
-  if (path === '/diagnostics') return 'diagnostics';
-  if (path.startsWith('/contributions/')) return `contribution:${path.replace('/contributions/', '')}`;
-  return 'home';
-}
-
-function hashFromPage(page: string) {
-  if (page.startsWith('problema:')) return `#/problems/${page.replace('problema:', '')}`;
-  if (page.startsWith('solucao:')) return `#/solutions/${page.replace('solucao:', '')}`;
-  if (page.startsWith('contribution:')) return `#/contributions/${page.replace('contribution:', '')}`;
-  return `#${pageToHashPath[page] ?? '/'}`;
-}
+import { hashFromPage, pageFromHash } from './routing/hashRouter';
 
 export function App() {
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
@@ -178,9 +93,9 @@ export function App() {
       {page === 'nova-solucao' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin} authPrompt={{ description: 'Para cadastrar uma solução, você precisa estar conectado à sua conta.', onRegisterRequired: redirectToRegister, onBack: () => setPage('solucoes') }}><SolutionForm /></AuthenticatedRoute>}
       {page === 'sobre' && <About />}
       {page === 'contact' && <Contact />}
-      {page === 'privacy' && <Privacy onNavigate={setPage} />}
-      {page === 'terms' && <Terms onNavigate={setPage} />}
-      {page === 'lgpd' && <Lgpd onNavigate={setPage} />}
+      {page === 'privacy' && <Privacy />}
+      {page === 'terms' && <Terms />}
+      {page === 'lgpd' && <Lgpd />}
       {page === 'login' && <Login onNavigate={setPage} />}
       {page === 'register' && <Register onNavigate={setPage} />}
       {page === 'mfa-challenge' && mfaRequired && <MfaChallenge onNavigate={setPage} />}

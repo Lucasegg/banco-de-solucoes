@@ -2,7 +2,7 @@ export const legalPtBR = {
   'footer.label': 'Rodapé institucional', 'footer.description': 'Conhecimento compartilhado para desafios reais.',
   'footer.contact': 'Fale Conosco', 'footer.privacy': 'Política de Privacidade', 'footer.terms': 'Termos de Uso', 'footer.lgpd': 'LGPD e Direitos do Titular',
   'footer.copyright': '© {{year}} Banco de Soluções. Conteúdo disponibilizado conforme estes termos.',
-  'legal.updatedLabel': 'Última atualização: 29 de julho de 2026', 'legal.contactLink': 'Envie uma solicitação pelo Fale Conosco',
+  'legal.updatedLabel': 'Última atualização: 29 de julho de 2026', 'legal.contactLink': 'Envie uma solicitação pelo Fale Conosco', 'legal.anpdLink': 'Acessar o site oficial da ANPD',
   'privacy.title': 'Política de Privacidade', 'privacy.intro': 'Esta política descreve como o Banco de Soluções trata dados pessoais nas funcionalidades atualmente disponíveis.',
   'privacy.data.title': 'Dados tratados', 'privacy.data.body': 'Podemos tratar nome, e-mail, avatar, identificadores de conta e autenticação; dados de perfil; conteúdo, autoria e histórico de publicações; comentários, reações, favoritos, contribuições, denúncias, notificações e registros administrativos. Problemas podem conter localização e imagens informadas pelo usuário.',
   'privacy.purposes.title': 'Finalidades e bases legais possíveis', 'privacy.purposes.body': 'Os dados são usados para criar e proteger contas, manter sessões, publicar e organizar conhecimento, permitir interações, moderar conteúdo, prevenir abuso, responder solicitações e operar com segurança. Conforme o contexto, o tratamento pode se apoiar em consentimento, execução dos serviços solicitados, legítimo interesse, exercício regular de direitos ou cumprimento de obrigação legal.',
@@ -35,7 +35,7 @@ export const legalPtBR = {
 
 export const legalEnUS = {
   'footer.label': 'Institutional footer', 'footer.description': 'Shared knowledge for real challenges.', 'footer.contact': 'Contact us', 'footer.privacy': 'Privacy Policy', 'footer.terms': 'Terms of Use', 'footer.lgpd': 'LGPD and Data Subject Rights', 'footer.copyright': '© {{year}} Solution Bank. Content made available under these terms.',
-  'legal.updatedLabel': 'Last updated: July 29, 2026', 'legal.contactLink': 'Submit a request through Contact us',
+  'legal.updatedLabel': 'Last updated: July 29, 2026', 'legal.contactLink': 'Submit a request through Contact us', 'legal.anpdLink': 'Visit the official ANPD website',
   'privacy.title': 'Privacy Policy', 'privacy.intro': 'This policy describes how Solution Bank processes personal data in the features currently available.',
   'privacy.data.title': 'Data processed', 'privacy.data.body': 'We may process name, email, avatar, account and authentication identifiers; profile data; publication content, authorship and history; comments, reactions, favorites, contributions, reports, notifications and administrative records. Problems may contain location and images provided by users.',
   'privacy.purposes.title': 'Purposes and possible legal bases', 'privacy.purposes.body': 'Data is used to create and protect accounts, maintain sessions, publish and organize knowledge, enable interactions, moderate content, prevent abuse, respond to requests and operate securely. Depending on the context, processing may rely on consent, performance of requested services, legitimate interests, exercise of legal claims or compliance with legal obligations.',

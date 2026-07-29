@@ -92,7 +92,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
         </nav>
       </header>
       <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">{children}</main>
-      <InstitutionalFooter onNavigate={onNavigate} />
+      <InstitutionalFooter />
     </div>
   );
 }

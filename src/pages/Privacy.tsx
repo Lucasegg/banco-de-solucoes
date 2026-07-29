@@ -7,4 +7,4 @@ const sections: LegalSection[] = [
   { title: 'privacy.sharing.title', body: 'privacy.sharing.body' }, { title: 'privacy.rights.title', body: 'privacy.rights.body' },
   { title: 'privacy.requests.title', body: 'privacy.requests.body', contact: true },
 ];
-export function Privacy({ onNavigate }: { onNavigate: (page: string) => void }) { return <LegalPage title="privacy.title" intro="privacy.intro" sections={sections} onNavigate={onNavigate} />; }
+export function Privacy() { return <LegalPage title="privacy.title" intro="privacy.intro" sections={sections} />; }

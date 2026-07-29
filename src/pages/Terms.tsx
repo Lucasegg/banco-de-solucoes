@@ -6,4 +6,4 @@ const sections: LegalSection[] = [
   { title: 'terms.availability.title', body: 'terms.availability.body' }, { title: 'terms.liability.title', body: 'terms.liability.body' },
   { title: 'terms.changes.title', body: 'terms.changes.body' }, { title: 'terms.contact.title', body: 'terms.contact.body', contact: true },
 ];
-export function Terms({ onNavigate }: { onNavigate: (page: string) => void }) { return <LegalPage title="terms.title" intro="terms.intro" sections={sections} onNavigate={onNavigate} />; }
+export function Terms() { return <LegalPage title="terms.title" intro="terms.intro" sections={sections} />; }
