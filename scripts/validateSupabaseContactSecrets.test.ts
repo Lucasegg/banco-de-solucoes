@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { REQUIRED_CONTACT_SECRETS, validateSupabaseContactSecrets } from './validateSupabaseContactSecrets.ts';
 
@@ -28,4 +29,13 @@ test('CLI output never contains returned values, digests, or found names', () =>
     assert.doesNotMatch(output, new RegExp(secret.digest));
     assert.doesNotMatch(output, new RegExp(secret.name));
   }
+});
+
+test('workflow uses modern CLI JSON for secrets without changing legacy gates', () => {
+  const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8');
+  const secretStep = workflow.slice(workflow.indexOf('- name: Validate contact secret names in Supabase'), workflow.indexOf('- name: Check migration baseline'));
+  assert.match(secretStep, /supabase@2\.110\.0 secrets list --output json/);
+  assert.doesNotMatch(secretStep, /supabase@2\.39\.2 secrets list/);
+  assert.match(workflow, /supabase@2\.39\.2 link --project-ref/);
+  assert.match(workflow, /supabase@2\.39\.2 migration list --linked/);
 });

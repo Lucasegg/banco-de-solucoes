@@ -247,9 +247,9 @@ jobs:
           secrets_file="$(mktemp)"
           errors_file="$(mktemp)"
           trap 'rm -f "$secrets_file" "$errors_file"' EXIT
-          # CLI 2.39.2 is retained for compatibility with link/migration gates.
-          # npm and CLI diagnostics are isolated so they cannot corrupt JSON or leak into logs.
-          if ! npm_config_loglevel=error npx --yes supabase@2.39.2 secrets list --output json >"$secrets_file" 2>"$errors_file"; then
+          # Legacy link/migration gates remain on 2.39.2. Secrets use 2.110.0,
+          # whose structured JSON output is validated before names are inspected.
+          if ! npm_config_loglevel=error npx --yes supabase@2.110.0 secrets list --output json >"$secrets_file" 2>"$errors_file"; then
             echo "Failed to query Supabase secrets." >&2
             exit 1
           fi

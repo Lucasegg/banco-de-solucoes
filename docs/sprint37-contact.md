@@ -29,7 +29,7 @@ Requisitos de produção:
 - `CONTACT_RATE_LIMIT_SECRET` deve ser aleatório, longo e exclusivo deste ambiente;
 - nenhum desses valores pode usar prefixo `VITE_` ou ser incluído no bundle do navegador.
 
-O cliente precisa apenas de `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, já existentes. O Production Preflight consulta `supabase secrets list`, mantém o resultado capturado e valida apenas os nomes obrigatórios sem imprimir valores ou digests.
+O cliente precisa apenas de `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, já existentes. Por compatibilidade, o pipeline mantém o Supabase CLI `2.39.2` nos gates antigos de link e migrations. Exclusivamente para `secrets list`, usa a versão fixa `2.110.0`, que fornece a saída JSON estruturada esperada pelo validador. O Production Preflight mantém stdout e stderr separados, valida o JSON antes dos nomes obrigatórios e não imprime nomes encontrados, valores, digests ou a saída completa.
 
 ## Verificação controlada
 
