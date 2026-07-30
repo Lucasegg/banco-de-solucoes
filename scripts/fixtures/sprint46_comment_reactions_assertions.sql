@@ -25,10 +25,9 @@ do $$ declare result_columns text[]; begin
 end $$;
 
 set role authenticated; select set_config('request.jwt.claim.sub','46000000-0000-0000-0000-000000000001',true);
-do $$ declare r record;t text;before_count bigint;begin
+do $$ declare r record;t text;begin
  begin insert into public.comment_reactions(comment_id,user_id,reaction_type)values('46000000-0000-0000-0001-000000000002',auth.uid(),'like');raise exception 'direct DML accepted';exception when insufficient_privilege then null;end;
  foreach t in array array['like','support','interesting','needsEvidence'] loop select * into r from public.toggle_my_comment_reaction('46000000-0000-0000-0001-000000000002',t);if not r.active or r.reaction_count<>1 then raise exception 'activation failed for %',t;end if;end loop;
- if (select count(*) from public.comment_reactions where comment_id='46000000-0000-0000-0001-000000000002' and user_id=auth.uid())<>4 then raise exception 'four stable unique rows missing';end if;
  select * into r from public.toggle_my_comment_reaction('46000000-0000-0000-0001-000000000002','like');if r.active or r.reaction_count<>0 then raise exception 'deactivation failed';end if;
  select * into r from public.toggle_my_comment_reaction('46000000-0000-0000-0001-000000000002','like');if not r.active or r.reaction_count<>1 then raise exception 'reactivation failed';end if;
  perform public.toggle_my_comment_reaction('46000000-0000-0000-0001-000000000001','like');
@@ -40,6 +39,7 @@ end $$;
 do $$ declare r record;begin select * into r from public.get_comment_reaction_summary('42000000-0000-0000-0001-000000000001',null) where comment_id='46000000-0000-0000-0001-000000000002' and reaction_type='support';if r.reaction_count<>1 or not r.selected_by_user then raise exception 'authenticated summary incorrect';end if;end $$;
 reset role;
 do $$ begin
+ if (select count(*) from public.comment_reactions where comment_id='46000000-0000-0000-0001-000000000002' and user_id='46000000-0000-0000-0000-000000000001')<>4 or (select count(distinct reaction_type) from public.comment_reactions where comment_id='46000000-0000-0000-0001-000000000002' and user_id='46000000-0000-0000-0000-000000000001')<>4 then raise exception 'four stable unique reaction rows missing';end if;
  if (select count(*) from public.notifications where event_key like 'comment-reaction:46000000-0000-0000-0001-000000000002:%')<>4 then raise exception 'activation/deactivation/reactivation notification count incorrect';end if;
  if exists(select 1 from public.notifications where event_key like 'comment-reaction:46000000-0000-0000-0001-000000000002:%' and (recipient_id<>'46000000-0000-0000-0000-000000000002' or actor_id<>'46000000-0000-0000-0000-000000000001')) then raise exception 'notification attribution incorrect';end if;
  if exists(select 1 from public.notifications where event_key like 'comment-reaction:46000000-0000-0000-0001-000000000001:%') then raise exception 'self reaction notified';end if;
