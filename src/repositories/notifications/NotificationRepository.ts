@@ -8,7 +8,7 @@ import { notificationPage } from './pagination';
 type Result<T> = { ok: true; data: T } | { ok: false; message: string };
 const allowedTypes = new Set<NotificationType>(['contribution.received','contribution.approved','contribution.rejected','contribution.changes_requested','comment.created','comment.replied','comment.reacted','favorite.content_updated','user.role_changed','report.reviewing','report.resolved','report.dismissed','content.archived','content.restored']);
 
-function mapRow(row: Record<string, unknown>): NotificationItem | null {
+export function mapNotificationRow(row: Record<string, unknown>): NotificationItem | null {
   const type = (row.notification_type ?? row.type) as NotificationType;
   if (!allowedTypes.has(type)) return null;
   return {
@@ -33,11 +33,14 @@ export class SupabaseNotificationRepository {
       : this.client.rpc('get_my_notifications', { p_unread_only: filters.unreadOnly ?? false, p_limit: limit, p_offset: Math.max(0, filters.offset ?? 0) });
     const { data, error } = await request;
     if (error) return { ok: false, message: safeDatabaseMessage(error, 'Não foi possível carregar as notificações.') };
-    const items = ((data ?? []) as Record<string, unknown>[]).map(mapRow).filter((item): item is NotificationItem => item !== null);
+    const items = ((data ?? []) as Record<string, unknown>[]).map(mapNotificationRow).filter((item): item is NotificationItem => item !== null);
     return { ok: true, data: notificationPage(items, limit) };
   }
   async getUnreadCount(): Promise<Result<number>> { const { data,error }=await this.client.rpc('get_my_unread_notification_count'); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível atualizar o contador.')}:{ok:true,data:Number(data??0)}; }
   async markRead(notificationId: string): Promise<Result<boolean>> { const {data,error}=await this.client.rpc('mark_my_notification_read',{p_notification_id:notificationId}); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível marcar a notificação.')}:{ok:true,data:Boolean(data)}; }
   async markAllRead(): Promise<Result<number>> { const {data,error}=await this.client.rpc('mark_all_my_notifications_read'); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível marcar as notificações.')}:{ok:true,data:Number(data??0)}; }
+  async getPreferences() { const {data,error}=await this.client.rpc('get_my_notification_preferences'); const row=Array.isArray(data)?data[0]:data; return error?{ok:false as const,message:safeDatabaseMessage(error,'Não foi possível carregar as preferências.')}:{ok:true as const,data:{contributions:Boolean(row?.contributions),comments:Boolean(row?.comments),favorites:Boolean(row?.favorites),updatedAt:String(row?.updated_at??'')}}; }
+  async updatePreferences(preferences: {contributions:boolean;comments:boolean;favorites:boolean}) { const {data,error}=await this.client.rpc('update_my_notification_preferences',{p_contributions:preferences.contributions,p_comments:preferences.comments,p_favorites:preferences.favorites}); return error?{ok:false as const,message:safeDatabaseMessage(error,'Não foi possível salvar as preferências.')}:{ok:true as const,data:Boolean(data)}; }
+  async cleanupRead() { const {data,error}=await this.client.rpc('delete_my_old_read_notifications'); return error?{ok:false as const,message:safeDatabaseMessage(error,'Não foi possível limpar as notificações.')}:{ok:true as const,data:Number(data??0)}; }
 }
 export const NotificationRepository = supabaseClient ? new SupabaseNotificationRepository(supabaseClient) : null;

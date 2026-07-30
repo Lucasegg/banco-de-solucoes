@@ -3,6 +3,7 @@ import { useNotificationsContext } from '../context/NotificationsContext';
 import { useAuth } from './useAuth';
 import { NotificationRepository } from '../repositories/notifications';
 import type { NotificationCategory, NotificationItem } from '../types/notification';
+import { mergeNotificationPages } from '../repositories/notifications/pagination';
 
 export function useNotifications(pageSize = 20) {
   const { isAuthenticated, user } = useAuth();
@@ -29,7 +30,7 @@ export function useNotifications(pageSize = 20) {
     });
     if (!mounted.current || currentRequest !== requestId.current) return;
     if (result.ok) {
-      setItems((current) => append ? [...current, ...result.data.items] : result.data.items);
+      setItems((current) => append ? mergeNotificationPages(current, result.data.items) : result.data.items);
       setHasMore(result.data.hasMore);
     } else {
       setError(result.message);
@@ -55,7 +56,7 @@ export function useNotifications(pageSize = 20) {
       return;
     }
     void load(false);
-  }, [category, isAuthenticated, unreadOnly, user?.id]);
+  }, [category, global.revision, isAuthenticated, unreadOnly, user?.id]);
 
   useEffect(() => {
     setItems((current) => current.map((item) => {
@@ -95,6 +96,7 @@ export function useNotifications(pageSize = 20) {
     error: error || global.error,
     hasMore,
     busy: global.busy,
+    connectionState: global.connectionState,
     reload: () => load(false),
     loadMore: () => load(true),
     markRead,
