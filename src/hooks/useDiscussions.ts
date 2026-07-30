@@ -5,6 +5,7 @@ import { useAuth } from './useAuth';
 import { useLocalStorageState } from './useLocalStorageState';
 import { CommentRepository, COMMENTS_KEY, isCommentArray, normalizeCommentArray } from '../repositories/comments';
 import { CommentReactionRepository, emptyCommentReactionSummary, type CommentReactionSummaries } from '../repositories/reactions';
+import { ReactionOperationController } from './reactionOperationController';
 
 const MAX_DEPTH = 3;
 
@@ -49,8 +50,12 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reactionSummaries, setReactionSummaries] = useState<CommentReactionSummaries>({});
   const [pendingReactions, setPendingReactions] = useState<Set<string>>(new Set());
-  const sessionGeneration = useRef(0);
-  useEffect(() => { sessionGeneration.current += 1; }, [user?.id]);
+  const reactionOperations = useRef(new ReactionOperationController());
+  useEffect(() => {
+    reactionOperations.current.reset();
+    setPendingReactions(new Set());
+    setReactionSummaries({});
+  }, [user?.id]);
   const canMarkBestAnswer = canManageTarget(user, targetOwnerNames);
 
   const comments = CommentRepository ? remoteComments : localComments;
@@ -136,16 +141,28 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
   const toggleReaction = async (commentId: string, type: CommentReactionType): Promise<ActionResult> => {
     if (!user) return { ok: false, message: 'Entre na sua conta para reagir.' };
     if (!CommentReactionRepository) return { ok: false, message: 'Reações persistentes estão indisponíveis neste modo.' };
-    const key = `${commentId}:${type}`;
-    if (pendingReactions.has(key)) return { ok: false, message: 'Aguarde a atualização da reação.' };
-    const generation = sessionGeneration.current; const previous = reactionSummaries[commentId] ?? emptyCommentReactionSummary();
-    setPendingReactions(current => new Set(current).add(key));
+    const repository = CommentReactionRepository;
+    const key = `${commentId}:${type}`; const controller = reactionOperations.current;
+    if (controller.isPending(key)) return { ok: false, message: 'Aguarde a atualização da reação.' };
+    const previous = reactionSummaries[commentId] ?? emptyCommentReactionSummary();
+    // run() takes the synchronous lock before yielding, including two clicks in one render.
+    const operation = controller.run(key, () => repository.toggle(commentId, type));
+    setPendingReactions(controller.pendingKeys());
     setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: { count: Math.max(0, previous[type].count + (previous[type].selected ? -1 : 1)), selected: !previous[type].selected } } }));
-    const result = await CommentReactionRepository.toggle(commentId, type);
-    if (sessionGeneration.current !== generation) return { ok: false, message: 'A sessão mudou durante a atualização.' };
-    setPendingReactions(current => { const next = new Set(current); next.delete(key); return next; });
-    if (!result.ok) { setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: previous[type] } })); return result; }
-    setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: { count: result.data.count, selected: result.data.active } } }));
+    const outcome = await operation;
+    setPendingReactions(controller.pendingKeys());
+    if (outcome.status === 'discarded') return { ok: false, message: 'A sessão mudou durante a atualização.' };
+    if (outcome.status === 'duplicate') return { ok: false, message: 'Aguarde a atualização da reação.' };
+    if (outcome.status === 'error') {
+      setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: previous[type] } }));
+      return { ok: false, message: 'Não foi possível atualizar a reação.' };
+    }
+    if (!outcome.value.ok) {
+      setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: previous[type] } }));
+      return outcome.value;
+    }
+    const confirmed = outcome.value.data;
+    setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: { count: confirmed.count, selected: confirmed.active } } }));
     return { ok: true };
   };
 

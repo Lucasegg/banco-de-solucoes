@@ -32,8 +32,8 @@ begin
  select cr.active into v_active from public.comment_reactions cr where cr.comment_id=p_comment_id and cr.user_id=v_user and cr.reaction_type=p_reaction_type for update;
  if found then update public.comment_reactions cr set active=not v_active,updated_at=timezone('utc',now()) where cr.comment_id=p_comment_id and cr.user_id=v_user and cr.reaction_type=p_reaction_type returning cr.active into v_active;
  else insert into public.comment_reactions(comment_id,user_id,reaction_type) values(p_comment_id,v_user,p_reaction_type) returning comment_reactions.active into v_active; v_first:=true; end if;
- if v_first and v_active and v_comment.author_id<>v_user and coalesce((select np.comments from public.notification_preferences np where np.user_id=v_comment.author_id),true) then
-   perform public.create_event_notification(v_comment.author_id,'comment.reacted',case when v_comment.problem_id is not null then 'problem' else 'solution' end,coalesce(v_comment.problem_id,v_comment.solution_id),null,'comment-reaction:'||p_comment_id||':'||v_user||':'||p_reaction_type,'Nova reação','Seu comentário recebeu uma reação.',case when v_comment.problem_id is not null then '/problems/'||v_comment.problem_id else '/solutions/'||v_comment.solution_id end);
+ if v_first and v_active and v_comment.user_id<>v_user and coalesce((select np.comments from public.notification_preferences np where np.user_id=v_comment.user_id),true) then
+   perform public.create_event_notification(v_comment.user_id,'comment.reacted',case when v_comment.problem_id is not null then 'problem' else 'solution' end,coalesce(v_comment.problem_id,v_comment.solution_id),null,'comment-reaction:'||p_comment_id||':'||v_user||':'||p_reaction_type,'Nova reação','Seu comentário recebeu uma reação.',case when v_comment.problem_id is not null then '/problems/'||v_comment.problem_id else '/solutions/'||v_comment.solution_id end);
    update public.notifications n set actor_id=v_user where n.event_key='comment-reaction:'||p_comment_id||':'||v_user||':'||p_reaction_type and n.actor_id is null;
  end if;
  return query select v_active,count(*) from public.comment_reactions cr where cr.comment_id=p_comment_id and cr.reaction_type=p_reaction_type and cr.active;
@@ -45,7 +45,7 @@ language plpgsql stable security definer set search_path=pg_catalog,public as $$
 begin
  if (p_problem_id is null)=(p_solution_id is null) then raise exception 'Exactly one target is required' using errcode='22023'; end if;
  if not exists(select 1 from public.problems p where p.id=p_problem_id) and not exists(select 1 from public.solutions s where s.id=p_solution_id) then raise exception 'Target unavailable' using errcode='P0002'; end if;
- return query select c.id,cr.reaction_type,count(*)::bigint,bool_or(cr.user_id=auth.uid())
+ return query select c.id,cr.reaction_type,count(*)::bigint,coalesce(bool_or(cr.user_id=auth.uid()),false)
  from public.comments c join public.comment_reactions cr on cr.comment_id=c.id and cr.active
  where not c.deleted and c.visibility='visible' and ((p_problem_id is not null and c.problem_id=p_problem_id) or (p_solution_id is not null and c.solution_id=p_solution_id))
  group by c.id,cr.reaction_type order by c.id,cr.reaction_type;

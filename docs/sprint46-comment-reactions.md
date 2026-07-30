@@ -12,9 +12,9 @@ A tabela usa RLS habilitada e forçada e não concede DML a `anon` ou `authentic
 
 ## Notificações, concorrência e moderação
 
-Somente a primeira transição para ativa cria `comment.reacted`, na mesma transação, para o autor e respeitando a preferência `comments`. A chave por comentário/ator/tipo torna o evento idempotente; desativação e reativação não criam spam. Exclusões de comentário, usuário ou pai removem linhas em cascata; ocultação/remoção é filtrada tanto na escrita como no resumo.
+Somente a primeira transição para ativa cria `comment.reacted`, na mesma transação, para `comments.user_id` e respeitando a preferência `comments`. A chave por comentário/ator/tipo torna o evento idempotente; desativação e reativação não criam spam. Exclusões de comentário, usuário ou pai removem linhas em cascata; ocultação/remoção é filtrada tanto na escrita como no resumo.
 
-A interface faz atualização otimista com rollback, serializa a chave comentário/tipo e descarta resultados após logout/troca de conta. Botões preservam teclado, foco visível, `aria-pressed`, `aria-live`, i18n e contagens para visitantes.
+A interface faz atualização otimista com rollback. Um controlador com trava síncrona serializa a chave comentário/tipo; gerações de sessão limpam operações e resumos e impedem resultados antigos de alterar ou liberar operações da nova conta. Botões preservam teclado, foco visível, `aria-pressed`, `aria-live`, i18n e contagens para visitantes.
 
 ## Limitações e validação manual
 
