@@ -15,7 +15,7 @@ alter table public.notifications
 
 alter table public.notifications drop constraint notifications_type_check;
 alter table public.notifications add constraint notifications_type_check check (type in (
-  'contribution.approved','contribution.rejected','contribution.changes_requested',
+  'contribution.received','contribution.approved','contribution.rejected','contribution.changes_requested',
   'comment.created','comment.replied','comment.reacted','favorite.content_updated','user.role_changed',
   'report.reviewing','report.resolved','report.dismissed','content.archived','content.restored'
 ));
@@ -55,7 +55,7 @@ begin
       'report:'||new.id||':status:'||new.status,
       case new.status when 'reviewing' then 'Denúncia em análise' when 'resolved' then 'Denúncia resolvida' else 'Denúncia descartada' end,
       case new.status when 'reviewing' then 'Sua denúncia está sendo analisada.' when 'resolved' then 'A análise da sua denúncia foi concluída.' else 'Sua denúncia foi analisada e descartada.' end,
-      '/reports/'||new.id
+      '/'||new.target_type||'s/'||new.target_id
     );
   end if;
   return new;
@@ -84,14 +84,18 @@ for each row execute function public.notify_content_moderation_sprint44();
 revoke all on function public.notify_content_moderation_sprint44() from public,anon,authenticated;
 
 create function public.get_my_notifications(p_limit integer default 20,p_offset integer default 0,p_unread_only boolean default false)
-returns table(id uuid,notification_type text,target_type text,target_id uuid,report_id uuid,read_at timestamptz,created_at timestamptz,notification_order bigint,title text,message text,action_url text)
+returns table(id uuid,actor_id uuid,actor_name text,notification_type text,target_type text,target_id uuid,report_id uuid,read_at timestamptz,created_at timestamptz,notification_order bigint,title text,message text,action_url text)
 language plpgsql stable security definer set search_path = pg_catalog, public as $$
 begin
   if auth.uid() is null then raise exception 'Authentication required' using errcode='42501'; end if;
   if p_limit is null or p_limit not between 1 and 50 or p_offset is null or p_offset < 0 or p_offset > 10000 then raise exception 'Invalid pagination' using errcode='22023'; end if;
-  return query select n.id,n.type,n.target_type,n.target_id,n.report_id,n.read_at,n.created_at,n.notification_order,n.title,n.message,n.action_url
-  from public.notifications n where n.recipient_id=auth.uid() and (not coalesce(p_unread_only,false) or n.read_at is null)
-  order by n.notification_order desc limit p_limit offset p_offset;
+  return query select n.id,n.actor_id,
+    case when n.type like 'report.%' or n.type like 'content.%' then null
+         else coalesce(nullif(btrim(p.display_name),''),nullif(btrim(p.username),''),'Sistema') end,
+    n.type,n.target_type,n.target_id,n.report_id,n.read_at,n.created_at,n.notification_order,n.title,n.message,n.action_url
+  from public.notifications n left join public.profiles p on p.id=n.actor_id
+  where n.recipient_id=auth.uid() and (not coalesce(p_unread_only,false) or n.read_at is null)
+  order by n.notification_order desc limit p_limit + 1 offset p_offset;
 end $$;
 
 create function public.get_my_unread_notification_count() returns bigint

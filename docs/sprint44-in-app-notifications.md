@@ -43,6 +43,6 @@ indisponível.
 `INSERT ... ON CONFLICT (event_key) DO NOTHING` garante uma linha por transição ou ação,
 inclusive sob tentativas concorrentes. Na primeira versão não há e-mail, push, polling,
 Realtime, preferências por evento, retenção automática nem payload administrativo. Os
-textos persistidos para os novos eventos são genéricos em pt-BR; a localização integral
-do conteúdo da mensagem no cliente fica para uma evolução futura. Migrations exigem o
-Production Preflight normal antes do deploy.
+textos persistidos para os novos eventos são genéricos, enquanto a apresentação troca
+título e mensagem pelas traduções pt-BR ou en-US conforme o locale ativo. Migrations
+exigem o Production Preflight normal antes do deploy.

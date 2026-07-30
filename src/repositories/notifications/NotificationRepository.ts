@@ -3,6 +3,7 @@ import { supabaseClient } from '../../integrations/supabase/client';
 import type { NotificationFilters, NotificationItem, NotificationPageResult, NotificationType } from '../../types/notification';
 import { safeNotificationActionUrl } from '../../notifications/navigation';
 import { safeDatabaseMessage } from '../errors';
+import { notificationPage } from './pagination';
 
 type Result<T> = { ok: true; data: T } | { ok: false; message: string };
 const allowedTypes = new Set<NotificationType>(['contribution.received','contribution.approved','contribution.rejected','contribution.changes_requested','comment.created','comment.replied','comment.reacted','favorite.content_updated','user.role_changed','report.reviewing','report.resolved','report.dismissed','content.archived','content.restored']);
@@ -12,7 +13,7 @@ function mapRow(row: Record<string, unknown>): NotificationItem | null {
   if (!allowedTypes.has(type)) return null;
   return {
     id: String(row.id), actorId: row.actor_id ? String(row.actor_id) : null,
-    actorName: 'Sistema', type,
+    actorName: String(row.actor_name ?? 'Sistema'), type,
     title: String(row.title), message: String(row.message), targetType: row.target_type ? String(row.target_type) : null,
     targetId: row.target_id ? String(row.target_id) : null,
     reportId: row.report_id ? String(row.report_id) : null,
@@ -33,7 +34,7 @@ export class SupabaseNotificationRepository {
     const { data, error } = await request;
     if (error) return { ok: false, message: safeDatabaseMessage(error, 'Não foi possível carregar as notificações.') };
     const items = ((data ?? []) as Record<string, unknown>[]).map(mapRow).filter((item): item is NotificationItem => item !== null);
-    return { ok: true, data: { items: items.slice(0, limit), hasMore: filters.category ? items.length > limit : items.length === limit } };
+    return { ok: true, data: notificationPage(items, limit) };
   }
   async getUnreadCount(): Promise<Result<number>> { const { data,error }=await this.client.rpc('get_my_unread_notification_count'); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível atualizar o contador.')}:{ok:true,data:Number(data??0)}; }
   async markRead(notificationId: string): Promise<Result<boolean>> { const {data,error}=await this.client.rpc('mark_my_notification_read',{p_notification_id:notificationId}); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível marcar a notificação.')}:{ok:true,data:Boolean(data)}; }

@@ -170,6 +170,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint43_content_moderation_assertions.sql
+      - name: Install the production-compatible pre-Sprint 44 notification contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint44_notifications_schema.sql
+      - name: Verify the cumulative Sprint 31 notification contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint31_notifications_assertions.sql
       - name: Apply the Sprint 44 in-app notifications migration
         env:
           PGPASSWORD: postgres
