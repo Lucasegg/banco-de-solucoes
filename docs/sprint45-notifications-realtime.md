@@ -15,3 +15,7 @@ A limpeza explicitamente confirmada chama uma RPC atômica que exclui somente no
 ## Testes e limitações
 
 As assertions SQL verificam publicação, RLS, privilégios e contratos das RPCs. Os testes TypeScript cobrem merge, duplicidade, ordem, ciclo de vida, polling, traduções e regressões das Sprints 31 e 44. Esta sprint não inclui e-mail, web push, APIs nativas do navegador nem `pg_cron`.
+
+## Alertas transitórios
+
+Cada sinal é enfileirado para reconciliação pelas RPCs privadas. Apenas sinais `INSERT` podem gerar o toast visual com título, mensagem, fechamento manual e timeout; sinais `UPDATE` somente reconciliam lista e contador. IDs já alertados são deduplicados durante a sessão e a fila, os timers e os alertas são descartados no logout ou na troca de conta. O banco limita cada notificação a um sinal de cada tipo por `UNIQUE (notification_id, change_type)`.

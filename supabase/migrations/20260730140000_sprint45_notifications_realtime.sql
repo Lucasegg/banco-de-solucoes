@@ -10,7 +10,8 @@ create table public.notification_realtime_signals (
   notification_id uuid not null references public.notifications(id) on delete cascade,
   notification_order bigint not null,
   change_type text not null check (change_type in ('INSERT','UPDATE')),
-  signaled_at timestamptz not null default clock_timestamp()
+  signaled_at timestamptz not null default clock_timestamp(),
+  constraint notification_realtime_signals_notification_change_key unique(notification_id,change_type)
 );
 create index notification_realtime_signals_recipient_order_idx
   on public.notification_realtime_signals(recipient_id, notification_order desc, id desc);
@@ -26,7 +27,8 @@ create function public.signal_notification_change_sprint45() returns trigger
 language plpgsql security definer set search_path=pg_catalog,public as $$
 begin
   insert into public.notification_realtime_signals(recipient_id,notification_id,notification_order,change_type)
-  values(new.recipient_id,new.id,new.notification_order,tg_op);
+  values(new.recipient_id,new.id,new.notification_order,tg_op)
+  on conflict(notification_id,change_type) do nothing;
   return new;
 end $$;
 revoke all on function public.signal_notification_change_sprint45() from public,anon,authenticated;

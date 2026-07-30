@@ -5,6 +5,7 @@ insert into auth.users(id) values
 do $$ declare columns text[];begin
  select array_agg(column_name order by ordinal_position) into columns from information_schema.columns where table_schema='public' and table_name='notification_realtime_signals';
  if columns<>array['id','recipient_id','notification_id','notification_order','change_type','signaled_at'] then raise exception 'unsafe signal projection: %',columns;end if;
+ if not exists(select 1 from pg_constraint where conrelid='public.notification_realtime_signals'::regclass and contype='u' and pg_get_constraintdef(oid)='UNIQUE (notification_id, change_type)') then raise exception 'signal uniqueness constraint missing';end if;
  if not(select relrowsecurity and relforcerowsecurity from pg_class where oid='public.notification_realtime_signals'::regclass) then raise exception 'signal RLS not forced';end if;
  if (select count(*) from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='notification_realtime_signals')<>1 then raise exception 'signal publication is not idempotent';end if;
  if exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='notifications') then raise exception 'internal notifications table was published';end if;
@@ -49,6 +50,11 @@ set role authenticated;select set_config('request.jwt.claim.sub','45000000-0000-
 do $$ begin
  if exists(select 1 from public.notification_realtime_signals where recipient_id='45000000-0000-0000-0000-000000000002') then raise exception 'cross-account signal visible';end if;
  begin insert into public.notification_realtime_signals(recipient_id,notification_id,notification_order,change_type) select recipient_id,id,notification_order,'INSERT' from public.notifications limit 1;raise exception 'direct signal DML accepted';exception when insufficient_privilege then null;end;
+ perform public.mark_my_notification_read((select id from public.notifications where event_key='s45:recent-a'));
+ perform public.mark_my_notification_read((select id from public.notifications where event_key='s45:recent-a'));
+ perform public.mark_my_notification_read((select id from public.notifications where event_key='s45:recent-a'));
+ if (select count(*) from public.notification_realtime_signals s join public.notifications n on n.id=s.notification_id where n.event_key='s45:recent-a' and s.change_type='INSERT')<>1 then raise exception 'duplicate INSERT signals';end if;
+ if (select count(*) from public.notification_realtime_signals s join public.notifications n on n.id=s.notification_id where n.event_key='s45:recent-a' and s.change_type='UPDATE')<>1 then raise exception 'duplicate UPDATE signals';end if;
 end $$;reset role;
 set role authenticated;select set_config('request.jwt.claim.sub','45000000-0000-0000-0000-000000000001',false);
 do $$ declare removed integer;begin select public.delete_my_old_read_notifications() into removed;if removed<>1 then raise exception 'cleanup removed % rows',removed;end if;end $$;reset role;
