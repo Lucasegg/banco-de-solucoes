@@ -19,6 +19,7 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
     error,
     busy,
     markRead,
+    announcement,
   } = useNotificationsContext();
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
 
   return (
     <div className="relative" ref={root}>
+      <span className="sr-only" aria-live="polite">{announcement}</span>
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

@@ -55,7 +55,7 @@ export function useNotifications(pageSize = 20) {
       return;
     }
     void load(false);
-  }, [category, isAuthenticated, unreadOnly, user?.id]);
+  }, [category, global.revision, isAuthenticated, unreadOnly, user?.id]);
 
   useEffect(() => {
     setItems((current) => current.map((item) => {

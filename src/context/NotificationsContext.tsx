@@ -1,201 +1,27 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { NotificationRepository } from '../repositories/notifications';
-import { mapNotificationRow } from '../repositories/notifications/NotificationRepository';
-import { mergeNotifications, NotificationRealtimeSubscription, type ConnectionState } from '../repositories/notifications/realtime';
-import { supabaseClient } from '../integrations/supabase/client';
-import type { NotificationItem } from '../types/notification';
+import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
+import {useAuth} from '../hooks/useAuth';
+import {NotificationRepository} from '../repositories/notifications';
+import {NotificationRealtimeSubscription,type ConnectionState,type NotificationSignal} from '../repositories/notifications/realtime';
+import {supabaseClient} from '../integrations/supabase/client';
+import type {NotificationItem,NotificationPreferences} from '../types/notification';
+import {optionalAlertEnabled} from '../repositories/notifications/preferences';
 
-interface NotificationsContextValue {
-  recentItems: NotificationItem[];
-  unreadCount: number;
-  loading: boolean;
-  busy: boolean;
-  error: string;
-  readAtById: Record<string, string>;
-  allReadAt: string | null;
-  connectionState: ConnectionState;
-  reload: () => Promise<void>;
-  markRead: (notificationId: string) => Promise<boolean>;
-  markAllRead: () => Promise<boolean>;
+interface Value{recentItems:NotificationItem[];unreadCount:number;loading:boolean;busy:boolean;error:string;readAtById:Record<string,string>;allReadAt:string|null;connectionState:ConnectionState;revision:number;announcement:string;reload:()=>Promise<void>;markRead:(id:string)=>Promise<boolean>;markAllRead:()=>Promise<boolean>}
+interface State{userId:string|null;items:NotificationItem[];count:number;preferences:NotificationPreferences;loading:boolean;busy:boolean;error:string;connection:ConnectionState;revision:number;announcement:string}
+const defaults:NotificationPreferences={contributions:true,comments:true,favorites:true,updatedAt:''};
+const initial:State={userId:null,items:[],count:0,preferences:defaults,loading:false,busy:false,error:'',connection:'connecting',revision:0,announcement:''};
+type Action={type:'reset';userId:string|null}|{type:'loading';userId:string}|{type:'loaded';userId:string;items:NotificationItem[];count:number;preferences:NotificationPreferences}|{type:'error';userId:string;message:string}|{type:'busy';value:boolean}|{type:'connection';value:ConnectionState}|{type:'announce';value:string}|{type:'preferences';value:NotificationPreferences};
+function reducer(state:State,action:Action):State{switch(action.type){case'reset':return{...initial,userId:action.userId,loading:Boolean(action.userId)};case'loading':return state.userId===action.userId?{...state,loading:true,error:''}:state;case'loaded':return state.userId===action.userId?{...state,items:action.items,count:action.count,preferences:action.preferences,loading:false,error:'',revision:state.revision+1}:state;case'error':return state.userId===action.userId?{...state,loading:false,error:action.message}:state;case'busy':return{...state,busy:action.value};case'connection':return{...state,connection:action.value};case'announce':return{...state,announcement:action.value};case'preferences':return{...state,preferences:action.value};}}
+const Context=createContext<Value|undefined>(undefined);
+export function NotificationsProvider({children}:{children:ReactNode}){
+ const {isAuthenticated,user}=useAuth();const userId=isAuthenticated?user?.id??null:null;const [state,setState]=useState<State>(initial);const dispatch=useCallback((action:Action)=>setState(current=>reducer(current,action)),[]);const active=useRef(userId);active.current=userId;const request=useRef(0);const busy=useRef(false);const pendingSignal=useRef<NotificationSignal|null>(null);
+ const reload=useCallback(async()=>{const account=userId;if(!account||!NotificationRepository)return;const token=++request.current;dispatch({type:'loading',userId:account});const [listed,counted,prefs]=await Promise.all([NotificationRepository.list({limit:5}),NotificationRepository.getUnreadCount(),NotificationRepository.getPreferences()]);if(active.current!==account||token!==request.current)return;if(!listed.ok){dispatch({type:'error',userId:account,message:listed.message});return;}if(!counted.ok){dispatch({type:'error',userId:account,message:counted.message});return;}if(!prefs.ok){dispatch({type:'error',userId:account,message:prefs.message});return;}dispatch({type:'loaded',userId:account,items:listed.data.items,count:counted.data,preferences:prefs.data});const signal=pendingSignal.current;pendingSignal.current=null;if(signal){const item=listed.data.items.find(x=>x.id===signal.notification_id);dispatch({type:'announce',value:item&&optionalAlertEnabled(item,prefs.data)?item.title:''});}},[userId]);
+ useEffect(()=>{request.current++;pendingSignal.current=null;dispatch({type:'reset',userId});if(userId)void reload();return()=>{request.current++;};},[reload,userId]);
+ useEffect(()=>{const changed=(event:Event)=>{const detail=(event as CustomEvent<NotificationPreferences>).detail;dispatch({type:'preferences',value:detail});};window.addEventListener('notification-preferences-changed',changed);return()=>window.removeEventListener('notification-preferences-changed',changed);},[]);
+ useEffect(()=>{if(!userId||!supabaseClient)return;const subscription=new NotificationRealtimeSubscription(supabaseClient,userId,signal=>{if(active.current!==userId)return;pendingSignal.current=signal;void reload();},reload,value=>dispatch({type:'connection',value}));subscription.start();return()=>subscription.stop();},[reload,userId]);
+ const markRead=useCallback(async(id:string)=>{if(!userId||!NotificationRepository||busy.current)return false;const account=userId;busy.current=true;dispatch({type:'busy',value:true});const result=await NotificationRepository.markRead(id);if(active.current!==account)return false;busy.current=false;dispatch({type:'busy',value:false});if(!result.ok){dispatch({type:'error',userId:account,message:result.message});return false;}await reload();return true;},[reload,userId]);
+ const markAllRead=useCallback(async()=>{if(!userId||!NotificationRepository||busy.current)return false;const account=userId;busy.current=true;dispatch({type:'busy',value:true});const result=await NotificationRepository.markAllRead();if(active.current!==account)return false;busy.current=false;dispatch({type:'busy',value:false});if(!result.ok){dispatch({type:'error',userId:account,message:result.message});return false;}await reload();return true;},[reload,userId]);
+ const valid=state.userId===userId&&Boolean(userId);const value=useMemo<Value>(()=>({recentItems:valid?state.items:[],unreadCount:valid?state.count:0,loading:valid?state.loading:Boolean(userId),busy:state.busy,error:valid?state.error:'',readAtById:{},allReadAt:null,connectionState:state.connection,revision:state.revision,announcement:state.announcement,reload,markRead,markAllRead}),[markAllRead,markRead,reload,state,userId,valid]);
+ return <Context.Provider value={value}>{children}</Context.Provider>;
 }
-
-const NotificationsContext = createContext<NotificationsContextValue | undefined>(undefined);
-
-export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, user } = useAuth();
-  const userId = isAuthenticated ? user?.id ?? null : null;
-  const mounted = useRef(true);
-  const requestId = useRef(0);
-  const busyRef = useRef(false);
-  const activeUserId = useRef<string | null>(userId);
-  activeUserId.current = userId;
-  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
-  const [recentItems, setRecentItems] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [readAtById, setReadAtById] = useState<Record<string, string>>({});
-  const [allReadAt, setAllReadAt] = useState<string | null>(null);
-  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
-
-  const setEmptyState = useCallback((stateUserId: string | null) => {
-    setLoadedUserId(stateUserId);
-    setRecentItems([]);
-    setUnreadCount(0);
-    setLoading(false);
-    setBusy(false);
-    busyRef.current = false;
-    setError('');
-    setReadAtById({});
-    setAllReadAt(null);
-  }, []);
-
-  const clearState = useCallback(() => {
-    setEmptyState(null);
-  }, [setEmptyState]);
-
-  const reload = useCallback(async () => {
-    const requestedUserId = userId;
-    if (!requestedUserId) {
-      if (mounted.current) clearState();
-      return;
-    }
-    if (!NotificationRepository) {
-      if (mounted.current) setEmptyState(requestedUserId);
-      return;
-    }
-
-    const currentRequest = ++requestId.current;
-    setLoading(true);
-    setError('');
-    const [listed, counted] = await Promise.all([
-      NotificationRepository.list({ limit: 5 }),
-      NotificationRepository.getUnreadCount(),
-    ]);
-
-    if (!mounted.current || currentRequest !== requestId.current) return;
-    if (listed.ok) setRecentItems(listed.data.items);
-    else setError(listed.message);
-    if (counted.ok) setUnreadCount(counted.data);
-    else if (listed.ok) setError(counted.message);
-    setLoadedUserId(requestedUserId);
-    setLoading(false);
-  }, [clearState, setEmptyState, userId]);
-
-  useEffect(() => {
-    mounted.current = true;
-    requestId.current += 1;
-    clearState();
-    void reload();
-    return () => {
-      mounted.current = false;
-      requestId.current += 1;
-    };
-  }, [clearState, reload, userId]);
-
-  useEffect(() => {
-    if (!userId || !supabaseClient) return;
-    const subscription = new NotificationRealtimeSubscription(
-      supabaseClient,
-      userId,
-      ({ row }) => {
-        if (activeUserId.current !== userId) return;
-        const item = mapNotificationRow(row);
-        if (!item) return;
-        setRecentItems((current) => {
-          const previous = current.find((entry) => entry.id === item.id);
-          setUnreadCount((count) => {
-            if (!previous && !item.readAt) return count + 1;
-            if (previous && !previous.readAt && item.readAt) return Math.max(0, count - 1);
-            return count;
-          });
-          return mergeNotifications(current, item, 5);
-        });
-      },
-      reload,
-      setConnectionState,
-    );
-    subscription.start();
-    return () => subscription.stop();
-  }, [reload, userId]);
-
-  const markRead = useCallback(async (notificationId: string) => {
-    if (!userId || !NotificationRepository || busyRef.current) return false;
-    const operationUserId = userId;
-    busyRef.current = true;
-    setBusy(true);
-    setError('');
-    const result = await NotificationRepository.markRead(notificationId);
-    if (!mounted.current || activeUserId.current !== operationUserId) return false;
-    busyRef.current = false;
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.message);
-      return false;
-    }
-
-    const readAt = new Date().toISOString();
-    setReadAtById((current) => ({ ...current, [notificationId]: readAt }));
-    setRecentItems((current) => current.map((item) => (
-      item.id === notificationId && !item.readAt ? { ...item, readAt } : item
-    )));
-    setUnreadCount((current) => Math.max(0, current - 1));
-    return true;
-  }, [userId]);
-
-  const markAllRead = useCallback(async () => {
-    if (!userId || !NotificationRepository || busyRef.current) return false;
-    const operationUserId = userId;
-    busyRef.current = true;
-    setBusy(true);
-    setError('');
-    const result = await NotificationRepository.markAllRead();
-    if (!mounted.current || activeUserId.current !== operationUserId) return false;
-    busyRef.current = false;
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.message);
-      return false;
-    }
-
-    const readAt = new Date().toISOString();
-    setAllReadAt(readAt);
-    setRecentItems((current) => current.map((item) => item.readAt ? item : { ...item, readAt }));
-    setUnreadCount(0);
-    return true;
-  }, [userId]);
-
-  const belongsToCurrentUser = loadedUserId === userId && userId !== null;
-  const value = useMemo<NotificationsContextValue>(() => ({
-    recentItems: belongsToCurrentUser ? recentItems : [],
-    unreadCount: belongsToCurrentUser ? unreadCount : 0,
-    loading: belongsToCurrentUser ? loading : Boolean(userId),
-    busy,
-    error: belongsToCurrentUser ? error : '',
-    readAtById: belongsToCurrentUser ? readAtById : {},
-    allReadAt: belongsToCurrentUser ? allReadAt : null,
-    connectionState,
-    reload,
-    markRead,
-    markAllRead,
-  }), [allReadAt, belongsToCurrentUser, busy, connectionState, error, loadedUserId, loading, markAllRead, markRead, readAtById, recentItems, reload, unreadCount, userId]);
-
-  return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
-}
-
-export function useNotificationsContext() {
-  const context = useContext(NotificationsContext) as NotificationsContextValue | undefined;
-  if (!context) throw new Error('useNotificationsContext deve ser usado dentro de NotificationsProvider.');
-  return context;
-}
+export function useNotificationsContext():Value{const value=useContext(Context) as Value|undefined;if(!value)throw new Error('useNotificationsContext deve ser usado dentro de NotificationsProvider.');return value;}

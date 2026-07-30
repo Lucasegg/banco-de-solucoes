@@ -1,88 +1,25 @@
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
-import type { NotificationItem } from '../../types/notification';
 
-export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'polling';
-export type RealtimeEvent = { eventType: 'INSERT' | 'UPDATE'; row: Record<string, unknown> };
-
-export function mergeNotifications(current: NotificationItem[], incoming: NotificationItem, limit = Infinity) {
-  const previous = current.find((item) => item.id === incoming.id);
-  // notification_order never changes. For UPDATE, read_at is monotonic: an old
-  // replica event must not turn a notification unread again.
-  const merged = previous
-    ? { ...previous, ...incoming, readAt: previous.readAt ?? incoming.readAt }
-    : incoming;
-  return [...current.filter((item) => item.id !== incoming.id), merged]
-    .sort((a, b) => (b.notificationOrder ?? 0) - (a.notificationOrder ?? 0))
-    .slice(0, limit);
+export type ConnectionState = 'connecting' | 'connected' | 'failed' | 'polling';
+export interface NotificationSignal { recipient_id:string;notification_id:string;notification_order:number;change_type:'INSERT'|'UPDATE';signaled_at?:string }
+export interface SubscriptionDependencies {
+  client: Pick<SupabaseClient,'channel'|'removeChannel'>;
+  document: Pick<Document,'visibilityState'|'addEventListener'|'removeEventListener'>;
+  setInterval: typeof setInterval;
+  clearInterval: typeof clearInterval;
 }
+const browserDependencies=(client:SupabaseClient):SubscriptionDependencies=>({client,document,setInterval,clearInterval});
 
+/** Owns exactly one safe-signal channel and at most one fallback timer. */
 export class NotificationRealtimeSubscription {
-  private channel: RealtimeChannel | null = null;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
-  private stopped = true;
-  private readonly client: SupabaseClient;
-  private readonly userId: string;
-  private readonly onEvent: (event: RealtimeEvent) => void;
-  private readonly recover: () => void | Promise<void>;
-  private readonly onState: (state: ConnectionState) => void;
-  private readonly documentRef: Pick<Document, 'visibilityState' | 'addEventListener' | 'removeEventListener'>;
-  private readonly pollMs: number;
-
-  constructor(
-    client: SupabaseClient, userId: string, onEvent: (event: RealtimeEvent) => void,
-    recover: () => void | Promise<void>, onState: (state: ConnectionState) => void,
-    documentRef: Pick<Document, 'visibilityState' | 'addEventListener' | 'removeEventListener'> = document,
-    pollMs = 60_000,
-  ) { this.client=client;this.userId=userId;this.onEvent=onEvent;this.recover=recover;this.onState=onState;this.documentRef=documentRef;this.pollMs=pollMs; }
-
-  start() {
-    if (!this.stopped) return;
-    this.stopped = false;
-    this.onState('connecting');
-    this.documentRef.addEventListener('visibilitychange', this.visibilityChanged);
-    this.channel = this.client.channel(`notifications:${this.userId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${this.userId}`,
-      }, (payload) => {
-        if ((payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') && payload.new) {
-          this.onEvent({ eventType: payload.eventType, row: payload.new as Record<string, unknown> });
-        }
-      })
-      .subscribe((status) => {
-        if (this.stopped) return;
-        if (status === 'SUBSCRIBED') {
-          this.stopPolling();
-          this.onState('connected');
-          void this.recover();
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          this.onState('reconnecting');
-          this.startPolling();
-        }
-      });
-  }
-
-  stop() {
-    if (this.stopped) return;
-    this.stopped = true;
-    this.documentRef.removeEventListener('visibilitychange', this.visibilityChanged);
-    this.stopPolling();
-    if (this.channel) void this.client.removeChannel(this.channel);
-    this.channel = null;
-  }
-
-  private visibilityChanged = () => {
-    if (this.documentRef.visibilityState === 'visible') {
-      void this.recover();
-      if (this.channel) return;
-      this.startPolling();
-    } else this.stopPolling();
-  };
-
-  private startPolling() {
-    if (this.stopped || this.pollTimer || this.documentRef.visibilityState !== 'visible') return;
-    this.onState('polling');
-    void this.recover();
-    this.pollTimer = setInterval(() => void this.recover(), this.pollMs);
-  }
-  private stopPolling() { if (this.pollTimer) clearInterval(this.pollTimer); this.pollTimer = null; }
+  private channel:RealtimeChannel|null=null;private timer:ReturnType<typeof setInterval>|null=null;
+  private stopped=true;private healthy=false;
+  private readonly deps:SubscriptionDependencies;
+  private readonly userId:string;private readonly onSignal:(signal:NotificationSignal)=>void;private readonly reconcile:()=>void|Promise<void>;private readonly onState:(state:ConnectionState)=>void;private readonly pollMs:number;
+  constructor(client:SupabaseClient,userId:string,onSignal:(signal:NotificationSignal)=>void,reconcile:()=>void|Promise<void>,onState:(state:ConnectionState)=>void,deps?:SubscriptionDependencies,pollMs=60_000){this.deps=deps??browserDependencies(client);this.userId=userId;this.onSignal=onSignal;this.reconcile=reconcile;this.onState=onState;this.pollMs=pollMs;}
+  start(){if(!this.stopped)return;this.stopped=false;this.healthy=false;this.onState('connecting');this.deps.document.addEventListener('visibilitychange',this.visibilityChanged);this.channel=this.deps.client.channel(`notification-signals:${this.userId}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'notification_realtime_signals',filter:`recipient_id=eq.${this.userId}`},payload=>{const row=payload.new as unknown as NotificationSignal;if(row.recipient_id===this.userId)this.onSignal(row);}).subscribe(status=>{if(this.stopped)return;if(status==='SUBSCRIBED'){this.healthy=true;this.stopPolling();this.onState('connected');void this.reconcile();}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){this.healthy=false;this.onState('failed');this.startPolling();}});}
+  stop(){if(this.stopped)return;this.stopped=true;this.healthy=false;this.deps.document.removeEventListener('visibilitychange',this.visibilityChanged);this.stopPolling();if(this.channel)void this.deps.client.removeChannel(this.channel);this.channel=null;}
+  private visibilityChanged=()=>{if(this.deps.document.visibilityState==='visible'&&!this.healthy){void this.reconcile();this.startPolling();}else if(this.deps.document.visibilityState!=='visible')this.stopPolling();};
+  private startPolling(){if(this.stopped||this.healthy||this.timer||this.deps.document.visibilityState!=='visible')return;this.onState('polling');void this.reconcile();this.timer=this.deps.setInterval(()=>void this.reconcile(),this.pollMs);}
+  private stopPolling(){if(this.timer)this.deps.clearInterval(this.timer);this.timer=null;}
 }

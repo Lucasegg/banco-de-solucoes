@@ -186,6 +186,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint44_notifications_assertions.sql
+      - name: Install the isolated Supabase Auth users contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -c 'create table if not exists auth.users (id uuid primary key);'
       - name: Apply the Sprint 45 notification Realtime migration
         env:
           PGPASSWORD: postgres

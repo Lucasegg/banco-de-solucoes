@@ -2,7 +2,7 @@
 
 ## Arquitetura
 
-O acesso permanece no `SupabaseNotificationRepository`. Uma assinatura testável e com ciclo de vida próprio recebe somente `INSERT` e `UPDATE` de `notifications` filtrados pela conta autenticada; a RLS forçada continua sendo a autorização efetiva. A camada de estado deduplica por `id`, ordena por `notification_order` e nunca reverte `read_at`.
+O acesso permanece no `SupabaseNotificationRepository`. Uma assinatura testável e com ciclo de vida próprio recebe somente `INSERT` da tabela de sinais segura, filtrado pela conta autenticada; a RLS forçada continua sendo a autorização efetiva. Cada sinal contém apenas destinatário, identificador, ordem e tipo da mudança. O estado é sempre reconciliado pelas RPCs privadas da Sprint 44, preservando atribuição, deduplicação, `notification_order` e `read_at`.
 
 Falhas ativam polling de 60 segundos apenas com a aba visível. Uma conexão recuperada cancela o timer e reconcilia o estado por RPC. Logout, troca de conta e desmontagem removem canal, listener e timer.
 

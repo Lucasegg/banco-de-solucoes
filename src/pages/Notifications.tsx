@@ -19,7 +19,7 @@ export function Notifications() {
     else setStatus(t('notifications.unavailable'));
   };
   return <section className="space-y-6">
-    <p className="sr-only" role="status" aria-live="polite">{t(`notifications.connection.${notifications.connectionState}`)}</p>
+    <p className="sr-only" role="status" aria-live="polite">{t(({connecting:'notifications.connection.connecting',connected:'notifications.connection.connected',failed:'notifications.connection.failed',polling:'notifications.connection.polling'} as const)[notifications.connectionState])}</p>
     <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-3xl font-bold">{t('notifications.title')}</h1><p className="mt-1 text-muted" aria-live="polite">{formatMessageCount(notifications.unreadCount, locale, t, 'notifications.unread.one', 'notifications.unread.other')}</p></div>
       <button disabled={notifications.busy || notifications.unreadCount === 0} onClick={() => void notifications.markAllRead()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 disabled:cursor-not-allowed disabled:opacity-50"><CheckCircle2 size={18} />{t('notifications.markAllRead')}</button></header>
     <NotificationFilters category={notifications.category} unreadOnly={notifications.unreadOnly} onChange={(category, unreadOnly) => { notifications.setCategory(category); notifications.setUnreadOnly(Boolean(unreadOnly)); }} />
