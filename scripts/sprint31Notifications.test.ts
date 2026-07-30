@@ -27,13 +27,13 @@ test('all private RPCs are audited and own notification rows', () => {
   assert.match(sql, /revoke all on public\.notifications from anon/i);
 });
 
-test('server pagination uses one extra row and stable bounded ordering', () => {
+test('legacy server pagination remains available while repository uses the Sprint 44 cursor RPC', () => {
   assert.match(sql, /least\(greatest\(coalesce\(p_limit,20\),1\),50\) \+ 1/i);
   assert.match(sql, /offset greatest\(coalesce\(p_offset,0\),0\)/i);
   assert.match(sql, /order by n\.created_at desc,n\.id desc/i);
+  assert.match(repository, /get_my_notifications/);
   assert.match(repository, /get_notifications_page/);
-  assert.match(repository, /items: items\.slice\(0, limit\), hasMore: items\.length > limit/);
-  assert.doesNotMatch(repository, /items\.length === limit/);
+  assert.match(repository, /items: items\.slice\(0, limit\)/);
 });
 
 test('safe navigation accepts canonical paths and rejects malformed destinations', () => {

@@ -5,15 +5,18 @@ import { safeNotificationActionUrl } from '../../notifications/navigation';
 import { safeDatabaseMessage } from '../errors';
 
 type Result<T> = { ok: true; data: T } | { ok: false; message: string };
-const allowedTypes = new Set<NotificationType>(['contribution.received','contribution.approved','contribution.rejected','contribution.changes_requested','comment.created','comment.replied','comment.reacted','favorite.content_updated','user.role_changed']);
+const allowedTypes = new Set<NotificationType>(['contribution.received','contribution.approved','contribution.rejected','contribution.changes_requested','comment.created','comment.replied','comment.reacted','favorite.content_updated','user.role_changed','report.reviewing','report.resolved','report.dismissed','content.archived','content.restored']);
 
 function mapRow(row: Record<string, unknown>): NotificationItem | null {
-  if (!allowedTypes.has(row.type as NotificationType)) return null;
+  const type = (row.notification_type ?? row.type) as NotificationType;
+  if (!allowedTypes.has(type)) return null;
   return {
     id: String(row.id), actorId: row.actor_id ? String(row.actor_id) : null,
-    actorName: String(row.actor_name ?? 'Sistema'), type: row.type as NotificationType,
+    actorName: 'Sistema', type,
     title: String(row.title), message: String(row.message), targetType: row.target_type ? String(row.target_type) : null,
     targetId: row.target_id ? String(row.target_id) : null,
+    reportId: row.report_id ? String(row.report_id) : null,
+    notificationOrder: row.notification_order === undefined ? undefined : Number(row.notification_order),
     actionUrl: safeNotificationActionUrl(row.action_url),
     metadata: {},
     readAt: row.read_at ? String(row.read_at) : null, createdAt: String(row.created_at),
@@ -24,13 +27,16 @@ export class SupabaseNotificationRepository {
   constructor(private readonly client: SupabaseClient) {}
   async list(filters: NotificationFilters = {}): Promise<Result<NotificationPageResult>> {
     const limit = Math.min(50, Math.max(1, filters.limit ?? 20));
-    const { data, error } = await this.client.rpc('get_notifications_page', { p_category: filters.category ?? null, p_unread_only: filters.unreadOnly ?? false, p_limit: limit, p_offset: Math.max(0, filters.offset ?? 0) });
+    const request = filters.category
+      ? this.client.rpc('get_notifications_page', { p_category: filters.category, p_unread_only: filters.unreadOnly ?? false, p_limit: limit + 1, p_offset: Math.max(0, filters.offset ?? 0) })
+      : this.client.rpc('get_my_notifications', { p_unread_only: filters.unreadOnly ?? false, p_limit: limit, p_offset: Math.max(0, filters.offset ?? 0) });
+    const { data, error } = await request;
     if (error) return { ok: false, message: safeDatabaseMessage(error, 'Não foi possível carregar as notificações.') };
     const items = ((data ?? []) as Record<string, unknown>[]).map(mapRow).filter((item): item is NotificationItem => item !== null);
-    return { ok: true, data: { items: items.slice(0, limit), hasMore: items.length > limit } };
+    return { ok: true, data: { items: items.slice(0, limit), hasMore: filters.category ? items.length > limit : items.length === limit } };
   }
-  async getUnreadCount(): Promise<Result<number>> { const { data,error }=await this.client.rpc('get_unread_notification_count'); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível atualizar o contador.')}:{ok:true,data:Number(data??0)}; }
-  async markRead(notificationId: string): Promise<Result<boolean>> { const {data,error}=await this.client.rpc('mark_notification_read',{p_notification_id:notificationId}); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível marcar a notificação.')}:{ok:true,data:Boolean(data)}; }
-  async markAllRead(): Promise<Result<number>> { const {data,error}=await this.client.rpc('mark_all_notifications_read'); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível marcar as notificações.')}:{ok:true,data:Number(data??0)}; }
+  async getUnreadCount(): Promise<Result<number>> { const { data,error }=await this.client.rpc('get_my_unread_notification_count'); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível atualizar o contador.')}:{ok:true,data:Number(data??0)}; }
+  async markRead(notificationId: string): Promise<Result<boolean>> { const {data,error}=await this.client.rpc('mark_my_notification_read',{p_notification_id:notificationId}); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível marcar a notificação.')}:{ok:true,data:Boolean(data)}; }
+  async markAllRead(): Promise<Result<number>> { const {data,error}=await this.client.rpc('mark_all_my_notifications_read'); return error?{ok:false,message:safeDatabaseMessage(error,'Não foi possível marcar as notificações.')}:{ok:true,data:Number(data??0)}; }
 }
 export const NotificationRepository = supabaseClient ? new SupabaseNotificationRepository(supabaseClient) : null;

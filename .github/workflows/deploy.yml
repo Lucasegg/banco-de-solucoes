@@ -170,6 +170,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint43_content_moderation_assertions.sql
+      - name: Apply the Sprint 44 in-app notifications migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260730130000_sprint44_in_app_notifications.sql
+      - name: Verify Sprint 44 notification security and behavior
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint44_notifications_assertions.sql
 
   verify:
     if: github.event_name != 'workflow_dispatch'
@@ -214,6 +222,8 @@ jobs:
         run: npm run test:sprint42
       - name: Sprint 43 content moderation tests
         run: npm run test:sprint43
+      - name: Sprint 44 in-app notification tests
+        run: npm run test:sprint44
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:
