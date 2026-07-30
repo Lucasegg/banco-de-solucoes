@@ -29,20 +29,27 @@ do $$ begin
 end $$;
 
 select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000099',false);
-do $$ declare v_report_id uuid;v_report_status text;begin
- select r.id,r.status into v_report_id,v_report_status from public.content_reports r where r.target_type='problem' and r.target_id='42000000-0000-0000-0001-000000000001';
+do $$ declare v_report_id uuid;v_report_status text;v_actual_status text;v_actual_report_status text;begin
+ select ar.id,ar.status into v_report_id,v_report_status
+   from public.get_admin_content_reports(null,'problem',null,100,0) ar
+  where ar.target_type='problem' and ar.target_id='42000000-0000-0000-0001-000000000001';
+ if v_report_id is null or v_report_status is null then raise exception 'administrative report RPC did not return the problem report';end if;
  perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','archive','Violação confirmada','Nota',v_report_id);
- if (select p.status from public.problems p where p.id='42000000-0000-0000-0001-000000000001')<>'Arquivado' then raise exception 'problem not archived';end if;
- if (select r.status from public.content_reports r where r.id=v_report_id)<>v_report_status then raise exception 'report silently changed';end if;
- if (select s.current_status from public.get_content_moderation_state('problem','42000000-0000-0000-0001-000000000001') s)<>'Arquivado' then raise exception 'state RPC differs from problem';end if;
+ select ms.current_status into v_actual_status from public.get_content_moderation_state('problem','42000000-0000-0000-0001-000000000001') ms;
+ if v_actual_status is distinct from 'Arquivado' then raise exception 'problem not archived through state RPC: %',v_actual_status;end if;
+ select ar.status into v_actual_report_status from public.get_admin_content_reports(null,'problem',null,100,0) ar where ar.id=v_report_id;
+ if v_actual_report_status is distinct from v_report_status then raise exception 'report silently changed: expected %, got %',v_report_status,v_actual_report_status;end if;
  begin perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','archive','again');raise exception 'duplicate archive accepted';exception when check_violation then null;end;
  perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','restore','Revisão concluída',null,v_report_id);
- if (select p.status from public.problems p where p.id='42000000-0000-0000-0001-000000000001')<>'Reportado' then raise exception 'exact problem restore failed';end if;
+ select ms.current_status into v_actual_status from public.get_content_moderation_state('problem','42000000-0000-0000-0001-000000000001') ms;
+ if v_actual_status is distinct from 'Reportado' then raise exception 'exact problem restore failed: %',v_actual_status;end if;
  begin perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','restore','again');raise exception 'duplicate restore accepted';exception when check_violation then null;end;
  perform public.moderate_reported_content('solution','42000000-0000-0000-0002-000000000001','archive','Violação confirmada');
- if (select s.current_status from public.get_content_moderation_state('solution','42000000-0000-0000-0002-000000000001') s)<>'Arquivada' then raise exception 'state RPC differs from solution';end if;
+ select ms.current_status into v_actual_status from public.get_content_moderation_state('solution','42000000-0000-0000-0002-000000000001') ms;
+ if v_actual_status is distinct from 'Arquivada' then raise exception 'state RPC differs from solution: %',v_actual_status;end if;
  perform public.moderate_reported_content('solution','42000000-0000-0000-0002-000000000001','restore','Revisão concluída');
- if (select s.status from public.solutions s where s.id='42000000-0000-0000-0002-000000000001')<>'Proposta' then raise exception 'exact solution restore failed';end if;
+ select ms.current_status into v_actual_status from public.get_content_moderation_state('solution','42000000-0000-0000-0002-000000000001') ms;
+ if v_actual_status is distinct from 'Proposta' then raise exception 'exact solution restore failed: %',v_actual_status;end if;
  begin perform public.moderate_reported_content('solution','42000000-0000-0000-0002-000000000001','restore','again');raise exception 'duplicate solution restore accepted';exception when check_violation then null;end;
  begin perform public.moderate_reported_content('solution','42000000-0000-0000-0002-000000000001','archive','x',null,v_report_id);raise exception 'mismatched report accepted';exception when check_violation then null;end;
  begin perform public.moderate_reported_content('user',gen_random_uuid(),'archive','x');raise exception 'bad target accepted';exception when invalid_parameter_value then null;end;
@@ -68,14 +75,15 @@ reset role;
 create function public.sprint43_reject_audit() returns trigger language plpgsql as $$begin if new.reason='force audit failure' then raise exception 'forced audit failure' using errcode='55000';end if;return new;end$$;
 create trigger sprint43_reject_audit before insert on public.content_moderation_actions for each row execute function public.sprint43_reject_audit();
 set role authenticated;select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000099',false);
-do $$ begin begin perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','archive','force audit failure');raise exception 'forced audit insert accepted';exception when sqlstate '55000' then null;end;if(select p.status from public.problems p where p.id='42000000-0000-0000-0001-000000000001')<>'Reportado' then raise exception 'status did not roll back';end if;end $$;
+do $$ declare v_actual_status text;begin begin perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','archive','force audit failure');raise exception 'forced audit insert accepted';exception when sqlstate '55000' then null;end;select ms.current_status into v_actual_status from public.get_content_moderation_state('problem','42000000-0000-0000-0001-000000000001') ms;if v_actual_status is distinct from 'Reportado' then raise exception 'status did not roll back: %',v_actual_status;end if;end $$;
 reset role;drop trigger sprint43_reject_audit on public.content_moderation_actions;drop function public.sprint43_reject_audit();
 
 -- Trigger blocks owner-level UPDATE and DELETE as well as revoked direct DML.
-do $$ begin
+do $$ declare v_action_count bigint;v_server_moderator_count bigint;begin
  begin update public.content_moderation_actions a set reason='tampered' where true;raise exception 'history UPDATE succeeded';exception when sqlstate '55000' then null;end;
  begin delete from public.content_moderation_actions a where true;raise exception 'history DELETE succeeded';exception when sqlstate '55000' then null;end;
- if exists(select 1 from public.content_moderation_actions a where a.moderator_id<>'42000000-0000-0000-0000-000000000099') then raise exception 'moderator not server-derived';end if;
+ select count(*),count(*) filter(where a.moderator_id='42000000-0000-0000-0000-000000000099') into v_action_count,v_server_moderator_count from public.content_moderation_actions a;
+ if v_action_count is distinct from 4 or v_server_moderator_count is distinct from v_action_count then raise exception 'moderator not exclusively server-derived: actions %, expected moderator %',v_action_count,v_server_moderator_count;end if;
 end $$;
 
 -- Two independent PostgreSQL sessions genuinely contend for the same row lock.
@@ -85,12 +93,13 @@ create trigger sprint43_slow_problem_update before update on public.problems for
 create function public.sprint43_concurrent_archive() returns void language plpgsql as $$begin perform set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000099',true);perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','archive','concurrent');end$$;
 select dblink_connect('s43a','dbname='||current_database());select dblink_connect('s43b','dbname='||current_database());
 select dblink_send_query('s43a','select public.sprint43_concurrent_archive()');select pg_sleep(0.1);select dblink_send_query('s43b','select public.sprint43_concurrent_archive()');
-do $$ declare v_successes integer:=0;begin
+do $$ declare v_successes integer:=0;v_concurrent_actions bigint;begin
  while dblink_is_busy('s43a')=1 or dblink_is_busy('s43b')=1 loop perform pg_sleep(0.1);end loop;
  begin perform * from dblink_get_result('s43a') as t(result text);v_successes:=v_successes+1;exception when check_violation then null;end;
  begin perform * from dblink_get_result('s43b') as t(result text);v_successes:=v_successes+1;exception when check_violation then null;end;
  if v_successes<>1 then raise exception 'expected exactly one concurrent success, got %',v_successes;end if;
- if(select count(*) from public.content_moderation_actions a where a.target_type='problem' and a.target_id='42000000-0000-0000-0001-000000000001' and a.reason='concurrent')<>1 then raise exception 'concurrency created incompatible actions';end if;
+ select count(*) into v_concurrent_actions from public.content_moderation_actions a where a.target_type='problem' and a.target_id='42000000-0000-0000-0001-000000000001' and a.reason='concurrent';
+ if v_concurrent_actions is distinct from 1 then raise exception 'concurrency created % actions instead of one',v_concurrent_actions;end if;
 end $$;
 select dblink_disconnect('s43a');select dblink_disconnect('s43b');
 drop function public.sprint43_concurrent_archive();drop trigger sprint43_slow_problem_update on public.problems;drop function public.sprint43_slow_problem_update();
