@@ -3,6 +3,7 @@ import { useNotificationsContext } from '../context/NotificationsContext';
 import { useAuth } from './useAuth';
 import { NotificationRepository } from '../repositories/notifications';
 import type { NotificationCategory, NotificationItem } from '../types/notification';
+import { mergeNotificationPages } from '../repositories/notifications/pagination';
 
 export function useNotifications(pageSize = 20) {
   const { isAuthenticated, user } = useAuth();
@@ -29,7 +30,7 @@ export function useNotifications(pageSize = 20) {
     });
     if (!mounted.current || currentRequest !== requestId.current) return;
     if (result.ok) {
-      setItems((current) => append ? result.data.items.reduce((all, item) => all.some((entry) => entry.id === item.id) ? all : [...all, item], current) : result.data.items);
+      setItems((current) => append ? mergeNotificationPages(current, result.data.items) : result.data.items);
       setHasMore(result.data.hasMore);
     } else {
       setError(result.message);
