@@ -7,7 +7,12 @@ export type NotificationType =
   | 'comment.replied'
   | 'comment.reacted'
   | 'favorite.content_updated'
-  | 'user.role_changed';
+  | 'user.role_changed'
+  | 'report.reviewing'
+  | 'report.resolved'
+  | 'report.dismissed'
+  | 'content.archived'
+  | 'content.restored';
 
 export type NotificationCategory = 'contributions' | 'comments' | 'favorites' | 'account';
 
@@ -20,6 +25,8 @@ export interface NotificationItem {
   message: string;
   targetType: string | null;
   targetId: string | null;
+  reportId?: string | null;
+  notificationOrder?: number;
   actionUrl: string | null;
   metadata: Record<string, unknown>;
   readAt: string | null;

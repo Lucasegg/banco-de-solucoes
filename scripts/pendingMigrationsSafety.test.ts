@@ -18,6 +18,7 @@ const sprint37 = '20260729120000_sprint37_contact_rate_limit.sql';
 const sprint39 = '20260729130000_sprint39_legal_consent.sql';
 const sprint42 = '20260729140000_sprint42_content_reports.sql';
 const sprint43 = '20260730120000_sprint43_content_moderation.sql';
+const sprint44 = '20260730130000_sprint44_in_app_notifications.sql';
 const auditedRpcs = new Set([
   'create_solution_with_problems', 'update_solution_with_problems', 'report_comment',
   'mark_comment_best_answer', 'moderate_comment_visibility', 'review_contribution',
@@ -43,7 +44,7 @@ test('pending migrations are ordered, transactional, and do not self-mark histor
   const all = files();
   assert.deepEqual(all, [...all].sort(), 'migration filenames must be chronological');
   const pending = all.filter((file) => version(file) > remoteBaseline);
-  assert.deepEqual(pending, [sprint29, authorshipHotfix, sprint30, sprint31, sprint32, sprint33, sprint34, sprint35, sprint37, sprint39, sprint42, sprint43], 'documented remote baseline must leave pending migrations in order');
+  assert.deepEqual(pending, [sprint29, authorshipHotfix, sprint30, sprint31, sprint32, sprint33, sprint34, sprint35, sprint37, sprint39, sprint42, sprint43, sprint44], 'documented remote baseline must leave pending migrations in order');
   for (const file of pending) {
     const sql = contents(file).trim().toLowerCase();
     assert.match(sql, /^--[\s\S]*?\bbegin\s*;/, `${file} must begin a transaction`);
