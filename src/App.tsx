@@ -44,6 +44,7 @@ const Contact = lazy(() => import('./pages/Contact').then((m) => ({ default: m.C
 const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.Privacy })));
 const Terms = lazy(() => import('./pages/Terms').then((m) => ({ default: m.Terms })));
 const Lgpd = lazy(() => import('./pages/Lgpd').then((m) => ({ default: m.Lgpd })));
+const AdminReports = lazy(() => import('./pages/AdminReports').then((m) => ({ default: m.AdminReports })));
 
 export function App() {
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
@@ -87,7 +88,8 @@ export function App() {
       : page === 'admin-users' ? <AdminUsers onBack={() => setPage('admin')} />
         : page === 'admin-problems' ? <AdminProblems onBack={() => setPage('admin')} />
           : page === 'admin-solutions' ? <AdminSolutions onBack={() => setPage('admin')} />
-        : page === 'admin-comments' || page === 'admin-reports' ? <AdminPanel initialTab="comments" />
+        : page === 'admin-reports' ? <AdminReports onNavigate={setPage} />
+          : page === 'admin-comments' ? <AdminPanel initialTab="comments" />
           : page === 'admin-audit' ? <AdminPanel initialTab="audit" />
             : page === 'admin-contributions' ? <AdminPanel initialTab="contributions" />
       : <AdminSectionPlaceholder title={({ 'admin-users': 'Usuários', 'admin-problems': 'Problemas', 'admin-solutions': 'Soluções', 'admin-comments': 'Comentários', 'admin-reports': 'Denúncias', 'admin-audit': 'Auditoria' } as Record<string, string>)[page]} onBack={() => setPage('admin')} />;

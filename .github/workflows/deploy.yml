@@ -98,6 +98,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260729130000_sprint39_legal_consent.sql
+      - name: Install Sprint 42 administrative compatibility contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint42_admin_compatibility.sql
+      - name: Apply the Sprint 42 content reports migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260729140000_sprint42_content_reports.sql
       - name: Verify Sprint 32 indexes and public search RPCs
         shell: bash
         env:
@@ -150,6 +158,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint39_legal_consent_assertions.sql
+      - name: Verify Sprint 42 reports security contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint42_content_reports_assertions.sql
 
   verify:
     if: github.event_name != 'workflow_dispatch'
@@ -190,6 +202,8 @@ jobs:
         run: npm run test:sprint40
       - name: Sprint 41 route resilience tests
         run: npm run test:sprint41
+      - name: Sprint 42 content reports tests
+        run: npm run test:sprint42
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:
