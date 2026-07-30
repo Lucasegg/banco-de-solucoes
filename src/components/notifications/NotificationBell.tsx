@@ -6,6 +6,7 @@ import { safeNotificationActionUrl } from '../../notifications/navigation';
 import { NotificationBadge } from './NotificationBadge';
 import { useTranslation } from '../../i18n/I18nProvider';
 import { formatNumber } from '../../i18n/format';
+import { notificationText } from '../../notifications/presentation';
 
 export function NotificationBell({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { locale, t } = useTranslation();
@@ -70,7 +71,9 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
             {!loading && !error && recentItems.length === 0 && (
               <p className="p-4 text-sm text-muted">{t('notifications.noNotifications')}</p>
             )}
-            {recentItems.map((item) => (
+            {recentItems.map((item) => {
+              const text = notificationText(item.type, item.title, item.message, t);
+              return (
               <button
                 disabled={busy}
                 key={item.id}
@@ -82,15 +85,16 @@ export function NotificationBell({ onNavigate }: { onNavigate: (page: string) =>
                     <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-600" aria-label={t('notifications.unread')} />
                   )}
                   <span>
-                    <strong className="block text-sm">{item.title}</strong>
-                    <span className="line-clamp-2 block text-xs text-muted">{item.message}</span>
+                    <strong className="block text-sm">{text.title}</strong>
+                    <span className="line-clamp-2 block text-xs text-muted">{text.message}</span>
                     <time className="mt-1 block text-xs text-slate-500">
                       {formatNotificationDate(item.createdAt, locale, t)}
                     </time>
                   </span>
                 </span>
               </button>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

@@ -27,19 +27,19 @@ test('all private RPCs are audited and own notification rows', () => {
   assert.match(sql, /revoke all on public\.notifications from anon/i);
 });
 
-test('server pagination uses one extra row and stable bounded ordering', () => {
+test('legacy server pagination remains available while repository uses the Sprint 44 cursor RPC', () => {
   assert.match(sql, /least\(greatest\(coalesce\(p_limit,20\),1\),50\) \+ 1/i);
   assert.match(sql, /offset greatest\(coalesce\(p_offset,0\),0\)/i);
   assert.match(sql, /order by n\.created_at desc,n\.id desc/i);
+  assert.match(repository, /get_my_notifications/);
   assert.match(repository, /get_notifications_page/);
-  assert.match(repository, /items: items\.slice\(0, limit\), hasMore: items\.length > limit/);
-  assert.doesNotMatch(repository, /items\.length === limit/);
+  assert.match(repository, /notificationPage\(items, limit\)/);
 });
 
 test('safe navigation accepts canonical paths and rejects malformed destinations', () => {
   const uuid = '123e4567-e89b-12d3-a456-426614174000';
   for (const path of ['/profile', `/problems/${uuid}`, `/solutions/${uuid}`, `/contributions/${uuid}`]) assert.equal(safeNotificationActionUrl(path), path);
-  for (const path of [`/problems/${uuid.slice(0, 8)}`, `/problems/${uuid}/extra`, `/problems/${uuid}/`, `//problems/${uuid}`, `/problems/${uuid}?next=x`, `/problems/${uuid}#x`, 'https://example.test/x', 'javascript:alert(1)', 'data:text/plain,x', '/admin', `/problems/${uuid}\\x`]) assert.equal(safeNotificationActionUrl(path), null, path);
+  for (const path of [`/reports/${uuid}`, `/problems/${uuid.slice(0, 8)}`, `/problems/${uuid}/extra`, `/problems/${uuid}/`, `//problems/${uuid}`, `/problems/${uuid}?next=x`, `/problems/${uuid}#x`, 'https://example.test/x', 'javascript:alert(1)', 'data:text/plain,x', '/admin', `/problems/${uuid}\\x`]) assert.equal(safeNotificationActionUrl(path), null, path);
   assert.match(navigation, /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{12\}/i);
   assert.match(page, /await notifications\.markRead/);
   assert.match(page, /t\('notifications\.unavailable'\)/);
