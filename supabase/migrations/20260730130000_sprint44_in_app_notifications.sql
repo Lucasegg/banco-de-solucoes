@@ -89,7 +89,8 @@ language plpgsql stable security definer set search_path = pg_catalog, public as
 begin
   if auth.uid() is null then raise exception 'Authentication required' using errcode='42501'; end if;
   if p_limit is null or p_limit not between 1 and 50 or p_offset is null or p_offset < 0 or p_offset > 10000 then raise exception 'Invalid pagination' using errcode='22023'; end if;
-  return query select n.id,n.actor_id,
+  return query select n.id,
+    case when n.type like 'report.%' or n.type like 'content.%' then null else n.actor_id end,
     case when n.type like 'report.%' or n.type like 'content.%' then null
          else coalesce(nullif(btrim(p.display_name),''),nullif(btrim(p.username),''),'Sistema') end,
     n.type,n.target_type,n.target_id,n.report_id,n.read_at,n.created_at,n.notification_order,n.title,n.message,n.action_url

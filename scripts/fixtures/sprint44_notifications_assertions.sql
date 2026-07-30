@@ -33,6 +33,17 @@ do $$ declare actor uuid;actor_label text;begin
 end $$;
 reset role;
 
+-- Defense in depth: even a malformed administrative row with actor_id must not expose it.
+insert into public.notifications(recipient_id,actor_id,type,title,message,target_type,target_id,event_key)
+values('42000000-0000-0000-0000-000000000001','42000000-0000-0000-0000-000000000099','content.archived','private actor','private actor','problem',gen_random_uuid(),'s44:private-actor');
+set role authenticated;
+select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000001',false);
+do $$ declare leaked_actor uuid;leaked_name text;begin
+ select actor_id,actor_name into leaked_actor,leaked_name from public.get_my_notifications(10,0,false) where id=(select id from public.notifications where event_key='s44:private-actor');
+ if leaked_actor is not null or leaked_name is not null then raise exception 'administrative actor leaked through RPC: %, %',leaked_actor,leaked_name;end if;
+end $$;
+reset role;
+
 -- A failed subtransaction leaves no residual notification (rollback atomicity).
 do $$ begin
  begin
@@ -91,16 +102,32 @@ end $$;
 create extension if not exists dblink;
 create function public.sprint44_slow_duplicate_event() returns trigger language plpgsql set search_path=pg_catalog,public as $$begin if new.event_key='s44:concurrency' then perform pg_sleep(0.5);end if;return new;end$$;
 create trigger sprint44_slow_duplicate_event before insert on public.notifications for each row execute function public.sprint44_slow_duplicate_event();
-select dblink_connect('s44a','dbname='||current_database());
-select dblink_connect('s44b','dbname='||current_database());
-select dblink_send_query('s44a',$q$select public.create_event_notification('44000000-0000-0000-0000-000000000004','content.archived','problem',gen_random_uuid(),null,'s44:concurrency','x','x',null)$q$);
-select dblink_send_query('s44b',$q$select public.create_event_notification('44000000-0000-0000-0000-000000000004','content.archived','problem',gen_random_uuid(),null,'s44:concurrency','x','x',null)$q$);
-do $$ declare failures integer:=0;begin
- while dblink_is_busy('s44a')=1 or dblink_is_busy('s44b')=1 loop perform pg_sleep(0.05);end loop;
- begin perform * from dblink_get_result('s44a') as t(id uuid);exception when others then failures:=failures+1;end;
- begin perform * from dblink_get_result('s44b') as t(id uuid);exception when others then failures:=failures+1;end;
- if failures<>0 then raise exception 'concurrent notification call failed: %',failures;end if;
- if (select count(*) from public.notifications where event_key='s44:concurrency')<>1 then raise exception 'concurrency duplicated notification';end if;
+create temporary table sprint44_concurrency_failure(message text) on commit preserve rows;
+do $$ declare failures integer:=0;failure_details text:='';connections text[];begin
+ begin
+  perform dblink_connect('s44a','dbname='||current_database());
+  perform dblink_connect('s44b','dbname='||current_database());
+  perform dblink_send_query('s44a',$q$select public.create_event_notification('44000000-0000-0000-0000-000000000004','content.archived','problem',gen_random_uuid(),null,'s44:concurrency','x','x',null)$q$);
+  perform dblink_send_query('s44b',$q$select public.create_event_notification('44000000-0000-0000-0000-000000000004','content.archived','problem',gen_random_uuid(),null,'s44:concurrency','x','x',null)$q$);
+  while dblink_is_busy('s44a')=1 or dblink_is_busy('s44b')=1 loop perform pg_sleep(0.05);end loop;
+  begin perform * from dblink_get_result('s44a') as t(result text);exception when others then failures:=failures+1;failure_details:=failure_details||' s44a='||sqlerrm;end;
+  begin perform * from dblink_get_result('s44b') as t(result text);exception when others then failures:=failures+1;failure_details:=failure_details||' s44b='||sqlerrm;end;
+  if failures<>0 then raise exception 'concurrent notification call failed:%',failure_details;end if;
+  if (select count(*) from public.notifications where event_key='s44:concurrency')<>1 then raise exception 'concurrency duplicated notification';end if;
+ exception when others then
+  connections:=coalesce(dblink_get_connections(),'{}'::text[]);
+ if 's44a'=any(connections) then perform dblink_disconnect('s44a');end if;
+ if 's44b'=any(connections) then perform dblink_disconnect('s44b');end if;
+  drop trigger sprint44_slow_duplicate_event on public.notifications;
+  drop function public.sprint44_slow_duplicate_event();
+  insert into sprint44_concurrency_failure values(sqlerrm);
+  return;
+ end;
+ connections:=coalesce(dblink_get_connections(),'{}'::text[]);
+ if 's44a'=any(connections) then perform dblink_disconnect('s44a');end if;
+ if 's44b'=any(connections) then perform dblink_disconnect('s44b');end if;
+ drop trigger sprint44_slow_duplicate_event on public.notifications;
+ drop function public.sprint44_slow_duplicate_event();
 end $$;
-select dblink_disconnect('s44a');select dblink_disconnect('s44b');
-drop trigger sprint44_slow_duplicate_event on public.notifications;drop function public.sprint44_slow_duplicate_event();
+do $$ declare failure text;begin select message into failure from sprint44_concurrency_failure limit 1;if failure is not null then raise exception 'Sprint 44 concurrency assertion failed: %',failure;end if;end $$;
+drop table sprint44_concurrency_failure;

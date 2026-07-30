@@ -35,6 +35,8 @@ test('automatic events contain no administrative identities, notes or report met
   assert.match(triggerSection, /create_event_notification\(\s*new\.reporter_id/);
   assert.doesNotMatch(triggerSection, /jsonb_build_object/i);
   for (const type of ['report.reviewing','report.resolved','report.dismissed','content.archived','content.restored']) assert.ok(migration.includes(type));
+  assert.match(migration, /case when n\.type like 'report\.%' or n\.type like 'content\.%' then null else n\.actor_id end/);
+  assert.match(assertions, /s44:private-actor[\s\S]*leaked_actor is not null or leaked_name is not null/);
 });
 
 test('all client RPCs derive ownership from auth.uid and have fixed search paths', () => {
