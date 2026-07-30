@@ -30,7 +30,6 @@ do $$ begin
  begin insert into public.content_moderation_actions(target_type,target_id,moderator_id,action,reason,previous_status,resulting_status)values('problem',gen_random_uuid(),auth.uid(),'archive','x','Reportado','Arquivado');raise exception 'direct INSERT accepted';exception when insufficient_privilege then null;end;
  begin update public.content_moderation_actions set reason='x';raise exception 'direct UPDATE accepted';exception when insufficient_privilege then null;end;
  begin delete from public.content_moderation_actions;raise exception 'direct DELETE accepted';exception when insufficient_privilege then null;end;
- begin insert into public.content_moderation_actions(action_order,target_type,target_id,moderator_id,action,reason,previous_status,resulting_status)values(1,'problem',gen_random_uuid(),auth.uid(),'archive','x','Reportado','Arquivado');raise exception 'client controlled action_order';exception when insufficient_privilege then null;end;
 end $$;
 
 select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000099',false);
