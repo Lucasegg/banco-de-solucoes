@@ -1,0 +1,17 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { safeDatabaseMessage } from '../errors.ts';
+
+export type ContentTarget = 'problem'|'solution';
+export type ContentModerationAction = 'archive'|'restore';
+export interface ModerationHistoryItem { id:string;action:ContentModerationAction;reason:string;moderatorNote:string|null;previousStatus:string;resultingStatus:string;createdAt:string }
+export interface ModerationResult { id:string;targetType:ContentTarget;targetId:string;action:ContentModerationAction;previousStatus:string;resultingStatus:string;createdAt:string }
+type Result<T>={ok:true;data:T}|{ok:false;message:string};type Row=Record<string,unknown>;
+const invalid='O servidor retornou uma resposta de moderação inválida.';
+const str=(r:Row,k:string)=>typeof r[k]==='string'&&r[k]!==''?r[k] as string:null;
+const nullable=(r:Row,k:string)=>!(k in r)?undefined:r[k]===null?null:str(r,k)??undefined;
+export function parseModerationHistory(value:unknown):ModerationHistoryItem|null {if(!value||typeof value!=='object')return null;const r=value as Row,id=str(r,'id'),action=str(r,'action'),reason=str(r,'reason'),note=nullable(r,'moderator_note'),previousStatus=str(r,'previous_status'),resultingStatus=str(r,'resulting_status'),createdAt=str(r,'created_at');return id&&(action==='archive'||action==='restore')&&reason&&note!==undefined&&previousStatus&&resultingStatus&&createdAt?{id,action,reason,moderatorNote:note,previousStatus,resultingStatus,createdAt}:null}
+export function parseModerationResult(value:unknown):ModerationResult|null {if(!value||typeof value!=='object')return null;const r=value as Row,id=str(r,'id'),targetType=str(r,'target_type'),targetId=str(r,'target_id'),action=str(r,'action'),previousStatus=str(r,'previous_status'),resultingStatus=str(r,'resulting_status'),createdAt=str(r,'created_at');return id&&(targetType==='problem'||targetType==='solution')&&targetId&&(action==='archive'||action==='restore')&&previousStatus&&resultingStatus&&createdAt?{id,targetType,targetId,action,previousStatus,resultingStatus,createdAt}:null}
+export class SupabaseAdminModerationRepository {private readonly client:SupabaseClient;constructor(client:SupabaseClient){this.client=client}
+ async history(targetType:ContentTarget,targetId:string):Promise<Result<ModerationHistoryItem[]>>{const {data,error}=await this.client.rpc('get_content_moderation_history',{p_target_type:targetType,p_target_id:targetId});if(error)return{ok:false,message:safeDatabaseMessage(error,'Não foi possível carregar o histórico.')};if(!Array.isArray(data))return{ok:false,message:invalid};const parsed=data.map(parseModerationHistory);return parsed.some(v=>!v)?{ok:false,message:invalid}:{ok:true,data:parsed as ModerationHistoryItem[]}}
+ async moderate(targetType:ContentTarget,targetId:string,action:ContentModerationAction,reason:string,note:string,reportId?:string):Promise<Result<ModerationResult>>{const {data,error}=await this.client.rpc('moderate_reported_content',{p_target_type:targetType,p_target_id:targetId,p_action:action,p_reason:reason.trim(),p_moderator_note:note.trim()||null,p_report_id:reportId??null});if(error)return{ok:false,message:safeDatabaseMessage(error,'Não foi possível moderar o conteúdo.')};const parsed=Array.isArray(data)&&data.length===1?parseModerationResult(data[0]):null;return parsed?{ok:true,data:parsed}:{ok:false,message:invalid}}
+}

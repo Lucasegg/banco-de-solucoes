@@ -31,7 +31,8 @@
     "test:sprint39": "node --experimental-strip-types --test scripts/sprint39LegalConsent.test.ts",
     "test:sprint40": "node --experimental-strip-types --test scripts/sprint40PerformanceActions.test.ts",
     "test:sprint41": "node --experimental-strip-types --test scripts/sprint41RouteResilience.test.ts",
-    "test:sprint42": "node --experimental-strip-types --test scripts/sprint42ContentReports.test.ts"
+    "test:sprint42": "node --experimental-strip-types --test scripts/sprint42ContentReports.test.ts",
+    "test:sprint43": "node --experimental-strip-types --test scripts/sprint43ContentModeration.test.ts"
   },
   "dependencies": {
     "vite": "latest",
