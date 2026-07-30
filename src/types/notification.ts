@@ -41,3 +41,10 @@ export interface NotificationFilters {
 }
 
 export interface NotificationPageResult { items: NotificationItem[]; hasMore: boolean }
+
+export interface NotificationPreferences {
+  contributions: boolean;
+  comments: boolean;
+  favorites: boolean;
+  updatedAt: string;
+}

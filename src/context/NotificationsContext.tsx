@@ -10,6 +10,9 @@ import {
 } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { NotificationRepository } from '../repositories/notifications';
+import { mapNotificationRow } from '../repositories/notifications/NotificationRepository';
+import { mergeNotifications, NotificationRealtimeSubscription, type ConnectionState } from '../repositories/notifications/realtime';
+import { supabaseClient } from '../integrations/supabase/client';
 import type { NotificationItem } from '../types/notification';
 
 interface NotificationsContextValue {
@@ -20,6 +23,7 @@ interface NotificationsContextValue {
   error: string;
   readAtById: Record<string, string>;
   allReadAt: string | null;
+  connectionState: ConnectionState;
   reload: () => Promise<void>;
   markRead: (notificationId: string) => Promise<boolean>;
   markAllRead: () => Promise<boolean>;
@@ -43,6 +47,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [readAtById, setReadAtById] = useState<Record<string, string>>({});
   const [allReadAt, setAllReadAt] = useState<string | null>(null);
+  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
 
   const setEmptyState = useCallback((stateUserId: string | null) => {
     setLoadedUserId(stateUserId);
@@ -99,6 +104,32 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     };
   }, [clearState, reload, userId]);
 
+  useEffect(() => {
+    if (!userId || !supabaseClient) return;
+    const subscription = new NotificationRealtimeSubscription(
+      supabaseClient,
+      userId,
+      ({ row }) => {
+        if (activeUserId.current !== userId) return;
+        const item = mapNotificationRow(row);
+        if (!item) return;
+        setRecentItems((current) => {
+          const previous = current.find((entry) => entry.id === item.id);
+          setUnreadCount((count) => {
+            if (!previous && !item.readAt) return count + 1;
+            if (previous && !previous.readAt && item.readAt) return Math.max(0, count - 1);
+            return count;
+          });
+          return mergeNotifications(current, item, 5);
+        });
+      },
+      reload,
+      setConnectionState,
+    );
+    subscription.start();
+    return () => subscription.stop();
+  }, [reload, userId]);
+
   const markRead = useCallback(async (notificationId: string) => {
     if (!userId || !NotificationRepository || busyRef.current) return false;
     const operationUserId = userId;
@@ -154,10 +185,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     error: belongsToCurrentUser ? error : '',
     readAtById: belongsToCurrentUser ? readAtById : {},
     allReadAt: belongsToCurrentUser ? allReadAt : null,
+    connectionState,
     reload,
     markRead,
     markAllRead,
-  }), [allReadAt, belongsToCurrentUser, busy, error, loadedUserId, loading, markAllRead, markRead, readAtById, recentItems, reload, unreadCount, userId]);
+  }), [allReadAt, belongsToCurrentUser, busy, connectionState, error, loadedUserId, loading, markAllRead, markRead, readAtById, recentItems, reload, unreadCount, userId]);
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
 }

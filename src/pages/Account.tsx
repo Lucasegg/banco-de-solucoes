@@ -8,6 +8,7 @@ import { useLegalConsent } from '../context/LegalConsentContext';
 import type { LegalDocumentType } from '../legal/versions';
 import { selectCurrentLegalAcceptance } from '../legal/selectCurrentAcceptance';
 import { MyContentReports } from '../components/reports/MyContentReports';
+import { NotificationPreferences } from '../components/notifications/NotificationPreferences';
 
 export function Account({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
@@ -45,6 +46,7 @@ export function Account({ onNavigate }: { onNavigate: (page: string) => void }) 
         {legal.status && <div className="mt-5 grid gap-4 md:grid-cols-2"><LegalDocument type="terms" label={t('account.termsVersion')} href="#/terms" link={t('account.viewTerms')} /><LegalDocument type="privacy" label={t('account.privacyVersion')} href="#/privacy" link={t('account.viewPrivacy')} /></div>}
       </section>
       <MyContentReports onNavigate={onNavigate} />
+      <NotificationPreferences userId={user?.id} />
       <section className="rounded-[2rem] border border-line bg-white p-6 shadow-soft">
         <div className="flex items-center gap-2"><Heart size={20} aria-hidden="true" /><h2 className="text-2xl font-semibold">{t('account.favorites')}</h2></div>
         {favorites.error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{favorites.error}</p>}
