@@ -8,6 +8,10 @@ do $$ declare fn text; begin
  end loop;
  if has_table_privilege('anon','public.content_moderation_actions','select,insert,update,delete') or has_table_privilege('authenticated','public.content_moderation_actions','select,insert,update,delete') then raise exception 'direct DML exposed';end if;
  if pg_get_function_result('public.get_content_moderation_history(text,uuid)'::regprocedure)~'moderator_id' then raise exception 'moderator identity exposed';end if;
+ if not exists(select 1 from pg_attribute a where a.attrelid='public.content_moderation_actions'::regclass and a.attname='action_order' and a.attidentity='a' and a.atttypid='bigint'::regtype) then raise exception 'action_order must be a generated-always bigint identity';end if;
+ if not exists(select 1 from pg_index i join pg_attribute a on a.attrelid=i.indrelid and a.attnum=any(i.indkey) where i.indrelid='public.content_moderation_actions'::regclass and i.indisunique and a.attname='action_order') then raise exception 'action_order is not unique';end if;
+ if pg_get_functiondef('public.moderate_reported_content(text,uuid,text,text,text,uuid)'::regprocedure)~*'order by\s+a\.created_at\s+desc|order by\s+a\.id\s+desc' then raise exception 'last action still depends on timestamp or UUID';end if;
+ if pg_get_functiondef('public.moderate_reported_content(text,uuid,text,text,text,uuid)'::regprocedure)!~*'order by\s+a\.action_order\s+desc' then raise exception 'last action does not use monotonic order';end if;
 end $$;
 
 set role anon;
@@ -26,10 +30,11 @@ do $$ begin
  begin insert into public.content_moderation_actions(target_type,target_id,moderator_id,action,reason,previous_status,resulting_status)values('problem',gen_random_uuid(),auth.uid(),'archive','x','Reportado','Arquivado');raise exception 'direct INSERT accepted';exception when insufficient_privilege then null;end;
  begin update public.content_moderation_actions set reason='x';raise exception 'direct UPDATE accepted';exception when insufficient_privilege then null;end;
  begin delete from public.content_moderation_actions;raise exception 'direct DELETE accepted';exception when insufficient_privilege then null;end;
+ begin insert into public.content_moderation_actions(action_order,target_type,target_id,moderator_id,action,reason,previous_status,resulting_status)values(1,'problem',gen_random_uuid(),auth.uid(),'archive','x','Reportado','Arquivado');raise exception 'client controlled action_order';exception when insufficient_privilege then null;end;
 end $$;
 
 select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000099',false);
-do $$ declare v_report_id uuid;v_report_status text;v_actual_status text;v_actual_report_status text;begin
+do $$ declare v_report_id uuid;v_report_status text;v_actual_status text;v_actual_report_status text;v_history_actions text[];v_archive_order bigint;v_restore_order bigint;begin
  select ar.id,ar.status into v_report_id,v_report_status
    from public.get_admin_content_reports(null,'problem',null,100,0) ar
   where ar.target_type='problem' and ar.target_id='42000000-0000-0000-0001-000000000001';
@@ -43,6 +48,8 @@ do $$ declare v_report_id uuid;v_report_status text;v_actual_status text;v_actua
  perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','restore','Revisão concluída',null,v_report_id);
  select ms.current_status into v_actual_status from public.get_content_moderation_state('problem','42000000-0000-0000-0001-000000000001') ms;
  if v_actual_status is distinct from 'Reportado' then raise exception 'exact problem restore failed: %',v_actual_status;end if;
+ select array_agg(h.action order by h.ordinality) into v_history_actions from public.get_content_moderation_history('problem','42000000-0000-0000-0001-000000000001') with ordinality h;
+ if v_history_actions is distinct from array['archive','restore']::text[] then raise exception 'history is not deterministically archive then restore: %',v_history_actions;end if;
  begin perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','restore','again');raise exception 'duplicate restore accepted';exception when check_violation then null;end;
  perform public.moderate_reported_content('solution','42000000-0000-0000-0002-000000000001','archive','Violação confirmada');
  select ms.current_status into v_actual_status from public.get_content_moderation_state('solution','42000000-0000-0000-0002-000000000001') ms;
@@ -62,6 +69,14 @@ do $$ declare v_report_id uuid;v_report_status text;v_actual_status text;v_actua
 end $$;
 reset role;
 
+-- Identity order, not transaction-stable now() or random UUID, establishes precedence.
+do $$ declare v_archive_order bigint;v_restore_order bigint;v_shared_timestamp_count bigint;begin
+ select min(a.action_order),max(a.action_order),count(distinct a.created_at) into v_archive_order,v_restore_order,v_shared_timestamp_count from public.content_moderation_actions a where a.target_type='problem' and a.target_id='42000000-0000-0000-0001-000000000001';
+ if v_archive_order is null or v_restore_order is null or v_archive_order>=v_restore_order then raise exception 'same-transaction actions lack increasing identity order: %, %',v_archive_order,v_restore_order;end if;
+ if v_shared_timestamp_count is distinct from 1 then raise exception 'fixture no longer proves ordering when timestamps tie';end if;
+ begin insert into public.content_moderation_actions(action_order,target_type,target_id,moderator_id,action,reason,previous_status,resulting_status)values(999999,'problem',gen_random_uuid(),gen_random_uuid(),'archive','owner override','Reportado','Arquivado');raise exception 'action_order accepted caller value';exception when generated_always then null;end;
+end $$;
+
 -- A manually archived row cannot reuse the latest (restore) audit action.
 update public.problems p set status='Arquivado' where p.id='42000000-0000-0000-0001-000000000001';
 set role authenticated;select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000099',false);
@@ -77,6 +92,13 @@ create trigger sprint43_reject_audit before insert on public.content_moderation_
 set role authenticated;select set_config('request.jwt.claim.sub','42000000-0000-0000-0000-000000000099',false);
 do $$ declare v_actual_status text;begin begin perform public.moderate_reported_content('problem','42000000-0000-0000-0001-000000000001','archive','force audit failure');raise exception 'forced audit insert accepted';exception when sqlstate '55000' then null;end;select ms.current_status into v_actual_status from public.get_content_moderation_state('problem','42000000-0000-0000-0001-000000000001') ms;if v_actual_status is distinct from 'Reportado' then raise exception 'status did not roll back: %',v_actual_status;end if;end $$;
 reset role;drop trigger sprint43_reject_audit on public.content_moderation_actions;drop function public.sprint43_reject_audit();
+
+do $$ declare v_sequence regclass;v_sequence_value bigint;v_max_order bigint;begin
+ v_sequence:=pg_get_serial_sequence('public.content_moderation_actions','action_order')::regclass;
+ execute format('select last_value from %s',v_sequence) into v_sequence_value;
+ select max(a.action_order) into v_max_order from public.content_moderation_actions a;
+ if v_sequence_value<=v_max_order then raise exception 'failed audit insert did not leave the expected harmless identity gap: sequence %, max %',v_sequence_value,v_max_order;end if;
+end $$;
 
 -- Trigger blocks owner-level UPDATE and DELETE as well as revoked direct DML.
 do $$ declare v_action_count bigint;v_server_moderator_count bigint;begin

@@ -3,6 +3,7 @@ begin;
 
 create table public.content_moderation_actions (
   id uuid primary key default gen_random_uuid(),
+  action_order bigint generated always as identity unique,
   target_type text not null check (target_type in ('problem','solution')),
   target_id uuid not null,
   report_id uuid,
@@ -15,7 +16,7 @@ create table public.content_moderation_actions (
   created_at timestamptz not null default now()
 );
 comment on table public.content_moderation_actions is 'Append-only administrative audit. Polymorphic target and optional report deliberately have no FK so history survives removal.';
-create index content_moderation_actions_target_idx on public.content_moderation_actions(target_type,target_id,created_at,id);
+create index content_moderation_actions_target_idx on public.content_moderation_actions(target_type,target_id,action_order);
 create index content_moderation_actions_report_idx on public.content_moderation_actions(report_id) where report_id is not null;
 create index content_moderation_actions_created_idx on public.content_moderation_actions(created_at,id);
 alter table public.content_moderation_actions enable row level security;
@@ -63,7 +64,7 @@ begin
      into v_last_action,v_last_previous_status,v_last_resulting_status
      from public.content_moderation_actions a
     where a.target_type=p_target_type and a.target_id=p_target_id
-    order by a.created_at desc,a.id desc limit 1;
+    order by a.action_order desc limit 1;
    if v_last_action is distinct from 'archive' or v_last_resulting_status is distinct from v_archived_status then raise exception 'No valid archive action to restore' using errcode='23514';end if;
    if (p_target_type='problem' and v_last_previous_status not in ('Reportado','Em análise','Em vistoria','Planejado','Licitado','Em execução','Parcialmente resolvido','Resolvido','Reaberto')) or (p_target_type='solution' and v_last_previous_status not in ('Proposta','Em teste','Implementada','Validada')) then raise exception 'No valid previous status' using errcode='23514';end if;
    v_result_status:=v_last_previous_status;
@@ -92,7 +93,7 @@ language plpgsql stable security definer set search_path = pg_catalog, public as
 begin
  if auth.uid() is null or not public.is_admin() then raise exception 'Not authorized' using errcode='42501';end if;
  if p_target_type not in ('problem','solution') then raise exception 'Invalid content target' using errcode='22023';end if;
- return query select a.id,a.action,a.reason,a.moderator_note,a.previous_status,a.resulting_status,a.created_at from public.content_moderation_actions a where a.target_type=p_target_type and a.target_id=p_target_id order by a.created_at asc,a.id asc;
+ return query select a.id,a.action,a.reason,a.moderator_note,a.previous_status,a.resulting_status,a.created_at from public.content_moderation_actions a where a.target_type=p_target_type and a.target_id=p_target_id order by a.action_order asc;
 end $$;
 revoke all on function public.moderate_reported_content(text,uuid,text,text,text,uuid),public.get_content_moderation_state(text,uuid),public.get_content_moderation_history(text,uuid) from public,anon;
 grant execute on function public.moderate_reported_content(text,uuid,text,text,text,uuid),public.get_content_moderation_state(text,uuid),public.get_content_moderation_history(text,uuid) to authenticated;
