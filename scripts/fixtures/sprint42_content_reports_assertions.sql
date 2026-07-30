@@ -10,6 +10,11 @@ begin
     if not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.oid=('public.'||fn)::regprocedure and 'search_path=pg_catalog, public'=any(p.proconfig)) then raise exception 'unsafe search_path on %',fn; end if;
   end loop;
   if has_table_privilege('anon','public.content_reports','select,insert,update,delete') or has_table_privilege('authenticated','public.content_reports','select,insert,update,delete') then raise exception 'direct table privilege exposed'; end if;
+  if not exists (
+    select 1 from pg_index i
+    where i.indexrelid='public.content_reports_one_active_per_reporter_target_idx'::regclass
+      and i.indisunique and pg_get_expr(i.indpred,i.indrelid) ~ 'status.*''open''.*''reviewing'''
+  ) then raise exception 'active report concurrency constraint missing or weakened'; end if;
   if pg_get_function_result('public.get_my_content_reports()'::regprocedure) ~ '(reporter_id|moderator_id|moderator_note)' then raise exception 'private field in user result'; end if;
   if pg_get_function_result('public.get_admin_content_reports(text,text,text,integer,integer)'::regprocedure) ~ '(reporter_id|moderator_id)' then raise exception 'identity in admin result'; end if;
 end $$;
@@ -50,6 +55,7 @@ select id from public.report_content('problem','42000000-0000-0000-0001-00000000
 select id from public.report_content('solution','42000000-0000-0000-0002-000000000001','other','Detalhes necessários');
 do $$ begin
   if (select count(*) from public.get_my_content_reports())<>2 then raise exception 'active report idempotency failed'; end if;
+  if (select count(*) from public.get_my_content_reports() where target_type='problem' and target_id='42000000-0000-0000-0001-000000000001')<>1 then raise exception 'logical concurrent duplicate was not collapsed'; end if;
   begin perform public.report_content('problem','42000000-0000-0000-0001-000000000002','spam',null);raise exception 'self report accepted';exception when insufficient_privilege then null;end;
   begin perform public.report_content('problem','42000000-0000-0000-0001-000000000099','spam',null);raise exception 'missing target accepted';exception when no_data_found then null;end;
   begin perform public.report_content('problem','42000000-0000-0000-0001-000000000003','spam',null);raise exception 'archived problem accepted';exception when no_data_found then null;end;

@@ -65,7 +65,7 @@ begin
   if v_id is null then
     insert into public.content_reports(reporter_id,target_type,target_id,reason,description)
     values(v_actor,p_target_type,p_target_id,p_reason,v_description)
-    on conflict (reporter_id,target_type,target_id) where status in ('open','reviewing') do nothing returning content_reports.id into v_id;
+    on conflict do nothing returning content_reports.id into v_id;
     if v_id is null then select r.id into v_id from public.content_reports r where r.reporter_id=v_actor and r.target_type=p_target_type and r.target_id=p_target_id and r.status in ('open','reviewing'); end if;
   end if;
   return query select r.id,r.target_type,r.target_id,r.reason,r.status,r.created_at from public.content_reports r where r.id=v_id;
