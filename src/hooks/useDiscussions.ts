@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { Badge, Comment, CommentReport, DiscussionTargetType, CommentReaction, CommentReactionType, UserReputation } from '../types/discussion';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Badge, Comment, CommentReport, DiscussionTargetType, CommentReactionType, UserReputation } from '../types/discussion';
 import type { UserProfile } from '../types/user';
 import { useAuth } from './useAuth';
 import { useLocalStorageState } from './useLocalStorageState';
-import { CommentRepository, COMMENTS_KEY, REACTIONS_KEY, isCommentArray, isReactionArray, normalizeCommentArray } from '../repositories/comments';
+import { CommentRepository, COMMENTS_KEY, isCommentArray, normalizeCommentArray } from '../repositories/comments';
+import { CommentReactionRepository, emptyCommentReactionSummary, type CommentReactionSummaries } from '../repositories/reactions';
 
 const MAX_DEPTH = 3;
 
@@ -46,21 +47,26 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
   const [remoteComments, setRemoteComments] = useState<Comment[]>([]);
   const [remoteError, setRemoteError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reactions, setReactions, reactionsStorageError] = useLocalStorageState<CommentReaction[]>(REACTIONS_KEY, [], isReactionArray);
+  const [reactionSummaries, setReactionSummaries] = useState<CommentReactionSummaries>({});
+  const [pendingReactions, setPendingReactions] = useState<Set<string>>(new Set());
+  const sessionGeneration = useRef(0);
+  useEffect(() => { sessionGeneration.current += 1; }, [user?.id]);
   const canMarkBestAnswer = canManageTarget(user, targetOwnerNames);
 
   const comments = CommentRepository ? remoteComments : localComments;
   useEffect(() => {
     let active = true;
-    async function loadRemoteComments() {
+    async function loadDiscussion() {
       if (!CommentRepository) return;
-      const result = targetType && targetId ? (targetType === 'problem' ? await CommentRepository.listByProblem(targetId) : await CommentRepository.listBySolution(targetId)) : await CommentRepository.listReported();
+      const commentsPromise = targetType && targetId ? (targetType === 'problem' ? CommentRepository.listByProblem(targetId) : CommentRepository.listBySolution(targetId)) : CommentRepository.listReported();
+      const reactionsPromise = targetType && targetId && CommentReactionRepository ? CommentReactionRepository.summary(targetType, targetId) : Promise.resolve({ ok: true as const, data: {} });
+      const [commentsResult, reactionsResult] = await Promise.all([commentsPromise, reactionsPromise]);
       if (!active) return;
-      if (result.ok) { setRemoteComments(result.data); setRemoteError(''); } else setRemoteError(result.message);
+      if (commentsResult.ok) setRemoteComments(commentsResult.data); else setRemoteError(commentsResult.message);
+      if (reactionsResult.ok) setReactionSummaries(reactionsResult.data); else setRemoteError(reactionsResult.message);
     }
-    void loadRemoteComments();
-    return () => { active = false; };
-  }, [targetId, targetType]);
+    void loadDiscussion(); return () => { active = false; };
+  }, [targetId, targetType, user?.id]);
 
   const targetComments = useMemo(() => comments.filter((comment) => !targetType || !targetId || (comment.targetType === targetType && comment.targetId === targetId)), [comments, targetId, targetType]);
 
@@ -127,13 +133,20 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     return { ok: true, message: 'Comentário reportado para moderação.' };
   };
 
-  const toggleReaction = (commentId: string, type: CommentReactionType) => {
-    if (!user) return;
-    setReactions((current) => {
-      const existing = current.find((reaction) => reaction.commentId === commentId && reaction.userId === user.id && reaction.type === type);
-      if (existing) return current.filter((reaction) => reaction.id !== existing.id);
-      return [...current, { id: createId('reaction'), commentId, userId: user.id, type, createdAt: new Date().toISOString() }];
-    });
+  const toggleReaction = async (commentId: string, type: CommentReactionType): Promise<ActionResult> => {
+    if (!user) return { ok: false, message: 'Entre na sua conta para reagir.' };
+    if (!CommentReactionRepository) return { ok: false, message: 'Reações persistentes estão indisponíveis neste modo.' };
+    const key = `${commentId}:${type}`;
+    if (pendingReactions.has(key)) return { ok: false, message: 'Aguarde a atualização da reação.' };
+    const generation = sessionGeneration.current; const previous = reactionSummaries[commentId] ?? emptyCommentReactionSummary();
+    setPendingReactions(current => new Set(current).add(key));
+    setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: { count: Math.max(0, previous[type].count + (previous[type].selected ? -1 : 1)), selected: !previous[type].selected } } }));
+    const result = await CommentReactionRepository.toggle(commentId, type);
+    if (sessionGeneration.current !== generation) return { ok: false, message: 'A sessão mudou durante a atualização.' };
+    setPendingReactions(current => { const next = new Set(current); next.delete(key); return next; });
+    if (!result.ok) { setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: previous[type] } })); return result; }
+    setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: { count: result.data.count, selected: result.data.active } } }));
+    return { ok: true };
   };
 
   const markBestAnswer = async (commentId: string): Promise<ActionResult> => {
@@ -155,13 +168,13 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     return Array.from(userIds).map((userId) => {
       const authored = comments.filter((comment) => comment.authorId === userId && !comment.deleted);
       const authoredIds = new Set(authored.map((comment) => comment.id));
-      const reactionsReceived = reactions.filter((reaction) => authoredIds.has(reaction.commentId)).length;
+      const reactionsReceived = Array.from(authoredIds).reduce((total, id) => total + Object.values(reactionSummaries[id] ?? emptyCommentReactionSummary()).reduce((sum, item) => sum + item.count, 0), 0);
       const bestAnswers = authored.filter((comment) => comment.bestAnswer).length;
       const discussions = new Set(authored.map((comment) => `${comment.targetType}:${comment.targetId}`)).size;
       const stats = { userId, points: authored.length * 5 + reactionsReceived * 2 + bestAnswers * 25, comments: authored.length, bestAnswers, reactionsReceived, discussions };
       return { ...stats, badges: buildBadges(stats) };
     });
-  }, [comments, reactions]);
+  }, [comments, reactionSummaries]);
 
-  return { comments: targetComments, allComments: comments, reactions, reputations, addComment, editComment, deleteComment, reportComment, toggleReaction, markBestAnswer, canMarkBestAnswer, currentUserId: user?.id ?? null, storageError: remoteError || commentsStorageError || reactionsStorageError || (isSubmitting ? 'Enviando comentário...' : '') };
+  return { comments: targetComments, allComments: comments, reactionSummaries, pendingReactions, reputations, addComment, editComment, deleteComment, reportComment, toggleReaction, markBestAnswer, canMarkBestAnswer, currentUserId: user?.id ?? null, storageError: remoteError || commentsStorageError || (isSubmitting ? 'Enviando comentário...' : '') };
 }

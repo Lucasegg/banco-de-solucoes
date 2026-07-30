@@ -39,6 +39,7 @@ export interface Reaction {
 /** Dados locais legados de reações a comentários; a Sprint 20 reage ao item. */
 export interface CommentReaction { id: string; commentId: string; userId: string; type: 'like' | 'support' | 'interesting' | 'needsEvidence'; createdAt: string; }
 export type CommentReactionType = CommentReaction['type'];
+export type CommentReactionSummary = Record<CommentReactionType, { count: number; selected: boolean }>;
 
 export type ReactionCounts = Record<ReactionType, number>;
 export interface ReactionState { counts: ReactionCounts; selected: ReactionType[]; }

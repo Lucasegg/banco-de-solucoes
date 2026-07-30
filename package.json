@@ -34,7 +34,8 @@
     "test:sprint42": "node --experimental-strip-types --test scripts/sprint42ContentReports.test.ts",
     "test:sprint43": "node --experimental-strip-types --test scripts/sprint43ContentModeration.test.ts",
     "test:sprint44": "node --experimental-strip-types --test scripts/sprint44Notifications.test.ts",
-    "test:sprint45": "node --experimental-strip-types --test scripts/sprint31Notifications.test.ts scripts/sprint44Notifications.test.ts scripts/sprint45NotificationsRealtime.test.ts"
+    "test:sprint45": "node --experimental-strip-types --test scripts/sprint31Notifications.test.ts scripts/sprint44Notifications.test.ts scripts/sprint45NotificationsRealtime.test.ts",
+    "test:sprint46": "node --experimental-strip-types --test scripts/sprint46CommentReactions.test.ts"
   },
   "dependencies": {
     "vite": "latest",
