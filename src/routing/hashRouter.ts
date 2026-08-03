@@ -21,7 +21,9 @@ export function pageFromHash(hash: string): string {
   const match = Object.entries(pageToHashPath).find(([, route]) => route === path);
   if (match) return match[0];
   if (path.startsWith('/contributions/')) return `contribution:${path.replace('/contributions/', '')}`;
-  if (path.startsWith('/members/')) return `member:${decodeURIComponent(path.replace('/members/', ''))}`;
+  if (path.startsWith('/members/')) {
+    try { return `member:${decodeURIComponent(path.replace('/members/', ''))}`; } catch { return 'invalid-route'; }
+  }
   return 'home';
 }
 

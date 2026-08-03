@@ -7,7 +7,6 @@ do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon; end if;
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated; end if;
-  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role; end if;
 end
 $$;
 
@@ -27,8 +26,23 @@ grant execute on function auth.jwt() to anon, authenticated;
 
 create table public.profiles (
   id uuid primary key,
-  role text not null default 'member'
+  username text unique,
+  display_name text,
+  organization text,
+  city text,
+  state text,
+  country text,
+  bio text,
+  avatar_url text,
+  website text,
+  role text not null default 'member',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+alter table public.profiles enable row level security;
+grant select, update on public.profiles to authenticated;
+create policy profiles_authenticated_read on public.profiles for select to authenticated using (true);
+create policy profiles_owner_update on public.profiles for update to authenticated using (auth.uid()=id) with check (auth.uid()=id);
 
 create table public.problems (
   id uuid primary key,

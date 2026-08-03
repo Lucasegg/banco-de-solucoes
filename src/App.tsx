@@ -83,7 +83,7 @@ export function App() {
 
   const adminPages = new Set(['admin', 'admin-system', 'admin-users', 'admin-problems', 'admin-solutions', 'admin-comments', 'admin-reports', 'admin-audit', 'admin-contributions']);
   const adminPage = adminPages.has(page);
-  const consentBypass = !isAuthenticated || kind === 'member' || mfaRequired || ['home', 'contact', 'privacy', 'terms', 'lgpd', 'login', 'register', 'password-recovery', 'mfa-challenge'].includes(page);
+  const consentBypass = !isAuthenticated || mfaRequired || ['home', 'contact', 'privacy', 'terms', 'lgpd', 'login', 'register', 'password-recovery', 'mfa-challenge'].includes(page);
   const adminContent = page === 'admin' ? <AdminDashboard onNavigate={setPage} />
     : page === 'admin-system' ? <AdminSystem />
       : page === 'admin-users' ? <AdminUsers onBack={() => setPage('admin')} />

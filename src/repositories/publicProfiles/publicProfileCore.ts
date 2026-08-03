@@ -5,7 +5,7 @@ export type PublicMemberProfile = {
   website: string | null; role: string; joinedAt: string;
   metrics: { reputation: number; comments: number; discussions: number; reactionsReceived: number; bestAnswers: number; problems: number; solutions: number; approvedContributions: number };
   achievements: { key: 'active_voice' | 'supported_idea' | 'best_answer' | 'frequent_collaborator' | 'community_expert'; earnedAt: string }[];
-  activity: { kind: PublicActivityKind; id: string; title: string; occurred_at: string }[];
+  activity: { kind: PublicActivityKind; id: string; title: string; occurred_at: string; target_kind: 'problem' | 'solution'; target_id: string }[];
 };
 export type PublicProfilePayload = { status: 'public'; profile: PublicMemberProfile } | { status: 'not_found' } | { status: 'private' };
 
@@ -25,9 +25,11 @@ export function parsePublicMemberProfile(value: unknown): { ok: true; data: Publ
   const p=value.profile,m=p.metrics;
   if (!string(p.userId)||!string(p.username)||!string(p.displayName)||!nullableString(p.avatarUrl)||!nullableString(p.bio)||!nullableString(p.organization)||!nullableString(p.city)||!nullableString(p.state)||!nullableString(p.country)||!nullableString(p.website)||!string(p.role)||!date(p.joinedAt)||!record(m)) return {ok:false};
   const metricKeys=['reputation','comments','discussions','reactionsReceived','bestAnswers','problems','solutions','approvedContributions'];
-  if (!metricKeys.every(k=>count(m[k]))||!Array.isArray(p.achievements)||!p.achievements.every(a=>record(a)&&string(a.key)&&achievementKeys.has(a.key)&&date(a.earnedAt))||!Array.isArray(p.activity)||p.activity.length>20||!p.activity.every(a=>record(a)&&string(a.kind)&&activityKinds.has(a.kind)&&string(a.id)&&string(a.title)&&date(a.occurred_at))) return {ok:false};
+  if (!metricKeys.every(k=>count(m[k]))||!Array.isArray(p.achievements)||!p.achievements.every(a=>record(a)&&string(a.key)&&achievementKeys.has(a.key)&&date(a.earnedAt))||!Array.isArray(p.activity)||p.activity.length>20||!p.activity.every(a=>record(a)&&string(a.kind)&&activityKinds.has(a.kind)&&string(a.id)&&string(a.title)&&date(a.occurred_at)&&(a.target_kind==='problem'||a.target_kind==='solution')&&string(a.target_id))) return {ok:false};
   if (!safeWebsite(p.website)) return {ok:false};
   return {ok:true,data:value as PublicProfilePayload};
 }
 
 export function publicProfilePage(username: string) { return `member:${username.trim().toLowerCase()}`; }
+
+export function publicActivityPage(activity: Pick<PublicMemberProfile['activity'][number], 'target_kind' | 'target_id'>) { return `${activity.target_kind === 'problem' ? 'problema' : 'solucao'}:${activity.target_id}`; }
