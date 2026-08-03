@@ -190,10 +190,22 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -c 'create table if not exists auth.users (id uuid primary key);'
+      - name: Install production-compatible cumulative comments contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint46_comments_schema.sql
       - name: Apply the Sprint 45 notification Realtime migration
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260730140000_sprint45_notifications_realtime.sql
+      - name: Apply Sprint 46 comment reactions migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260730150000_sprint46_comment_reactions.sql
+      - name: Verify Sprint 46 comment reactions
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint46_comment_reactions_assertions.sql
       - name: Verify Sprint 45 notification security and behavior
         env:
           PGPASSWORD: postgres
@@ -246,6 +258,8 @@ jobs:
         run: npm run test:sprint44
       - name: Sprint 45 Realtime notification tests
         run: npm run test:sprint45
+      - name: Sprint 46 comment reaction tests
+        run: npm run test:sprint46
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:
