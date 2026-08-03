@@ -214,6 +214,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint47_reputation_assertions.sql
+      - name: Apply Sprint 48 public profile migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260803130000_sprint48_public_member_profile.sql
+      - name: Verify Sprint 48 public profile privacy and behavior
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint48_public_profile_assertions.sql
       - name: Verify Sprint 45 notification security and behavior
         env:
           PGPASSWORD: postgres
@@ -270,6 +278,8 @@ jobs:
         run: npm run test:sprint46
       - name: Sprint 47 reputation tests
         run: npm run test:sprint47
+      - name: Sprint 48 public profile tests
+        run: npm run test:sprint48
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:

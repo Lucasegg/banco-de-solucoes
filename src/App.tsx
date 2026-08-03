@@ -45,6 +45,7 @@ const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.P
 const Terms = lazy(() => import('./pages/Terms').then((m) => ({ default: m.Terms })));
 const Lgpd = lazy(() => import('./pages/Lgpd').then((m) => ({ default: m.Lgpd })));
 const AdminReports = lazy(() => import('./pages/AdminReports').then((m) => ({ default: m.AdminReports })));
+const PublicProfile = lazy(() => import('./pages/PublicProfile').then((m) => ({ default: m.PublicProfile })));
 
 export function App() {
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
@@ -82,7 +83,7 @@ export function App() {
 
   const adminPages = new Set(['admin', 'admin-system', 'admin-users', 'admin-problems', 'admin-solutions', 'admin-comments', 'admin-reports', 'admin-audit', 'admin-contributions']);
   const adminPage = adminPages.has(page);
-  const consentBypass = !isAuthenticated || mfaRequired || ['home', 'contact', 'privacy', 'terms', 'lgpd', 'login', 'register', 'password-recovery', 'mfa-challenge'].includes(page);
+  const consentBypass = !isAuthenticated || kind === 'member' || mfaRequired || ['home', 'contact', 'privacy', 'terms', 'lgpd', 'login', 'register', 'password-recovery', 'mfa-challenge'].includes(page);
   const adminContent = page === 'admin' ? <AdminDashboard onNavigate={setPage} />
     : page === 'admin-system' ? <AdminSystem />
       : page === 'admin-users' ? <AdminUsers onBack={() => setPage('admin')} />
@@ -123,6 +124,7 @@ export function App() {
       {page === 'notifications' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><Notifications /></AuthenticatedRoute>}
       {page === 'diagnostics' && <SupabaseStatus />}
       {kind === 'contribution' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin}><ContributionDetails id={id} /></AuthenticatedRoute>}
+      {kind === 'member' && <PublicProfile username={id} onNavigate={setPage} />}
     </Suspense></RouteErrorBoundary></LegalConsentGate></Layout>
   );
 }

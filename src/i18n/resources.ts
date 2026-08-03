@@ -19,10 +19,11 @@ import { contactEnUS, contactPtBR } from './locales/contact.ts';
 import { legalEnUS, legalPtBR } from './locales/legal.ts';
 import { consentEnUS, consentPtBR } from './locales/consent.ts';
 import { reportsEnUS, reportsPtBR } from './locales/reports.ts';
+import { publicProfileEnUS, publicProfilePtBR } from './locales/publicProfile.ts';
 
-export const ptBR = { ...commonPtBR, ...homePtBR, ...contentPtBR, ...domainPtBR, ...sharedPtBR, ...recoveryPtBR, ...authPtBR, ...accountPtBR, ...profilePtBR, ...adminPtBR, ...collaborationPtBR, ...engagementPtBR, ...catalogPtBR, ...searchPtBR, ...formsPtBR, ...detailsPtBR, ...legacyAdminPtBR, ...contactPtBR, ...legalPtBR, ...consentPtBR, ...reportsPtBR } as const;
+export const ptBR = { ...commonPtBR, ...homePtBR, ...contentPtBR, ...domainPtBR, ...sharedPtBR, ...recoveryPtBR, ...authPtBR, ...accountPtBR, ...profilePtBR, ...adminPtBR, ...collaborationPtBR, ...engagementPtBR, ...catalogPtBR, ...searchPtBR, ...formsPtBR, ...detailsPtBR, ...legacyAdminPtBR, ...contactPtBR, ...legalPtBR, ...consentPtBR, ...reportsPtBR, ...publicProfilePtBR } as const;
 export type TranslationKey = keyof typeof ptBR;
 export type TranslationResource = { readonly [K in TranslationKey]: string };
-export const enUS = { ...commonEnUS, ...homeEnUS, ...contentEnUS, ...domainEnUS, ...sharedEnUS, ...recoveryEnUS, ...authEnUS, ...accountEnUS, ...profileEnUS, ...adminEnUS, ...collaborationEnUS, ...engagementEnUS, ...catalogEnUS, ...searchEnUS, ...formsEnUS, ...detailsEnUS, ...legacyAdminEnUS, ...contactEnUS, ...legalEnUS, ...consentEnUS, ...reportsEnUS } satisfies TranslationResource;
+export const enUS = { ...commonEnUS, ...homeEnUS, ...contentEnUS, ...domainEnUS, ...sharedEnUS, ...recoveryEnUS, ...authEnUS, ...accountEnUS, ...profileEnUS, ...adminEnUS, ...collaborationEnUS, ...engagementEnUS, ...catalogEnUS, ...searchEnUS, ...formsEnUS, ...detailsEnUS, ...legacyAdminEnUS, ...contactEnUS, ...legalEnUS, ...consentEnUS, ...reportsEnUS, ...publicProfileEnUS } satisfies TranslationResource;
 export const resources = { 'pt-BR': ptBR, 'en-US': enUS } as const;
 export type SupportedLocale = keyof typeof resources;

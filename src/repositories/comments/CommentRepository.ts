@@ -11,6 +11,7 @@ export interface Comment {
   targetId: string;
   authorId: string;
   authorName: string;
+  authorUsername?: string;
   authorAvatarUrl: string | null;
   problemId: string | null;
   solutionId: string | null;
@@ -74,7 +75,7 @@ export function mapCommentRowToDomain(row: CommentRow): Comment {
   const profile = parseProfile(row.profiles) ?? parseProfile(row);
   const targetType = row.problem_id ? 'problem' : 'solution';
   const targetId = row.problem_id ?? row.solution_id ?? '';
-  return { id: row.id, parentId: row.parent_id, targetType, targetId, authorId: row.user_id, authorName: profile?.display_name || profile?.username || 'Usuário', authorAvatarUrl: profile?.avatar_url ?? null, problemId: row.problem_id, solutionId: row.solution_id, content: row.content, edited: row.edited, deleted: row.deleted, visibility: isContentVisibility(row.visibility) ? row.visibility : 'visible', bestAnswer: row.best_answer, reports: row.reports ?? [], createdAt: row.created_at, updatedAt: row.updated_at };
+  return { id: row.id, parentId: row.parent_id, targetType, targetId, authorId: row.user_id, authorName: profile?.display_name || profile?.username || 'Usuário', authorUsername: profile?.username ?? undefined, authorAvatarUrl: profile?.avatar_url ?? null, problemId: row.problem_id, solutionId: row.solution_id, content: row.content, edited: row.edited, deleted: row.deleted, visibility: isContentVisibility(row.visibility) ? row.visibility : 'visible', bestAnswer: row.best_answer, reports: row.reports ?? [], createdAt: row.created_at, updatedAt: row.updated_at };
 }
 function validateContent(content: string): RepositoryResult<string> {
   const trimmed = content.trim();

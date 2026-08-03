@@ -169,7 +169,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await repositories.profiles.getByAuthUserId(nextSession.user.id, nextSession.user.email ?? '');
     if (!mounted()) return { ok: false, message: 'Operação cancelada.' };
     if (result.ok) {
-      setUser({ ...result.profile, settings: { ...result.profile.settings, ...readLocalSettings(result.profile.id) } });
+      const local = readLocalSettings(result.profile.id);
+      setUser({ ...result.profile, settings: { ...result.profile.settings, emailNotifications: local.emailNotifications ?? result.profile.settings.emailNotifications, weeklyDigest: local.weeklyDigest ?? result.profile.settings.weeklyDigest } });
       setAuthStatus('authenticated');
       setAuthMessage(undefined);
       return { ok: true };
@@ -479,6 +480,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof settings.emailNotifications === 'boolean') localSettings.emailNotifications = settings.emailNotifications;
     if (typeof settings.publicProfile === 'boolean') localSettings.publicProfile = settings.publicProfile;
     if (typeof settings.weeklyDigest === 'boolean') localSettings.weeklyDigest = settings.weeklyDigest;
+    if (typeof settings.publicProfile === 'boolean') {
+      const persisted = await repositories.profiles.updatePublicPreference(user.id, settings.publicProfile);
+      if (!persisted.ok) return persisted;
+    }
     const editable = { username: settings.username, name: settings.name, organization: settings.organization, city: settings.city, state: settings.state, country: settings.country, bio: settings.bio, website: settings.website, avatarUrl: settings.avatarUrl };
     const hasRemote = Object.values(editable).some((value) => typeof value === 'string');
     if (hasRemote) {

@@ -37,7 +37,8 @@
     "test:sprint44": "node --experimental-strip-types --test scripts/sprint44Notifications.test.ts",
     "test:sprint45": "node --experimental-strip-types --test scripts/sprint31Notifications.test.ts scripts/sprint44Notifications.test.ts scripts/sprint45NotificationsRealtime.test.ts",
     "test:sprint46": "node --experimental-strip-types --test scripts/sprint46CommentReactions.test.ts",
-    "test:sprint47": "node --experimental-strip-types --test scripts/sprint47ReputationAchievements.test.ts"
+    "test:sprint47": "node --experimental-strip-types --test scripts/sprint47ReputationAchievements.test.ts",
+    "test:sprint48": "node --experimental-strip-types --test scripts/sprint48PublicProfile.test.ts"
   },
   "dependencies": {
     "vite": "latest",
