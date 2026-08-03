@@ -54,10 +54,10 @@ test('Sprint 32 indexed search documents remain null-safe and equivalent to @@ d
 });
 
 test('Sprint 32 fixture is minimal, non-production, and supports the pending migration', () => {
-  for (const required of ['create schema if not exists auth', 'create or replace function auth.uid()', 'create role anon', 'create role authenticated', 'create table public.problems', 'create table public.solutions', 'create table public.favorites', 'create table public.solution_problems']) assert.ok(fixture.includes(required), `fixture missing ${required}`);
+  for (const required of ['create schema if not exists auth', 'create or replace function auth.uid()', 'create role anon', 'create role authenticated', 'create role service_role', 'create table public.problems', 'create table public.solutions', 'create table public.favorites', 'create table public.solution_problems']) assert.ok(fixture.includes(required), `fixture missing ${required}`);
   assert.match(fixture, /insert into public\.problems/);
   assert.match(fixture, /insert into public\.solutions/);
-  assert.doesNotMatch(fixture, /service_role/i);
+  assert.match(fixture, /if not exists \([\s\S]*pg_roles[\s\S]*rolname = 'service_role'[\s\S]*create role service_role/);
 });
 
 test('Sprint 32 ranking tsquery is grouped with each aggregate search result', () => {

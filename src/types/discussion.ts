@@ -16,6 +16,7 @@ export interface Comment {
   targetId: string;
   authorId: string;
   authorName: string;
+  authorUsername?: string;
   authorAvatarUrl: string | null;
   content: string;
   createdAt: string;

@@ -21,6 +21,9 @@ export function pageFromHash(hash: string): string {
   const match = Object.entries(pageToHashPath).find(([, route]) => route === path);
   if (match) return match[0];
   if (path.startsWith('/contributions/')) return `contribution:${path.replace('/contributions/', '')}`;
+  if (path.startsWith('/members/')) {
+    try { return `member:${decodeURIComponent(path.replace('/members/', ''))}`; } catch { return 'invalid-route'; }
+  }
   return 'home';
 }
 
@@ -28,5 +31,6 @@ export function hashFromPage(page: string): string {
   if (page.startsWith('problema:')) return `#/problems/${page.replace('problema:', '')}`;
   if (page.startsWith('solucao:')) return `#/solutions/${page.replace('solucao:', '')}`;
   if (page.startsWith('contribution:')) return `#/contributions/${page.replace('contribution:', '')}`;
+  if (page.startsWith('member:')) return `#/members/${encodeURIComponent(page.replace('member:', ''))}`;
   return `#${pageToHashPath[page] ?? '/'}`;
 }

@@ -98,7 +98,7 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
             <p className="mt-2 text-muted">@{user.username} · {t(userRoleKeys[user.roleKey])} · {user.organization}</p>
             <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted"><span className="inline-flex items-center gap-2"><Mail size={16} /> {user.email}</span><span className="inline-flex items-center gap-2"><MapPin size={16} /> {user.city}, {user.state}, {user.country}</span></div>
           </div>
-          <button onClick={signOut} className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold hover:bg-slate-50"><LogOut size={16} /> {t('profile.signOut')}</button>
+          <div className="flex flex-wrap gap-2"><button onClick={() => onNavigate(`member:${user.username}`)} className="rounded-full border border-line px-5 py-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2">{t('publicProfile.viewOwn')}</button><button onClick={signOut} className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold hover:bg-slate-50"><LogOut size={16} /> {t('profile.signOut')}</button></div>
         </div>
       </div>
 

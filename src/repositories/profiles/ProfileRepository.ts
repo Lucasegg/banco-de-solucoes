@@ -15,12 +15,13 @@ export type ProfileRow = {
   role: string | null;
   created_at: string | null;
   updated_at: string | null;
+  public_profile: boolean;
 };
 
 export type EditableProfileFields = Pick<UserProfile, 'username' | 'name' | 'organization' | 'city' | 'state' | 'country' | 'bio' | 'website' | 'avatarUrl'>;
 export type ProfileLoadResult = { ok: true; profile: UserProfile } | { ok: false; reason: 'missing' | 'invalid' | 'forbidden' | 'network'; message: string };
 
-const profileSelect = 'id, username, display_name, organization, city, state, country, bio, avatar_url, website, role, created_at, updated_at';
+const profileSelect = 'id, username, display_name, organization, city, state, country, bio, avatar_url, website, role, created_at, updated_at, public_profile';
 const usernameRegex = /^[a-z0-9._-]{3,30}$/;
 const websiteRegex = /^https?:\/\//i;
 
@@ -54,7 +55,8 @@ function isProfileRow(value: unknown): value is ProfileRow {
     && isNullableString(value.website)
     && isNullableString(value.role)
     && isNullableString(value.created_at)
-    && isNullableString(value.updated_at);
+    && isNullableString(value.updated_at)
+    && typeof value.public_profile === 'boolean';
 }
 function initials(name: string) { return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'BS'; }
 
@@ -83,7 +85,7 @@ export function mapProfileRowToUserProfile(row: ProfileRow, email = ''): UserPro
     createdAt: row.created_at || new Date().toISOString(),
     stats: createEmptyUserStats(),
     achievements: [],
-    settings: { emailNotifications: true, publicProfile: true, weeklyDigest: false },
+    settings: { emailNotifications: true, publicProfile: row.public_profile, weeklyDigest: false },
   };
 }
 
@@ -145,4 +147,9 @@ export class ProfileRepository {
   }
 
   updateEditableFields(userId: string, fields: Partial<EditableProfileFields>, email = '') { return this.updateOwnProfile(userId, fields, email); }
+
+  async updatePublicPreference(userId:string, publicProfile:boolean) {
+    const {error}=await this.client.from('profiles').update({public_profile:publicProfile}).eq('id',userId);
+    return error ? {ok:false as const,message:'Não foi possível salvar a privacidade do perfil.'} : {ok:true as const};
+  }
 }
