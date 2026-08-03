@@ -13,8 +13,11 @@ test('perfil encontrado tem atividade navegável e link externo seguro', async (
 });
 
 test('perfil privado e inexistente são indistinguíveis', async ({ page, consoleErrors }) => {
-  await page.goto('/#/members/private'); const privateText = await page.getByRole('heading', { level: 1 }).innerText();
-  await page.goto('/#/members/unknown'); const missingText = await page.getByRole('heading', { level: 1 }).innerText();
-  expect(privateText).toBe(missingText);
-  expect(privateText).not.toMatch(/privad/i);
+  const responses: string[] = [];
+  page.on('response', async (response) => { if (response.url().includes('get_public_member_profile')) responses.push(await response.text()); });
+  await page.goto('/#/members/private'); await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); const privateHtml = await page.locator('main').innerHTML();
+  await page.goto('/#/members/unknown'); await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); const missingHtml = await page.locator('main').innerHTML();
+  expect(privateHtml).toBe(missingHtml);
+  expect(responses).toEqual([JSON.stringify({ status: 'not_found' }), JSON.stringify({ status: 'not_found' })]);
+  expect(privateHtml).not.toMatch(/privad/i);
 });

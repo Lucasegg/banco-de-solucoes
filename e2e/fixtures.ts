@@ -3,7 +3,7 @@ import { expect, test as base, type Page } from '@playwright/test';
 const apiPrefix = '**/__e2e_supabase/**';
 export type ApiMode = 'empty' | 'success' | 'error' | 'rate-limit';
 
-export async function mockApi(page: Page, mode: ApiMode = 'empty') {
+export async function mockApi(page: Page, mode: ApiMode = 'empty', ownProfile: 'public' | 'not_found' = 'public') {
   await page.route(apiPrefix, async (route) => {
     const url = route.request().url();
     if (url.includes('/functions/v1/contact-request')) {
@@ -17,7 +17,7 @@ export async function mockApi(page: Page, mode: ApiMode = 'empty') {
     }
     if (url.includes('/rest/v1/rpc/get_public_member_profile')) {
       const username = JSON.parse(route.request().postData() || '{}').p_username;
-      const body = username === 'ana' ? { status: 'public', profile: { userId: '22222222-2222-4222-8222-222222222222', username: 'ana', displayName: 'Ana Silva', avatarUrl: null, bio: 'Mobilizadora comunitária', organization: 'Rede Local', city: 'Recife', state: 'PE', country: 'Brasil', website: 'https://example.org/ana', role: 'member', joinedAt: '2025-01-01', metrics: { reputation: 10, comments: 1, discussions: 1, reactionsReceived: 2, bestAnswers: 0, problems: 1, solutions: 0, approvedContributions: 0 }, achievements: [], activity: [{ kind: 'problem', id: 'activity-1', title: 'Horta comunitária', occurred_at: '2026-01-01T00:00:00Z', target_kind: 'problem', target_id: '11111111-1111-4111-8111-111111111111' }] } } : { status: username === 'private' ? 'private' : 'not_found' };
+      const body = username === 'ana' && ownProfile === 'public' ? { status: 'public', profile: { userId: '22222222-2222-4222-8222-222222222222', username: 'ana', displayName: 'Ana Silva', avatarUrl: null, bio: 'Mobilizadora comunitária', organization: 'Rede Local', city: 'Recife', state: 'PE', country: 'Brasil', website: 'https://example.org/ana', role: 'member', joinedAt: '2025-01-01', metrics: { reputation: 10, comments: 1, discussions: 1, reactionsReceived: 2, bestAnswers: 0, problems: 1, solutions: 0, approvedContributions: 0 }, achievements: [], activity: [{ kind: 'problem', id: 'activity-1', title: 'Horta comunitária', occurred_at: '2026-01-01T00:00:00Z', target_kind: 'problem', target_id: '11111111-1111-4111-8111-111111111111' }] } } : { status: 'not_found' };
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });

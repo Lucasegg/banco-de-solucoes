@@ -24,7 +24,7 @@ export function pageFromHash(hash: string): string {
   if (path.startsWith('/members/')) {
     try { return `member:${decodeURIComponent(path.replace('/members/', ''))}`; } catch { return 'invalid-route'; }
   }
-  return 'home';
+  return 'not-found';
 }
 
 export function hashFromPage(page: string): string {

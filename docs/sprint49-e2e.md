@@ -25,7 +25,7 @@ O job E2E será dependente de `verify`, separado do deploy, com Node e browser f
 
 `playwright.config.ts` define dois projetos Chromium (desktop e 320 px), build Vite em modo `e2e`, preview estrito em `127.0.0.1:4173`, health wait e encerramento do processo pelo `webServer`. A fixture `e2e/fixtures.ts` intercepta toda a pseudo-API local e bloqueia tráfego externo. Console errors e exceções de página fazem cada cenário falhar. Não há delays fixos: as esperas são por URL, role, nome acessível ou estado anunciado.
 
-O modo E2E usa somente `http://127.0.0.1:4173/__e2e_supabase` e uma chave pública explicitamente fictícia. Respostas de busca, contato e perfil são fixtures em memória; nenhum request alcança Supabase, serviço de e-mail ou produção. Não foram alterados AuthContext, RLS, migrations ou gates legais.
+O harness de autenticação é carregado dinamicamente somente quando `VITE_E2E_FIXTURES=true` no modo E2E; builds normais preservam os providers e gates reais. O modo E2E usa somente `http://127.0.0.1:4173/__e2e_supabase` e uma chave pública explicitamente fictícia. Respostas de busca, contato e perfil são fixtures em memória; nenhum request alcança Supabase, serviço de e-mail ou produção. Não foram alterados AuthContext, RLS, migrations ou gates legais.
 
 ## Matriz de fluxos
 
@@ -33,7 +33,8 @@ O modo E2E usa somente `http://127.0.0.1:4173/__e2e_supabase` e uma chave públi
 | --- | --- |
 | Anônimo | início; menu e rodapé; busca vazia/sucesso/erro; privacidade/termos/LGPD; contato e validação/consentimento/sucesso/429; perfil público; indisponibilidade uniforme; atividade; link seguro; 404; percent-encoding inválido; console |
 | Autorização | restauração anônima; redirecionamento de perfil e admin; ausência de acesso administrativo |
-| Autenticado (contratos anteriores + checklist) | sessão, consentimento, MFA, edição/privacidade, perfil do proprietário e logout continuam cobertos pelos testes de contrato das Sprints 29, 39 e 48; a fixture E2E não enfraquece esses gates |
+| Autenticado | sessão simulada; consentimento obrigatório; MFA; edição do perfil; ativação/desativação pública; navegação do proprietário privado; logout |
+| Administrativo | membro recebe 403; administrador autorizado abre o dashboard |
 | Acessibilidade/i18n | headings, labels, roles/status/aria-live, teclado/foco, links acionáveis e PT-BR/en-US |
 | Responsividade | todos os cenários em desktop e Chromium com viewport de 320 x 720; verificação explícita de overflow no fluxo transversal |
 
@@ -56,7 +57,7 @@ npx playwright show-report
 
 ## CI e deploy
 
-O job `e2e` roda somente depois de `verify`, tem timeout de 15 minutos, Node 24.4.1, Playwright 1.54.2 e Chromium correspondente. Relatório, screenshot e trace são produzidos/recolhidos somente em falha e retidos por sete dias. O job não usa environments/secrets e não faz deploy. Os jobs de migrations, `migrate-and-health`, `deploy` e o dispatch independente `Production Preflight` não foram encadeados nem modificados.
+O job `e2e` roda somente depois de `verify`, tem timeout de 15 minutos, Node 24.4.1, Playwright 1.54.2 e Chromium correspondente. Relatório, screenshot e trace são produzidos/recolhidos somente em falha e retidos por sete dias. O job não usa environments/secrets e não faz deploy. Em push para `main`, `migrate-and-health` depende de `verify` e `e2e`, tornando a suíte um gate de deploy. O dispatch independente `Production Preflight` permanece sem deploy e não depende do E2E.
 
 ## Diagnóstico de falhas e traces
 
@@ -68,7 +69,7 @@ O job `e2e` roda somente depois de `verify`, tem timeout de 15 minutos, Node 24.
 
 ## Limitações conhecidas
 
-A automação deliberadamente não prova RLS ou entrega de e-mail reais; esses itens pertencem aos testes SQL/Edge Function e ao preflight. Sessão autenticada completa, MFA físico e persistência real são mantidos no checklist manual porque executar esses fluxos contra um projeto real violaria o requisito de zero writes/secrets; seus gates e transformações seguem verificados pelos testes de contrato anteriores. Não há snapshot visual de página inteira.
+A automação deliberadamente não prova RLS ou entrega de e-mail reais; esses itens pertencem aos testes SQL/Edge Function e ao preflight. Sessão, consentimento, MFA, perfil e RBAC são exercitados no navegador pelo harness exclusivo do modo E2E; MFA físico e persistência real permanecem no checklist manual porque usar um projeto real violaria zero writes/secrets. Não há snapshot visual de página inteira.
 
 ## Checklist manual complementar
 
