@@ -67,13 +67,13 @@ test('new event copy is localized in pt-BR and en-US without changing legacy cop
   assert.match(translations, /'notifications\.event\.reportResolved\.title':'Report resolved'/);
 });
 
-test('report notifications navigate to allowlisted content and unsupported report routes fall back', () => {
+test('report notifications navigate to allowlisted content and unsupported report routes use not-found', () => {
   assert.ok(migration.includes("'/'||new.target_type||'s/'||new.target_id"));
   assert.doesNotMatch(navigation, /reports/);
   const uuid = '123e4567-e89b-12d3-a456-426614174000';
   assert.equal(pageFromHash(`#/problems/${uuid}`), `problema:${uuid}`);
   assert.equal(pageFromHash(`#/solutions/${uuid}`), `solucao:${uuid}`);
-  assert.equal(pageFromHash(`#/reports/${uuid}`), 'home');
+  assert.equal(pageFromHash(`#/reports/${uuid}`), 'not-found');
 });
 
 test('pagination distinguishes incomplete, exactly full and real next pages', () => {
