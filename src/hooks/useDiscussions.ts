@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Badge, Comment, CommentReport, DiscussionTargetType, CommentReactionType, UserReputation } from '../types/discussion';
+import type { Comment, CommentReport, DiscussionTargetType, CommentReactionType, UserReputation } from '../types/discussion';
 import type { UserProfile } from '../types/user';
 import { useAuth } from './useAuth';
 import { useLocalStorageState } from './useLocalStorageState';
 import { CommentRepository, COMMENTS_KEY, isCommentArray, normalizeCommentArray } from '../repositories/comments';
 import { CommentReactionRepository, emptyCommentReactionSummary, type CommentReactionSummaries } from '../repositories/reactions';
 import { ReactionOperationController } from './reactionOperationController';
+import { ReputationRepository } from '../repositories/reputation';
 
 const MAX_DEPTH = 3;
 
@@ -21,15 +22,6 @@ function getDepth(comments: Comment[], parentId: string | null): number {
   const parent = comments.find((comment) => comment.id === parentId);
   if (!parent) return 1;
   return 1 + getDepth(comments, parent.parentId);
-}
-
-function buildBadges(stats: Omit<UserReputation, 'badges'>): Badge[] {
-  const badges: Badge[] = [];
-  const today = new Date().toISOString();
-  if (stats.comments >= 1) badges.push({ id: 'voz-ativa', title: 'Voz ativa', description: 'Publicou o primeiro comentário.', level: 'bronze', earnedAt: today });
-  if (stats.reactionsReceived >= 3) badges.push({ id: 'ideia-apoiada', title: 'Ideia apoiada', description: 'Recebeu múltiplas reações da comunidade.', level: 'silver', earnedAt: today });
-  if (stats.bestAnswers >= 1) badges.push({ id: 'melhor-resposta', title: 'Melhor resposta', description: 'Teve uma resposta marcada como melhor resposta.', level: 'gold', earnedAt: today });
-  return badges;
 }
 
 function normalize(value: string) {
@@ -49,6 +41,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
   const [remoteError, setRemoteError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reactionSummaries, setReactionSummaries] = useState<CommentReactionSummaries>({});
+  const [reputations, setReputations] = useState<UserReputation[]>([]);
   const [pendingReactions, setPendingReactions] = useState<Set<string>>(new Set());
   const reactionOperations = useRef(new ReactionOperationController());
   useEffect(() => {
@@ -57,6 +50,11 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     setReactionSummaries({});
   }, [user?.id]);
   const canMarkBestAnswer = canManageTarget(user, targetOwnerNames);
+  const refreshReputation = async (userIds: string[]) => {
+    if (!ReputationRepository) return;
+    const result = await ReputationRepository.listByUserIds(userIds);
+    if (result.ok) setReputations(current => [...current.filter(item => !userIds.includes(item.userId)), ...result.data]);
+  };
 
   const comments = CommentRepository ? remoteComments : localComments;
   useEffect(() => {
@@ -67,7 +65,12 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
       const reactionsPromise = targetType && targetId && CommentReactionRepository ? CommentReactionRepository.summary(targetType, targetId) : Promise.resolve({ ok: true as const, data: {} });
       const [commentsResult, reactionsResult] = await Promise.all([commentsPromise, reactionsPromise]);
       if (!active) return;
-      if (commentsResult.ok) setRemoteComments(commentsResult.data); else setRemoteError(commentsResult.message);
+      if (commentsResult.ok) {
+        setRemoteComments(commentsResult.data);
+        const reputationResult = ReputationRepository ? await ReputationRepository.listByUserIds([...commentsResult.data.map(comment => comment.authorId), ...(user?.id ? [user.id] : [])]) : { ok: true as const, data: [] };
+        if (!active) return;
+        if (reputationResult.ok) setReputations(reputationResult.data); else setRemoteError(reputationResult.message);
+      } else setRemoteError(commentsResult.message);
       if (reactionsResult.ok) setReactionSummaries(reactionsResult.data); else setRemoteError(reactionsResult.message);
     }
     void loadDiscussion(); return () => { active = false; };
@@ -84,7 +87,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (CommentRepository) {
       setIsSubmitting(true);
       const result = await CommentRepository.create(targetType === 'problem' ? { authorId: user.id, problemId: targetId, parentId, content } : { authorId: user.id, solutionId: targetId, parentId, content });
-      if (result.ok) { setRemoteComments((current) => [result.data, ...current]); setRemoteError(''); } else setRemoteError(result.message);
+      if (result.ok) { setRemoteComments((current) => [result.data, ...current]); setRemoteError(''); await refreshReputation([user.id]); } else setRemoteError(result.message);
       setIsSubmitting(false);
       return result.ok ? { ok: true } : result;
     }
@@ -115,7 +118,7 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (!comment || comment.authorId !== user.id || comment.deleted) return { ok: false, message: 'Você só pode excluir seus comentários ativos.' };
     if (CommentRepository) {
       const result = await CommentRepository.delete(commentId);
-      if (result.ok) { setRemoteComments((current) => current.filter((item) => item.id !== commentId)); setRemoteError(''); } else setRemoteError(result.message);
+      if (result.ok) { setRemoteComments((current) => current.filter((item) => item.id !== commentId)); setRemoteError(''); await refreshReputation([user.id]); } else setRemoteError(result.message);
       return result.ok ? { ok: true } : result;
     }
     setLocalComments((current) => current.map((item) => item.id === commentId ? { ...item, deleted: true, visibility: 'removed', bestAnswer: false, updatedAt: new Date().toISOString() } : item));
@@ -163,6 +166,8 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     }
     const confirmed = outcome.value.data;
     setReactionSummaries(current => ({ ...current, [commentId]: { ...(current[commentId] ?? emptyCommentReactionSummary()), [type]: { count: confirmed.count, selected: confirmed.active } } }));
+    const authorId = comments.find(comment => comment.id === commentId)?.authorId;
+    if (authorId) await refreshReputation([authorId]);
     return { ok: true };
   };
 
@@ -173,25 +178,12 @@ export function useDiscussions(targetType?: DiscussionTargetType, targetId?: str
     if (!comment) return { ok: false, message: 'Comentário não encontrado.' };
     if (CommentRepository) {
       const result = await CommentRepository.setBestAnswer(targetType, targetId, commentId);
-      if (result.ok) { setRemoteComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item)); setRemoteError(''); } else setRemoteError(result.message);
+      if (result.ok) { setRemoteComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item)); setRemoteError(''); await refreshReputation([...new Set(comments.filter(item => item.targetType === targetType && item.targetId === targetId).map(item => item.authorId))]); } else setRemoteError(result.message);
       return result.ok ? { ok: true } : result;
     }
     setLocalComments((current) => current.map((item) => item.targetType === targetType && item.targetId === targetId ? { ...item, bestAnswer: item.id === commentId } : item));
     return { ok: true };
   };
-
-  const reputations = useMemo<UserReputation[]>(() => {
-    const userIds = new Set(comments.map((comment) => comment.authorId));
-    return Array.from(userIds).map((userId) => {
-      const authored = comments.filter((comment) => comment.authorId === userId && !comment.deleted);
-      const authoredIds = new Set(authored.map((comment) => comment.id));
-      const reactionsReceived = Array.from(authoredIds).reduce((total, id) => total + Object.values(reactionSummaries[id] ?? emptyCommentReactionSummary()).reduce((sum, item) => sum + item.count, 0), 0);
-      const bestAnswers = authored.filter((comment) => comment.bestAnswer).length;
-      const discussions = new Set(authored.map((comment) => `${comment.targetType}:${comment.targetId}`)).size;
-      const stats = { userId, points: authored.length * 5 + reactionsReceived * 2 + bestAnswers * 25, comments: authored.length, bestAnswers, reactionsReceived, discussions };
-      return { ...stats, badges: buildBadges(stats) };
-    });
-  }, [comments, reactionSummaries]);
 
   return { comments: targetComments, allComments: comments, reactionSummaries, pendingReactions, reputations, addComment, editComment, deleteComment, reportComment, toggleReaction, markBestAnswer, canMarkBestAnswer, currentUserId: user?.id ?? null, storageError: remoteError || commentsStorageError || (isSubmitting ? 'Enviando comentário...' : '') };
 }

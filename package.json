@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test:sprint26": "node --experimental-strip-types --test src/services/systemHealth.test.ts",
     "test:admin-focus": "node --experimental-strip-types --test src/components/admin/focusTrap.test.ts",
     "check:migration-baseline": "node --experimental-strip-types scripts/checkMigrationBaseline.ts",
@@ -35,7 +36,8 @@
     "test:sprint43": "node --experimental-strip-types --test scripts/sprint43ContentModeration.test.ts",
     "test:sprint44": "node --experimental-strip-types --test scripts/sprint44Notifications.test.ts",
     "test:sprint45": "node --experimental-strip-types --test scripts/sprint31Notifications.test.ts scripts/sprint44Notifications.test.ts scripts/sprint45NotificationsRealtime.test.ts",
-    "test:sprint46": "node --experimental-strip-types --test scripts/sprint46CommentReactions.test.ts"
+    "test:sprint46": "node --experimental-strip-types --test scripts/sprint46CommentReactions.test.ts",
+    "test:sprint47": "node --experimental-strip-types --test scripts/sprint47ReputationAchievements.test.ts"
   },
   "dependencies": {
     "vite": "latest",

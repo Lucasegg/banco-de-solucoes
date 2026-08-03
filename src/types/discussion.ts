@@ -52,6 +52,13 @@ export interface Badge {
   earnedAt: string;
 }
 
+export type ReputationAchievementKey = 'active_voice' | 'supported_idea' | 'best_answer' | 'frequent_collaborator' | 'community_expert';
+export interface ReputationBadge {
+  id: ReputationAchievementKey;
+  level: BadgeLevel;
+  earnedAt: string;
+}
+
 export interface UserReputation {
   userId: string;
   points: number;
@@ -59,5 +66,5 @@ export interface UserReputation {
   bestAnswers: number;
   reactionsReceived: number;
   discussions: number;
-  badges: Badge[];
+  badges: ReputationBadge[];
 }
