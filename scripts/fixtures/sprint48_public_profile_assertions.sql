@@ -3,11 +3,11 @@ begin;
 -- Controlled public, archived, draft and moderated content for one existing Sprint 47 member.
 update public.profiles set public_profile=true where username='autor-47';
 insert into public.problems(id,author_id,title,summary,description,category,city,state,status) values
- ('48000000-0000-0000-0001-000000000001','47000000-0000-0000-0000-000000000001','Problema público','Público','Público','Teste','Cidade','UF','Reportado'),
- ('48000000-0000-0000-0001-000000000002','47000000-0000-0000-0000-000000000001','Problema arquivado','Arquivado','Arquivado','Teste','Cidade','UF','Arquivado');
+ ('48000000-0000-0000-0001-000000000001','47000000-0000-0000-0000-000000000001','Problema público','Público','Público','Infraestrutura','Cidade','UF','Reportado'),
+ ('48000000-0000-0000-0001-000000000002','47000000-0000-0000-0000-000000000001','Problema arquivado','Arquivado','Arquivado','Infraestrutura','Cidade','UF','Arquivado');
 insert into public.solutions(id,author_id,title,summary,description,category,organization,status,impact_metric) values
- ('48000000-0000-0000-0002-000000000001','47000000-0000-0000-0000-000000000001','Solução pública','Pública','Pública','Teste','Org','Validada','Impacto'),
- ('48000000-0000-0000-0002-000000000002','47000000-0000-0000-0000-000000000001','Solução arquivada','Arquivada','Arquivada','Teste','Org','Arquivada','Impacto');
+ ('48000000-0000-0000-0002-000000000001','47000000-0000-0000-0000-000000000001','Solução pública','Pública','Pública','Infraestrutura','Org','Validada','Impacto'),
+ ('48000000-0000-0000-0002-000000000002','47000000-0000-0000-0000-000000000001','Solução arquivada','Arquivada','Arquivada','Infraestrutura','Org','Arquivada','Impacto');
 insert into public.comments(id,user_id,problem_id,content,visibility,deleted) values
  ('48000000-0000-0000-0003-000000000001','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000002','Comentário em conteúdo arquivado','visible',false),
  ('48000000-0000-0000-0003-000000000002','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000001','Comentário oculto','hidden',false),
