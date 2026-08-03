@@ -13,9 +13,9 @@ insert into public.comments(id,user_id,problem_id,content,visibility,deleted) va
  ('48000000-0000-0000-0003-000000000002','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000001','Comentário oculto','hidden',false),
  ('48000000-0000-0000-0003-000000000003','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000001','Comentário removido','removed',true);
 insert into public.contributions(id,user_id,problem_id,contribution_type,payload,status,moderator_id,reviewed_at) values
- ('48000000-0000-0000-0004-000000000001','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000001','other','{"title":"Rascunho"}'::jsonb,'pending',null,null),
- ('48000000-0000-0000-0004-000000000002','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000002','other','{"title":"Aprovada arquivada"}'::jsonb,'approved','47000000-0000-0000-0000-000000000002',now()),
- ('48000000-0000-0000-0004-000000000003','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000001','other','{"title":"Aprovada pública"}'::jsonb,'approved','47000000-0000-0000-0000-000000000002',now());
+ ('48000000-0000-0000-0004-000000000001','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000001','other','{"title":"Rascunho","changes":[{"field":"title"}]}'::jsonb,'pending',null,null),
+ ('48000000-0000-0000-0004-000000000002','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000002','other','{"title":"Aprovada arquivada","changes":[{"field":"title"}]}'::jsonb,'approved','47000000-0000-0000-0000-000000000002',now()),
+ ('48000000-0000-0000-0004-000000000003','47000000-0000-0000-0000-000000000001','48000000-0000-0000-0001-000000000001','other','{"title":"Aprovada pública","changes":[{"field":"title"}]}'::jsonb,'approved','47000000-0000-0000-0000-000000000002',now());
 
 do $$ begin
  if not has_function_privilege('anon','public.get_public_member_profile(text)','execute') or not has_function_privilege('authenticated','public.get_public_member_profile(text)','execute') then raise exception 'minimal RPC grants missing';end if;

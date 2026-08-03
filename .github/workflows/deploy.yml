@@ -214,6 +214,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint47_reputation_assertions.sql
+      - name: Install production-compatible pre-Sprint 48 contributions contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint48_contributions_schema.sql
       - name: Apply Sprint 48 public profile migration
         env:
           PGPASSWORD: postgres
