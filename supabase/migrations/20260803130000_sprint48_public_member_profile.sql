@@ -47,14 +47,14 @@ begin
       from public.user_achievements a where a.user_id=v_profile.id and ((a.achievement_key='active_voice' and t.comments>=1)
        or (a.achievement_key='supported_idea' and t.reactions>=3) or (a.achievement_key='best_answer' and t.best_answers>=1)
        or (a.achievement_key='frequent_collaborator' and t.discussions>=5) or (a.achievement_key='community_expert' and t.reputation>=250))),'[]'::jsonb),
-    'activity',coalesce((select jsonb_agg(item order by occurred_at desc,kind,id) from (
+    'activity',coalesce((select jsonb_agg(recent order by recent.occurred_at desc,recent.kind,recent.id) from (
       select 'problem'::text kind,p.id,p.title,p.created_at occurred_at,'problem'::text target_kind,p.id target_id from public.problems p where p.author_id=v_profile.id and p.status in ('Reportado','Em análise','Em vistoria','Planejado','Licitado','Em execução','Parcialmente resolvido','Resolvido','Reaberto')
       union all select 'solution',s.id,s.title,s.created_at,'solution',s.id from public.solutions s where s.author_id=v_profile.id and s.status in ('Proposta','Em teste','Implementada','Validada')
       union all select 'comment',c.id,left(c.content,160),c.created_at,case when c.problem_id is not null then 'problem' else 'solution' end,coalesce(c.problem_id,c.solution_id) from public_comments c
       union all select 'contribution',c.id,coalesce(c.payload->>'title',c.payload->>'summary',''),c.reviewed_at,case when c.problem_id is not null then 'problem' else 'solution' end,coalesce(c.problem_id,c.solution_id)
         from public.contributions c where c.user_id=v_profile.id and c.status='approved' and c.reviewed_at is not null
         and ((c.problem_id is not null and exists(select 1 from public.problems p where p.id=c.problem_id and p.status in ('Reportado','Em análise','Em vistoria','Planejado','Licitado','Em execução','Parcialmente resolvido','Resolvido','Reaberto'))) or (c.solution_id is not null and exists(select 1 from public.solutions s where s.id=c.solution_id and s.status in ('Proposta','Em teste','Implementada','Validada'))))
-      order by occurred_at desc,kind,id limit 20) recent item),'[]'::jsonb))) into v_result from totals t;
+      order by occurred_at desc,kind,id limit 20) recent),'[]'::jsonb))) into v_result from totals t;
   return v_result;
 end $$;
 
