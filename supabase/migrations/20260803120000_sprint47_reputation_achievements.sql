@@ -109,9 +109,18 @@ revoke all on function public.refresh_user_reputation(uuid,text) from public,ano
 create function public.sync_reputation_from_comment() returns trigger
 language plpgsql security definer set search_path=pg_catalog,public as $$
 begin
- perform public.refresh_user_reputation(coalesce(new.user_id,old.user_id),'comment-'||lower(tg_op));
- if tg_op='UPDATE' and new.user_id is distinct from old.user_id then perform public.refresh_user_reputation(old.user_id,'comment-update');end if;
- return coalesce(new,old);
+ if tg_op='INSERT' then
+  perform public.refresh_user_reputation(new.user_id,'comment-insert');
+  return new;
+ elsif tg_op='UPDATE' then
+  perform public.refresh_user_reputation(new.user_id,'comment-update');
+  if new.user_id is distinct from old.user_id then perform public.refresh_user_reputation(old.user_id,'comment-update-previous-owner');end if;
+  return new;
+ elsif tg_op='DELETE' then
+  perform public.refresh_user_reputation(old.user_id,'comment-delete');
+  return old;
+ end if;
+ raise exception 'Unsupported comment trigger operation: %',tg_op;
 end $$;
 create trigger sync_reputation_comment after insert or update or delete on public.comments
 for each row execute function public.sync_reputation_from_comment();
@@ -120,11 +129,22 @@ create function public.sync_reputation_from_reaction() returns trigger
 language plpgsql security definer set search_path=pg_catalog,public as $$
 declare v_new_author uuid;v_old_author uuid;
 begin
- if tg_op<>'DELETE' then select user_id into v_new_author from public.comments where id=new.comment_id;end if;
- if tg_op<>'INSERT' then select user_id into v_old_author from public.comments where id=old.comment_id;end if;
- perform public.refresh_user_reputation(coalesce(v_new_author,v_old_author),'reaction-'||lower(tg_op));
- if v_old_author is distinct from v_new_author then perform public.refresh_user_reputation(v_old_author,'reaction-update');end if;
- return coalesce(new,old);
+ if tg_op='INSERT' then
+  select user_id into v_new_author from public.comments where id=new.comment_id;
+  perform public.refresh_user_reputation(v_new_author,'reaction-insert');
+  return new;
+ elsif tg_op='UPDATE' then
+  select user_id into v_new_author from public.comments where id=new.comment_id;
+  select user_id into v_old_author from public.comments where id=old.comment_id;
+  perform public.refresh_user_reputation(v_new_author,'reaction-update');
+  if v_old_author is distinct from v_new_author then perform public.refresh_user_reputation(v_old_author,'reaction-update-previous-owner');end if;
+  return new;
+ elsif tg_op='DELETE' then
+  select user_id into v_old_author from public.comments where id=old.comment_id;
+  perform public.refresh_user_reputation(v_old_author,'reaction-delete');
+  return old;
+ end if;
+ raise exception 'Unsupported reaction trigger operation: %',tg_op;
 end $$;
 create trigger sync_reputation_reaction after insert or update or delete on public.comment_reactions
 for each row execute function public.sync_reputation_from_reaction();
