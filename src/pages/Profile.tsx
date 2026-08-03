@@ -181,8 +181,8 @@ export function Profile({ onNavigate }: { onNavigate: (page: string) => void }) 
               {[...user.achievements, ...(reputation?.badges ?? []), ...(contributionData.stats?.badges ?? [])].map((achievement: UserAchievement | NonNullable<typeof reputation>['badges'][number]) => (
                 <article key={achievement.id} className="rounded-3xl border border-line bg-slate-50 p-5">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase text-teal-700">{t(`achievement.${achievement.level}` as 'achievement.bronze' | 'achievement.silver' | 'achievement.gold')}</span>
-                  <h3 className="mt-4 font-semibold">{achievement.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted">{achievement.description}</p>
+                  <h3 className="mt-4 font-semibold">{'title' in achievement ? achievement.title : t(`reputation.achievement.${achievement.id}.title`)}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted">{'description' in achievement ? achievement.description : t(`reputation.achievement.${achievement.id}.description`)}</p>
                 </article>
               ))}
             </div>
