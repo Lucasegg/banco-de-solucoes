@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 export type AuditVulnerability = { name: string; severity: string; isDirect?: boolean; range?: string; fixAvailable?: unknown };
 export type AuditReport = { auditReportVersion?: number; vulnerabilities?: Record<string, AuditVulnerability>; metadata?: { vulnerabilities?: Record<string, number> } };
 export type AuditResult = { vulnerabilities: AuditVulnerability[]; blocking: AuditVulnerability[] };
+export type AuditProcessFailure = { stdout?: string; stderr?: string; killed?: boolean; signal?: string; message?: string };
 const execFileAsync = promisify(execFile);
 const timeout = 120_000;
 const severities = ['info', 'low', 'moderate', 'high', 'critical'];
@@ -36,16 +37,24 @@ export function evaluateAuditReport(report: AuditReport): AuditResult {
   return { vulnerabilities, blocking };
 }
 function reportFromStdout(stdout?: string) { return stdout ? validateAuditReport(parseAuditJson(stdout)) : undefined; }
+export function auditFailureMessage(error: AuditProcessFailure): string {
+  const report = reportFromStdout(error.stdout);
+  if (report) return '';
+  const cause = error.killed || error.signal === 'SIGTERM' ? `timeout after ${timeout / 1000}s` : (error.stderr || error.message || 'unknown error').trim();
+  return `npm audit --omit=dev --json failed: ${cause}`;
+}
+export function evaluateAuditProcessResult(stdout: string, failure?: AuditProcessFailure): AuditResult {
+  if (!failure) return evaluateAuditReport(validateAuditReport(parseAuditJson(stdout)));
+  const report = reportFromStdout(failure.stdout);
+  if (report) return evaluateAuditReport(report);
+  throw new Error(auditFailureMessage(failure));
+}
 export async function runProductionAudit(): Promise<AuditResult> {
   try {
     const { stdout } = await execFileAsync('npm', ['audit', '--omit=dev', '--json'], { timeout, maxBuffer: 20 * 1024 * 1024 });
-    return evaluateAuditReport(validateAuditReport(parseAuditJson(stdout)));
+    return evaluateAuditProcessResult(stdout);
   } catch (error) {
-    const err = error as { stdout?: string; stderr?: string; killed?: boolean; signal?: string; message?: string };
-    const report = reportFromStdout(err.stdout);
-    if (report) return evaluateAuditReport(report);
-    const cause = err.killed || err.signal === 'SIGTERM' ? `timeout after ${timeout / 1000}s` : (err.stderr || err.message || 'unknown error').trim();
-    throw new Error(`npm audit --omit=dev --json failed: ${cause}`);
+    throw new Error(auditFailureMessage(error as AuditProcessFailure));
   }
 }
 export function formatAuditResult(result: AuditResult): string[] {

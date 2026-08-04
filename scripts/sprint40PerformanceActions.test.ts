@@ -32,10 +32,22 @@ test('provides the route loading message in pt-BR and en-US', () => {
   assert.match(fallback, /t\('route\.loading'\)/);
 });
 
-test('uses Node 24-compatible action majors without changing workflow gates', () => {
-  assert.doesNotMatch(workflow, /actions\/(checkout|setup-node)@v4/);
-  assert.match(workflow, /actions\/checkout@v5/);
-  assert.match(workflow, /actions\/setup-node@v5/);
+test('uses Node 24-compatible pinned action versions without changing workflow gates', () => {
+  const actionPins = [...workflow.matchAll(/uses: ([^@\s]+)@([a-f0-9]{40}) # (v\d+(?:\.\d+){0,2})/g)];
+  const actionVersions = new Map(actionPins.map(([, action, sha, version]) => [action, { sha, version }]));
+  assert.ok(actionPins.length > 0, 'workflow must pin Actions by immutable SHA with readable version comments');
+  assert.doesNotMatch(workflow, /uses: [^\n]+@v\d+(?:\s|$)/, 'mutable Action tags are not allowed');
+  assert.equal(actionVersions.get('actions/checkout')?.version.split('.')[0], 'v5');
+  assert.equal(actionVersions.get('actions/setup-node')?.version.split('.')[0], 'v5');
+  for (const [action, expectedMajor] of Object.entries({
+    'dorny/paths-filter': 'v3',
+    'denoland/setup-deno': 'v2',
+    'actions/upload-artifact': 'v7',
+    'actions/download-artifact': 'v7',
+    'actions/configure-pages': 'v6',
+    'actions/upload-pages-artifact': 'v5',
+    'actions/deploy-pages': 'v5',
+  })) assert.equal(actionVersions.get(action)?.version.split('.')[0], expectedMajor, `${action} major must remain documented`);
   for (const gate of ['pull_request:', 'push:', 'workflow_dispatch:', 'production-preflight:', 'migrate-and-health:', 'deploy:']) {
     assert.ok(workflow.includes(gate), `${gate} gate must remain present`);
   }
