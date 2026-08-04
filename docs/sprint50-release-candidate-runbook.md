@@ -45,10 +45,32 @@ Requisições `GET`, `HEAD` e `OPTIONS` podem seguir para a rede. Como o cliente
 Supabase representa consultas RPC por `POST`, apenas os pathnames exatos
 `/rest/v1/rpc/search_problems`, `/rest/v1/rpc/search_solutions`,
 `/rest/v1/rpc/search_nearby_problems` e
-`/rest/v1/rpc/search_nearby_solutions` são interceptados localmente com uma lista
-vazia; eles nunca chegam à produção. Qualquer outro método mutável é abortado,
+`/rest/v1/rpc/search_nearby_solutions`, além de
+`/rest/v1/rpc/list_taxonomy_terms`, são interceptados localmente com uma lista
+vazia; eles nunca chegam à produção. A lista vazia respeita o contrato do
+repositório de taxonomia, que converte qualquer resultado em array em `items` e
+retorna total zero quando não há primeira linha. Qualquer outro método mutável é abortado,
 registrado com método e URL sem query, fragmento ou credenciais, e reprova o teste.
 Não existe allowlist genérica por prefixo nem exceção para erros de console.
+
+### Revisão somente-leitura de `list_taxonomy_terms`
+
+A implementação SQL da Sprint 35 foi revisada antes da inclusão na allowlist. A
+função tem corpo composto somente por `WITH`/`SELECT` sobre
+`public.taxonomy_terms`, com filtro, ordenação e paginação: não contém `INSERT`,
+`UPDATE`, `DELETE`, `UPSERT`, DDL, locks explícitos nem outros efeitos colaterais.
+Ela é declarada `LANGUAGE sql STABLE SECURITY INVOKER` e fixa
+`search_path=public,pg_catalog`; portanto usa as permissões e a RLS do chamador, em
+vez de elevar privilégios. Os grants continuam restritos a `EXECUTE` para `anon` e
+`authenticated`, coerentes com a leitura pública de termos aprovados.
+
+A única função chamada pelo corpo é `public.normalize_taxonomy_name(text)`, além de
+built-ins do PostgreSQL. `normalize_taxonomy_name` é declarada `IMMUTABLE STRICT
+PARALLEL SAFE`, fixa `search_path=pg_catalog` e executa apenas normalização textual.
+Assim, a cadeia de chamadas também é somente-leitura e não alcança funções
+mutáveis. Essa conclusão vale especificamente para a definição versionada na
+migration da Sprint 35; qualquer alteração futura nessa função ou dependência exige
+nova revisão antes de manter a exceção do smoke.
 
 ## Traces e screenshots
 
