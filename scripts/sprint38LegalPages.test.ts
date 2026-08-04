@@ -56,13 +56,13 @@ test('rendered LGPD page has localized content and the safe official ANPD link',
   assert.ok(en.includes('Visit the official ANPD website'));
 });
 
-test('hash router converts public legal routes, query strings and fallback directly', () => {
+test('hash router converts legal routes and query strings while unknown paths use not-found', () => {
   for (const page of ['contact', 'privacy', 'terms', 'lgpd']) {
     assert.equal(hashFromPage(page), `#/${page}`);
     assert.equal(pageFromHash(`#/${page}`), page);
     assert.equal(pageFromHash(`#/${page}?source=footer`), page);
   }
-  assert.equal(pageFromHash('#/not-a-route'), 'home');
+  assert.equal(pageFromHash('#/not-a-route'), 'not-found');
   assert.equal(pageFromHash(''), 'home');
   assert.equal(hashFromPage('not-a-page'), '#/');
 });

@@ -38,7 +38,12 @@
     "test:sprint45": "node --experimental-strip-types --test scripts/sprint31Notifications.test.ts scripts/sprint44Notifications.test.ts scripts/sprint45NotificationsRealtime.test.ts",
     "test:sprint46": "node --experimental-strip-types --test scripts/sprint46CommentReactions.test.ts",
     "test:sprint47": "node --experimental-strip-types --test scripts/sprint47ReputationAchievements.test.ts",
-    "test:sprint48": "node --experimental-strip-types --test scripts/sprint48PublicProfile.test.ts"
+    "test:sprint48": "node --experimental-strip-types --test scripts/sprint48PublicProfile.test.ts",
+    "build:e2e": "tsc -b && vite build --mode e2e",
+    "test:e2e": "playwright test",
+    "test:previous": "npm run test:sprint26 && npm run test:reconciliation && npm run test:pending-migrations && npm run test:sprint28 && npm run test:sprint29 && npm run test:auth-hotfix && npm run test:favorites-permissions && npm run test:sprint30 && npm run test:sprint31 && npm run test:sprint32 && npm run test:sprint33 && npm run test:sprint34 && npm run test:sprint35 && npm run test:sprint36 && npm run test:sprint37 && npm run test:sprint38 && npm run test:sprint39 && npm run test:sprint40 && npm run test:sprint41 && npm run test:sprint42 && npm run test:sprint43 && npm run test:sprint44 && npm run test:sprint45 && npm run test:sprint46 && npm run test:sprint47 && npm run test:sprint48 && npm run test:router",
+    "test:sprint49": "node --experimental-strip-types --test scripts/sprint49E2e.test.ts",
+    "test:router": "node --experimental-strip-types --test src/routing/hashRouter.test.ts"
   },
   "dependencies": {
     "vite": "latest",
@@ -53,6 +58,7 @@
     "tailwindcss": "^3.4.17",
     "postcss": "latest",
     "autoprefixer": "latest",
-    "@types/leaflet": "1.9.21"
+    "@types/leaflet": "1.9.21",
+    "@playwright/test": "1.54.2"
   }
 }

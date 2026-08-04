@@ -8,16 +8,15 @@ import './styles.css';
 import { I18nProvider } from './i18n/I18nProvider';
 import { LegalConsentProvider } from './context/LegalConsentContext';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <I18nProvider><PersistenceProvider>
-      <AuthProvider>
-        <LegalConsentProvider>
-        <NotificationsProvider>
-          <App />
-        </NotificationsProvider>
-        </LegalConsentProvider>
-      </AuthProvider>
-    </PersistenceProvider></I18nProvider>
-  </React.StrictMode>,
-);
+const useE2EFixtures = import.meta.env.VITE_E2E_FIXTURES === 'true';
+
+const productionApp = <PersistenceProvider><AuthProvider><LegalConsentProvider><NotificationsProvider><App /></NotificationsProvider></LegalConsentProvider></AuthProvider></PersistenceProvider>;
+
+async function render() {
+  const application = useE2EFixtures
+    ? await import('../e2e/E2EHarness').then(({ E2EHarness }) => <E2EHarness><App /></E2EHarness>)
+    : productionApp;
+  ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><I18nProvider initialLocale={useE2EFixtures ? 'pt-BR' : undefined}>{application}</I18nProvider></React.StrictMode>);
+}
+
+void render();

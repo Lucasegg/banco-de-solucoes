@@ -5,7 +5,7 @@ import type { LegalConsentStatus } from '../types/legalConsent';
 import type { LegalLocale } from '../legal/versions';
 
 export type ConsentState = { state: 'idle' | 'loading' | 'ready' | 'error'; status: LegalConsentStatus | null; accept: (locale: LegalLocale) => Promise<boolean>; reload: () => Promise<void> };
-const Context = createContext<ConsentState>({ state: 'idle', status: null, accept: async () => false, reload: async () => undefined });
+export const LegalConsentContext = createContext<ConsentState>({ state: 'idle', status: null, accept: async () => false, reload: async () => undefined });
 
 export function LegalConsentProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, mfaRequired, session } = useAuth();
@@ -26,7 +26,7 @@ export function LegalConsentProvider({ children }: { children: ReactNode }) {
     if (!result.ok) { setState('error'); return false; }
     await reload(); return true;
   }, [reload, state]);
-  return <Context.Provider value={{ state, status, accept, reload }}>{children}</Context.Provider>;
+  return <LegalConsentContext.Provider value={{ state, status, accept, reload }}>{children}</LegalConsentContext.Provider>;
 }
-export const useLegalConsent = () => useContext(Context) as ConsentState;
+export const useLegalConsent = () => useContext(LegalConsentContext) as ConsentState;
 
