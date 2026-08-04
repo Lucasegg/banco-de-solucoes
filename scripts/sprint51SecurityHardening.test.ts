@@ -10,15 +10,18 @@ const nvmrc = readFileSync('.nvmrc', 'utf8').trim();
 
 test('security:audit exists and does not use audit fix force', () => {
   assert.equal(pkg.scripts['security:audit'], 'node --experimental-strip-types scripts/securityAudit.ts');
+  assert.equal(pkg.scripts['security:audit:report'], 'node --experimental-strip-types scripts/securityAuditReport.ts');
   assert.doesNotMatch(JSON.stringify(pkg.scripts), /npm audit fix --force/);
   assert.doesNotMatch(readFileSync('scripts/securityAudit.ts', 'utf8'), /audit fix --force/);
 });
 
 test('verify runs security gate before build', () => {
   const verify = workflow.slice(workflow.indexOf('\n  verify:'), workflow.indexOf('\n  e2e:'));
-  const audit = verify.indexOf('npm run security:audit');
+  const report = verify.indexOf('run: npm run security:audit:report');
+  const audit = verify.indexOf('run: npm run security:audit\n');
   const build = verify.indexOf('npm run build');
-  assert.ok(audit > 0, 'security audit gate must be in verify');
+  assert.ok(report > 0, 'full audit report must be in verify');
+  assert.ok(audit > report, 'production gate must run after full report');
   assert.ok(build > audit, 'security gate must run before build');
   assert.match(verify, /npm run test:sprint51/);
 });
@@ -70,5 +73,6 @@ test('Actions are pinned to immutable SHAs with readable version comments', () =
   }
   assert.doesNotMatch(workflow, /uses: [^\n]+@v\d+(?:\s|$)/);
   assert.doesNotMatch(workflow, /ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION/);
+  assert.doesNotMatch(workflow, /dorny\/paths-filter/);
   assert.ok(readdirSync('.github/workflows').includes('deploy.yml'));
 });

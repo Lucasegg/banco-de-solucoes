@@ -10,15 +10,15 @@ O CI da PR #86 apontou uma vulnerabilidade moderada em `postcss <=8.5.22`, com c
 
 ## Resultado final do audit
 
-Após a correção para `postcss@8.5.25`, a execução de CI do SHA `8d260d5835a6ccb131560c92892b28d49b78194e` ficou verde em 2026-08-04 no run `30959106532`, incluindo `verify` e E2E, com aviso residual de runtime Node 20 apenas em `dorny/paths-filter@v3.0.3`. No ambiente local, o registry online continua retornando HTTP 403 para `npm audit --json` e `npm audit --omit=dev --json`; por isso foi executado também `npm audit --offline --json` e `npm audit --omit=dev --offline --json` contra o lockfile atual, ambos com `info=0`, `low=0`, `moderate=0`, `high=0`, `critical=0`, `total=0`. O gate `npm run security:audit` permanece online/fail-closed no CI e bloqueia vulnerabilidades altas ou críticas aplicáveis à produção.
+O CI do SHA `a908a747cb44e4c7e6f782e9aac433b284285354` (`30959586118`) confirmou que `npm ci` ainda reporta `2 high severity vulnerabilities`, enquanto `npm audit --omit=dev` está limpo; portanto as vulnerabilidades altas restantes pertencem ao conjunto de desenvolvimento/build e não ao runtime de produção. A Sprint 51 agora executa dois passos online no CI: `npm run security:audit:report`, que roda `npm audit --json`, valida o relatório completo e imprime todas as vulnerabilidades sem bloquear apenas por severidade dev; e `npm run security:audit`, que continua sendo o gate bloqueador para high/critical de produção. No ambiente local desta correção, o registry online retorna HTTP 403 para os dois audits, e esse erro operacional é mantido como falha explícita, não como sucesso.
 
 ## Correções realizadas
 
 - `scripts/securityAudit.ts` agora é fail-closed e também processa corretamente o caminho real de `npm audit` com exit code não zero e stdout contendo relatório válido; rejeita JSON com `error`, JSON inválido, relatório vazio/incompleto, ausência de `metadata.vulnerabilities`, timeout e falhas de registry sem relatório válido.
 - O exit code não zero normal do `npm audit` continua aceito apenas quando há relatório JSON válido de vulnerabilidades.
 - `postcss` foi atualizado de `latest`/`8.5.19` para `8.5.25`, sem troca de major.
-- Todas as Actions em `.github/workflows/deploy.yml` foram fixadas por SHA completo de 40 caracteres com comentário da versão legível.
-- `npm run test:sprint51` cobre os contratos da Sprint 51 e os cenários unitários do audit gate.
+- Todas as Actions em `.github/workflows/deploy.yml` foram fixadas por SHA completo de 40 caracteres com comentário da versão legível, e `dorny/paths-filter` foi removida para eliminar o runtime Node 20.
+- `npm run test:sprint51` cobre os contratos da Sprint 51, o relatório completo `security:audit:report` e os cenários unitários do audit gate.
 - Dependabot, SBOM, Node 24.15.0 e política `SECURITY.md` permanecem ativos.
 
 ## Configuração do Dependabot
@@ -33,7 +33,6 @@ Pinagem concluída com SHAs oficiais consultados nos tags/releases das Actions:
 | --- | --- | --- |
 | `actions/checkout` | `v5.1.0` | `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09` |
 | `actions/setup-node` | `v5.0.0` | `a0853c24544627f65ddf259abe73b1d18a591444` |
-| `dorny/paths-filter` | `v3.0.3` | `d1c1ffe0248fe513906c8e24db8ea791d46f8590` |
 | `denoland/setup-deno` | `v2.0.5` | `22d081ff2d3a40755e97629de92e3bcbfa7cf2ed` |
 | `actions/upload-artifact` | `v7.0.1` | `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` |
 | `actions/download-artifact` | `v7.0.0` | `37930b1c2abaa49bbe596cd826c3c89aef350131` |
@@ -41,7 +40,7 @@ Pinagem concluída com SHAs oficiais consultados nos tags/releases das Actions:
 | `actions/upload-pages-artifact` | `v5.0.0` | `fc324d3547104276b827a68afc52ff2a11cc49c9` |
 | `actions/deploy-pages` | `v5.0.0` | `cd2ce8fcbc39b97be8ca5fce6e763baed58fa128` |
 
-Não foi usado `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION`.
+Não foi usado `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION`. A detecção de alterações SQL de PR agora é feita por Bash/Git fail-closed usando `BASE_SHA`, `HEAD_SHA`, `git fetch --depth=1` e `git diff --name-only`, preservando o output `requires-local-db`/`database=true|false` para `supabase/migrations/**` e `supabase/**/*.sql` sem depender de Action Node 20.
 
 ## Versão Node
 
@@ -53,7 +52,7 @@ A fonte versionada é `.nvmrc`, definida como Node 24.15.0. O workflow usa `node
 
 ## Operação do novo gate
 
-O gate roda no job `verify` antes do build. Ele chama `npm audit --omit=dev --json` com timeout de 120 segundos, valida a estrutura oficial do relatório, imprime resumo acionável e falha em vulnerabilidades altas/críticas de produção. Falhas de rede, registry, JSON inválido, resposta `error` ou timeout viram falha explícita.
+No `verify`, `npm run security:audit:report` roda antes de `npm run security:audit` e antes do build. O relatório completo chama `npm audit --json`, aceita o exit code normal de vulnerabilidades apenas quando o JSON é estruturalmente válido e imprime resumo acionável para dev/build. O gate de produção chama `npm audit --omit=dev --json` com timeout de 120 segundos, valida a estrutura oficial do relatório, imprime resumo acionável e falha em vulnerabilidades altas/críticas de produção. Falhas de rede, registry, JSON inválido, resposta `error` ou timeout viram falha explícita.
 
 ## Rollback
 

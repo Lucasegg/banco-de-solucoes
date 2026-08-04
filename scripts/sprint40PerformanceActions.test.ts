@@ -37,10 +37,10 @@ test('uses Node 24-compatible pinned action versions without changing workflow g
   const actionVersions = new Map(actionPins.map(([, action, sha, version]) => [action, { sha, version }]));
   assert.ok(actionPins.length > 0, 'workflow must pin Actions by immutable SHA with readable version comments');
   assert.doesNotMatch(workflow, /uses: [^\n]+@v\d+(?:\s|$)/, 'mutable Action tags are not allowed');
+  assert.doesNotMatch(workflow, /dorny\/paths-filter/, 'Node 20 paths-filter Action must not be used');
   assert.equal(actionVersions.get('actions/checkout')?.version.split('.')[0], 'v5');
   assert.equal(actionVersions.get('actions/setup-node')?.version.split('.')[0], 'v5');
   for (const [action, expectedMajor] of Object.entries({
-    'dorny/paths-filter': 'v3',
     'denoland/setup-deno': 'v2',
     'actions/upload-artifact': 'v7',
     'actions/download-artifact': 'v7',
@@ -48,6 +48,7 @@ test('uses Node 24-compatible pinned action versions without changing workflow g
     'actions/upload-pages-artifact': 'v5',
     'actions/deploy-pages': 'v5',
   })) assert.equal(actionVersions.get(action)?.version.split('.')[0], expectedMajor, `${action} major must remain documented`);
+  assert.match(workflow, /Detect database SQL changes[\s\S]*git diff --name-only[\s\S]*supabase\/migrations[\s\S]*supabase\/\.\*\\\.sql[\s\S]*database=true/);
   for (const gate of ['pull_request:', 'push:', 'workflow_dispatch:', 'production-preflight:', 'migrate-and-health:', 'deploy:']) {
     assert.ok(workflow.includes(gate), `${gate} gate must remain present`);
   }

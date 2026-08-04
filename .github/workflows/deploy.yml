@@ -38,13 +38,26 @@ jobs:
       requires-local-db: ${{ steps.filter.outputs.database }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+      - name: Detect database SQL changes
         id: filter
-        with:
-          filters: |
-            database:
-              - 'supabase/migrations/**'
-              - 'supabase/**/*.sql'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${BASE_SHA:-}" || -z "${HEAD_SHA:-}" ]]; then
+            echo "Pull request base/head SHAs are required for migration change detection." >&2
+            exit 1
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
+          # Equivalent filters: supabase/migrations/** and supabase/**/*.sql.
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          if grep -E '^(supabase/migrations/.*|supabase/.*\.sql)$' <<< "$changed_files" >/dev/null; then
+            echo "database=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "database=false" >> "$GITHUB_OUTPUT"
+          fi
 
   local-migration-validation:
     if: github.event_name == 'pull_request' && needs.migration-changes.outputs.requires-local-db == 'true'
@@ -291,6 +304,8 @@ jobs:
         run: npm run test:sprint50
       - name: Sprint 51 security hardening tests
         run: npm run test:sprint51
+      - name: Full dependency audit report
+        run: npm run security:audit:report
       - name: Security audit gate
         run: npm run security:audit
       - name: Setup Deno for Edge Function
