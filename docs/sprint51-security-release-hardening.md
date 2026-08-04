@@ -7,16 +7,19 @@ O CI da PR #86 apontou uma vulnerabilidade moderada em `postcss <=8.5.22`, com c
 | Pacote | Direta/transitiva | Escopo | Severidade | Caminho | Impacto real | Versão corrigida | Estratégia | Risco de quebra |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `postcss` | direta de dev/build e transitiva via ferramentas CSS | desenvolvimento/build | moderada | `postcss`; `tailwindcss -> postcss`; `autoprefixer -> postcss` | risco restrito ao processamento de CSS no build, sem dependência runtime no app | `8.5.25` | pin compatível em devDependencies e lockfile, sem major e sem `npm audit fix --force` | baixo: patch dentro do major 8 |
+| `@playwright/test` | direta | desenvolvimento/E2E | alta | `@playwright/test` | sem impacto no bundle/runtime de produção; usado para E2E local/CI e production smoke read-only | `1.62.1` | atualização minor controlada de 1.54.2 para 1.62.1 | baixo/médio: exige reinstalar browsers do Playwright correspondentes |
+| `playwright` | transitiva via `@playwright/test` | desenvolvimento/E2E | alta | `@playwright/test -> playwright` | sem impacto no bundle/runtime de produção; usado por runner/browser E2E | `1.62.1` via `@playwright/test@1.62.1` | atualização minor controlada do pacote direto | baixo/médio: binário Chromium deve acompanhar a nova versão |
 
 ## Resultado final do audit
 
-O CI do SHA `a908a747cb44e4c7e6f782e9aac433b284285354` (`30959586118`) confirmou que `npm ci` ainda reporta `2 high severity vulnerabilities`, enquanto `npm audit --omit=dev` está limpo; portanto as vulnerabilidades altas restantes pertencem ao conjunto de desenvolvimento/build e não ao runtime de produção. A Sprint 51 agora executa dois passos online no CI: `npm run security:audit:report`, que roda `npm audit --json`, valida o relatório completo e imprime todas as vulnerabilidades sem bloquear apenas por severidade dev; e `npm run security:audit`, que continua sendo o gate bloqueador para high/critical de produção. No ambiente local desta correção, o registry online retorna HTTP 403 para os dois audits, e esse erro operacional é mantido como falha explícita, não como sucesso.
+O CI do SHA `a25526e25b8f506d45fe571fe5393a53fec42fb5` (`30960258908`) confirmou duas vulnerabilidades altas fora do conjunto de produção: `@playwright/test@1.54.2` direta e `playwright <1.55.1` transitiva via `@playwright/test`. O audit de produção está limpo. A correção controlada atualiza `@playwright/test` para `1.62.1`, que também corrige `playwright` para `1.62.1`, sem impacto no bundle/runtime de produção. A Sprint 51 agora executa dois passos online no CI: `npm run security:audit:report`, que roda `npm audit --json`, valida o relatório completo e imprime todas as vulnerabilidades sem bloquear apenas por severidade dev; e `npm run security:audit`, que continua sendo o gate bloqueador para high/critical de produção. No ambiente local desta correção, o registry online retorna HTTP 403 para os dois audits, e esse erro operacional é mantido como falha explícita, não como sucesso.
 
 ## Correções realizadas
 
 - `scripts/securityAudit.ts` agora é fail-closed e também processa corretamente o caminho real de `npm audit` com exit code não zero e stdout contendo relatório válido; rejeita JSON com `error`, JSON inválido, relatório vazio/incompleto, ausência de `metadata.vulnerabilities`, timeout e falhas de registry sem relatório válido.
 - O exit code não zero normal do `npm audit` continua aceito apenas quando há relatório JSON válido de vulnerabilidades.
 - `postcss` foi atualizado de `latest`/`8.5.19` para `8.5.25`, sem troca de major.
+- `@playwright/test` foi atualizado de `1.54.2` para `1.62.1`, corrigindo também a transitiva `playwright`, sem alterar migrations ou código de produto.
 - Todas as Actions em `.github/workflows/deploy.yml` foram fixadas por SHA completo de 40 caracteres com comentário da versão legível, e `dorny/paths-filter` foi removida para eliminar o runtime Node 20.
 - `npm run test:sprint51` cobre os contratos da Sprint 51, o relatório completo `security:audit:report` e os cenários unitários do audit gate.
 - Dependabot, SBOM, Node 24.15.0 e política `SECURITY.md` permanecem ativos.
