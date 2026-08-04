@@ -16,6 +16,17 @@ test('production-smoke sucede deploy e nunca roda em pull_request', () => {
   assert.doesNotMatch(productionJob, /pull_request/);
 });
 
+test('verify executa os testes da Sprint 50 antes do build', () => {
+  const verify = workflow.slice(workflow.indexOf('\n  verify:'), workflow.indexOf('\n  e2e:'));
+  const sprint50 = verify.indexOf('- name: Sprint 50 release candidate tests');
+  const build = verify.indexOf('- name: Build');
+  assert.ok(sprint50 > 0 && build > sprint50);
+  assert.match(verify.slice(sprint50, build), /run: npm run test:sprint50/);
+  assert.match(pkg.scripts['test:sprint50'], /sprint50ReleaseCandidate\.test\.ts/);
+  assert.match(pkg.scripts['test:sprint50'], /productionEnvironment\.test\.ts/);
+  assert.match(pkg.scripts['test:sprint50'], /productionSmokeSafety\.test\.ts/);
+});
+
 test('smoke é estritamente read-only e sem credenciais', () => {
   assert.doesNotMatch(smoke, /\.fill\(|\.check\(|\.click\([^\n]*Enviar|POST|PUT|PATCH|DELETE/i);
   assert.match(smoke, /classifyProductionRequest/);

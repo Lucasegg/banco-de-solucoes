@@ -287,6 +287,8 @@ jobs:
         run: npm run test:sprint47
       - name: Sprint 48 public profile tests
         run: npm run test:sprint48
+      - name: Sprint 50 release candidate tests
+        run: npm run test:sprint50
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:
