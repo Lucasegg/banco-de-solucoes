@@ -1,16 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PRODUCTION_ORIGIN } from '../scripts/productionEnvironment.ts';
 import { classifyProductionRequest, sanitizedRequestTarget } from '../scripts/productionSmokeSafety.ts';
+import { assertNoHorizontalOverflow } from './overflow';
 
 type SmokePage = Page & { assertSmokeErrors?: () => void };
 type RequestViolation = { method: string; url: string };
 const LOCALE_STORAGE_KEY = 'banco-de-solucoes.locale';
 async function openReadOnly(page: Page, hash = '/') {
   const response = await page.goto(hash, { waitUntil: 'networkidle' });
-  expect(response?.ok(), `HTTP inválido ao carregar ${hash}`).toBe(true);
+  if (response) {
+    expect(response.ok(), `HTTP inválido ao carregar ${hash}`).toBe(true);
+  }
   expect(page.url()).toMatch(/^https:\/\/www\.bancodesolucoes\.com\.br\//);
+  await expect(page).toHaveURL(new URL(hash, PRODUCTION_ORIGIN).href);
   expect(await page.evaluate(() => document.documentElement.lang)).toBe('pt-BR');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  await assertNoHorizontalOverflow(page, hash);
 }
 
 test.beforeEach(async ({ page }) => {
