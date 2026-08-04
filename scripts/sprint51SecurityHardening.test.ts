@@ -50,7 +50,7 @@ test('SBOM is generated from lockfile and uploaded only on push to main', () => 
   assert.match(pkg.scripts['sbom:generate'], /npm sbom --json/);
   const sbom = workflow.slice(workflow.indexOf('Generate SBOM from npm lockfile'), workflow.indexOf('Preserve build for deploy'));
   assert.match(sbom, /github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
-  assert.match(sbom, /uses: actions\/upload-artifact@v4/);
+  assert.match(sbom, /uses: actions\/upload-artifact@[a-f0-9]{40} # v7\.0\.1/);
   assert.match(sbom, /retention-days: 14/);
   assert.ok(!existsSync('sbom.cyclonedx.json'), 'generated SBOM must not be committed');
 });
@@ -58,12 +58,17 @@ test('SBOM is generated from lockfile and uploaded only on push to main', () => 
 test('SECURITY policy and Sprint 51 documentation exist', () => {
   assert.ok(existsSync('SECURITY.md'));
   assert.match(readFileSync('SECURITY.md', 'utf8'), /Não publique vulnerabilidades como issues públicas/);
-  for (const section of ['resultado do audit inicial', 'Dependabot', 'pinagem', 'Node', 'SBOM', 'rollback', 'checklist']) assert.match(docs.toLowerCase(), new RegExp(section.toLowerCase()));
+  for (const section of ['resultado real do audit', 'Dependabot', 'pinagem', 'Node', 'SBOM', 'rollback', 'checklist']) assert.match(docs.toLowerCase(), new RegExp(section.toLowerCase()));
 });
 
-test('Actions are reviewed without unsecure Node runtime override', () => {
-  const uses = [...workflow.matchAll(/uses: ([^@\s]+)@([^\s]+)/g)].map((m) => `${m[1]}@${m[2]}`);
+test('Actions are pinned to immutable SHAs with readable version comments', () => {
+  const uses = [...workflow.matchAll(/uses: ([^@\s]+)@([^\s#]+)(?:\s+#\s*([^\n]+))?/g)];
   assert.ok(uses.length > 0);
+  for (const [, action, ref, comment] of uses) {
+    assert.match(ref, /^[a-f0-9]{40}$/, `${action} must be pinned to a 40-character SHA`);
+    assert.match(comment ?? '', /^v\d+(?:\.\d+){0,2}(?:-[\w.]+)?$/, `${action} must keep a readable version comment`);
+  }
+  assert.doesNotMatch(workflow, /uses: [^\n]+@v\d+(?:\s|$)/);
   assert.doesNotMatch(workflow, /ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION/);
   assert.ok(readdirSync('.github/workflows').includes('deploy.yml'));
 });
