@@ -34,6 +34,22 @@ o link do run e confirme que o checkout mostra o SHA esperado.
 - **falha funcional do smoke:** não é repetida. Heading, navegação, asset, overflow,
   `pageerror` ou console inesperado deixam o workflow vermelho depois do deploy.
 
+### Locale e barreira de escrita do smoke
+
+O contexto Playwright fixa `locale: 'pt-BR'` e, antes de qualquer navegação, grava
+`banco-de-solucoes.locale=pt-BR` por `addInitScript`. Cada página confirma também
+`document.documentElement.lang === 'pt-BR'`. Isso torna o runner determinístico sem
+alterar traduções nem impedir que usuários reais selecionem inglês.
+
+Requisições `GET`, `HEAD` e `OPTIONS` podem seguir para a rede. Como o cliente
+Supabase representa consultas RPC por `POST`, apenas os pathnames exatos
+`/rest/v1/rpc/search_problems`, `/rest/v1/rpc/search_solutions`,
+`/rest/v1/rpc/search_nearby_problems` e
+`/rest/v1/rpc/search_nearby_solutions` são interceptados localmente com uma lista
+vazia; eles nunca chegam à produção. Qualquer outro método mutável é abortado,
+registrado com método e URL sem query, fragmento ou credenciais, e reprova o teste.
+Não existe allowlist genérica por prefixo nem exceção para erros de console.
+
 ## Traces e screenshots
 
 Artefatos só existem em falha. No run, abra **Artifacts**, baixe

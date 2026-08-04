@@ -17,9 +17,18 @@ test('production-smoke sucede deploy e nunca roda em pull_request', () => {
 });
 
 test('smoke é estritamente read-only e sem credenciais', () => {
-  assert.match(smoke, /\['GET', 'HEAD', 'OPTIONS'\]/);
   assert.doesNotMatch(smoke, /\.fill\(|\.check\(|\.click\([^\n]*Enviar|POST|PUT|PATCH|DELETE/i);
+  assert.match(smoke, /classifyProductionRequest/);
+  assert.match(smoke, /route\.abort\('blockedbyclient'\)/);
+  assert.match(smoke, /sanitizedRequestTarget/);
   assert.doesNotMatch(productionJob, /secrets\.|SUPABASE_|service.role/i);
+});
+
+test('locale do production smoke é explicitamente pt-BR', () => {
+  assert.match(config, /locale: 'pt-BR'/);
+  assert.match(smoke, /addInitScript/);
+  assert.match(smoke, /document\.documentElement\.lang/);
+  assert.match(smoke, /toBe\('pt-BR'\)/);
 });
 
 test('domínio é centralizado, HTTPS e validado', async () => {

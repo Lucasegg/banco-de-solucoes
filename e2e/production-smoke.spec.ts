@@ -1,26 +1,33 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PRODUCTION_ORIGIN } from '../scripts/productionEnvironment.ts';
+import { classifyProductionRequest, sanitizedRequestTarget } from '../scripts/productionSmokeSafety.ts';
 
 type SmokePage = Page & { assertSmokeErrors?: () => void };
+type RequestViolation = { method: string; url: string };
+const LOCALE_STORAGE_KEY = 'banco-de-solucoes.locale';
 async function openReadOnly(page: Page, hash = '/') {
   const response = await page.goto(hash, { waitUntil: 'networkidle' });
   expect(response?.ok(), `HTTP inválido ao carregar ${hash}`).toBe(true);
   expect(page.url()).toMatch(/^https:\/\/www\.bancodesolucoes\.com\.br\//);
+  expect(await page.evaluate(() => document.documentElement.lang)).toBe('pt-BR');
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
 }
 
 test.beforeEach(async ({ page }) => {
-  const consoleErrors: string[] = []; const pageErrors: string[] = [];
+  const consoleErrors: string[] = []; const pageErrors: string[] = []; const violations: RequestViolation[] = [];
+  await page.addInitScript(([key, locale]) => localStorage.setItem(key, locale), [LOCALE_STORAGE_KEY, 'pt-BR']);
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.route('**/*', async route => {
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(route.request().method())) {
-      if (route.request().url().includes('/rest/v1/rpc/search_')) return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-      throw new Error(`Production smoke bloqueou escrita ${route.request().method()} ${route.request().url()}`);
-    }
-    await route.continue();
+    const request = route.request();
+    const decision = classifyProductionRequest(request.method(), request.url());
+    if (decision === 'continue') return route.continue();
+    if (decision === 'intercept-read-only-rpc') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    violations.push({ method: request.method(), url: sanitizedRequestTarget(request.url()) });
+    await route.abort('blockedbyclient');
   });
   (page as SmokePage).assertSmokeErrors = () => {
+    expect(violations, 'requests mutáveis bloqueados antes de chegar à produção').toEqual([]);
     expect(pageErrors, 'pageerror em produção').toEqual([]);
     expect(consoleErrors, 'erros inesperados no console de produção').toEqual([]);
   };
