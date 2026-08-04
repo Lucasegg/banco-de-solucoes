@@ -4,13 +4,53 @@ import { classifyProductionRequest, sanitizedRequestTarget } from '../scripts/pr
 
 type SmokePage = Page & { assertSmokeErrors?: () => void };
 type RequestViolation = { method: string; url: string };
+type OverflowDiagnostic = {
+  selector: string;
+  tag: string;
+  classes: string;
+  width: number;
+  left: number;
+  right: number;
+  clientWidth: number;
+  scrollWidth: number;
+};
 const LOCALE_STORAGE_KEY = 'banco-de-solucoes.locale';
 async function openReadOnly(page: Page, hash = '/') {
   const response = await page.goto(hash, { waitUntil: 'networkidle' });
-  expect(response?.ok(), `HTTP inválido ao carregar ${hash}`).toBe(true);
+  if (response) {
+    expect(response.ok(), `HTTP inválido ao carregar ${hash}`).toBe(true);
+  }
   expect(page.url()).toMatch(/^https:\/\/www\.bancodesolucoes\.com\.br\//);
+  await expect(page).toHaveURL(new URL(hash, PRODUCTION_ORIGIN).href);
   expect(await page.evaluate(() => document.documentElement.lang)).toBe('pt-BR');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  const { overflow, elements }: { overflow: number; elements: OverflowDiagnostic[] } = await page.evaluate(() => {
+    const rootWidth = document.documentElement.clientWidth;
+    const selectorFor = (element: Element) => {
+      const parts: string[] = [];
+      let current: Element | null = element;
+      while (current && current !== document.documentElement) {
+        const parent: Element | null = current.parentElement;
+        const siblings = parent ? [...parent.children].filter(sibling => sibling.tagName === current?.tagName) : [];
+        const position = siblings.length > 1 ? `:nth-of-type(${siblings.indexOf(current) + 1})` : '';
+        parts.unshift(`${current.tagName.toLowerCase()}${position}`);
+        current = parent;
+      }
+      return parts.join(' > ');
+    };
+    const elements = [...document.querySelectorAll('*')].flatMap((element) => {
+      const rect = element.getBoundingClientRect();
+      const htmlElement = element as HTMLElement;
+      if (rect.right <= rootWidth && rect.left >= 0 && htmlElement.scrollWidth <= htmlElement.clientWidth) return [];
+      return [{
+        selector: selectorFor(element), tag: element.tagName.toLowerCase(), classes: element.getAttribute('class') ?? '',
+        width: rect.width, left: rect.left, right: rect.right,
+        clientWidth: htmlElement.clientWidth, scrollWidth: htmlElement.scrollWidth,
+      }];
+    });
+    return { overflow: document.documentElement.scrollWidth - rootWidth, elements };
+  });
+  if (elements.length) console.info(`Diagnóstico de overflow em ${hash}: ${JSON.stringify(elements)}`);
+  expect(overflow, `overflow horizontal em ${hash}; elementos: ${JSON.stringify(elements)}`).toBeLessThanOrEqual(1);
 }
 
 test.beforeEach(async ({ page }) => {

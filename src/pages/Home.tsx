@@ -33,9 +33,9 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
   }, []);
 
   return <div className="space-y-14">
-    <section className="rounded-[2rem] border border-line bg-white p-8 shadow-soft md:p-14"><div className="max-w-3xl">
+    <section className="rounded-[2rem] border border-line bg-white p-6 shadow-soft sm:p-8 md:p-14"><div className="min-w-0 max-w-3xl">
       <span className="rounded-full border border-line px-3 py-1 text-sm text-muted">{t('home.eyebrow')}</span>
-      <h1 className="mt-6 text-5xl font-semibold tracking-tight md:text-7xl">{t('home.title')}</h1>
+      <h1 className="mt-6 max-w-full break-words text-4xl font-semibold tracking-tight sm:text-5xl md:text-7xl">{t('home.title')}</h1>
       <p className="mt-6 text-lg leading-8 text-muted">{t('home.description')}</p>
       <div className="mt-8 flex flex-wrap gap-3"><button onClick={() => onNavigate('problemas')} className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white">{t('home.exploreProblems')}</button><button onClick={() => onNavigate('solucoes')} className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-3 text-sm font-semibold">{t('home.viewSolutions')} <ArrowRight size={16} /></button></div>
     </div></section>

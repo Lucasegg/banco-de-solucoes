@@ -42,6 +42,22 @@ test('locale do production smoke é explicitamente pt-BR', () => {
   assert.match(smoke, /toBe\('pt-BR'\)/);
 });
 
+test('smoke aceita navegação same-document sem enfraquecer as validações', () => {
+  assert.match(smoke, /if \(response\) \{[\s\S]*response\.ok\(\)/);
+  assert.match(smoke, /toHaveURL\(new URL\(hash, PRODUCTION_ORIGIN\)\.href\)/);
+  assert.match(smoke, /scrollWidth - rootWidth/);
+  assert.match(smoke, /requests mutáveis bloqueados/);
+  assert.match(smoke, /pageerror em produção/);
+  assert.match(smoke, /erros inesperados no console/);
+});
+
+test('diagnóstico de overflow expõe somente geometria e identificação visual', () => {
+  for (const field of ['selector', 'tag', 'classes', 'width', 'left', 'right', 'clientWidth', 'scrollWidth']) {
+    assert.match(smoke, new RegExp(`\\b${field}\\b`));
+  }
+  assert.doesNotMatch(smoke, /textContent|innerText|innerHTML/);
+});
+
 test('domínio é centralizado, HTTPS e validado', async () => {
   assert.match(workflow, /PRODUCTION_BASE_URL: https:\/\/www\.bancodesolucoes\.com\.br/);
   assert.match(config, /assertProductionSmokeTarget/);
