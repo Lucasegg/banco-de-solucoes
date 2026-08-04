@@ -27,6 +27,9 @@ concurrency:
   group: pages-${{ github.event_name }}
   cancel-in-progress: false
 
+env:
+  PRODUCTION_BASE_URL: https://www.bancodesolucoes.com.br
+
 jobs:
   migration-changes:
     if: github.event_name == 'pull_request'
@@ -284,6 +287,8 @@ jobs:
         run: npm run test:sprint47
       - name: Sprint 48 public profile tests
         run: npm run test:sprint48
+      - name: Sprint 50 release candidate tests
+        run: npm run test:sprint50
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:
@@ -297,6 +302,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - name: Enforce bundle budget
+        run: npm run check:bundle-budget
       - name: Preserve build for deploy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -501,3 +508,60 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  production-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Read-only production smoke
+    needs: deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout deployed revision
+        uses: actions/checkout@v5
+      - name: Wait for bounded Pages propagation
+        shell: bash
+        run: |
+          set -euo pipefail
+          delays=(5 10 20 30 45)
+          for attempt in "${!delays[@]}"; do
+            response="$(mktemp)"
+            result="$(curl --silent --show-error --location --output "$response" --write-out '%{http_code}|%{url_effective}' \
+              --connect-timeout 10 --max-time 20 "$PRODUCTION_BASE_URL/" || true)"
+            status="${result%%|*}"
+            effective_url="${result#*|}"
+            if [[ "$status" == "200" ]] && [[ "$effective_url" == "$PRODUCTION_BASE_URL/"* ]] \
+              && grep -qi '<html' "$response" && grep -qi '/assets/' "$response"; then
+              rm -f "$response"
+              echo "GitHub Pages propagado com HTML e referências de assets."
+              exit 0
+            fi
+            rm -f "$response"
+            if (( attempt == ${#delays[@]} - 1 )); then
+              echo "Propagação não confirmou HTTP 200 e HTML válido após ${#delays[@]} tentativas (último status: $status)." >&2
+              exit 1
+            fi
+            sleep "${delays[$attempt]}"
+          done
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.4.1
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install pinned Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Run read-only production browser smoke
+        run: npm run test:production-smoke
+      - name: Preserve production smoke diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-smoke-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
