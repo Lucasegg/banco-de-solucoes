@@ -6,6 +6,8 @@ export type AuditReport = { auditReportVersion?: number; vulnerabilities?: Recor
 export type AuditResult = { vulnerabilities: AuditVulnerability[]; blocking: AuditVulnerability[] };
 export type AuditProcessFailure = { stdout?: string; stderr?: string; killed?: boolean; signal?: string; message?: string };
 const execFileAsync = promisify(execFile);
+type AuditExecutor = () => Promise<{ stdout: string }>;
+const defaultAuditExecutor: AuditExecutor = () => execFileAsync('npm', ['audit', '--omit=dev', '--json'], { timeout, maxBuffer: 20 * 1024 * 1024 });
 const timeout = 120_000;
 const severities = ['info', 'low', 'moderate', 'high', 'critical'];
 function score(severity: string) { const index = severities.indexOf(severity); return index < 0 ? -1 : index; }
@@ -49,12 +51,12 @@ export function evaluateAuditProcessResult(stdout: string, failure?: AuditProces
   if (report) return evaluateAuditReport(report);
   throw new Error(auditFailureMessage(failure));
 }
-export async function runProductionAudit(): Promise<AuditResult> {
+export async function runProductionAudit(executor: AuditExecutor = defaultAuditExecutor): Promise<AuditResult> {
   try {
-    const { stdout } = await execFileAsync('npm', ['audit', '--omit=dev', '--json'], { timeout, maxBuffer: 20 * 1024 * 1024 });
+    const { stdout } = await executor();
     return evaluateAuditProcessResult(stdout);
   } catch (error) {
-    throw new Error(auditFailureMessage(error as AuditProcessFailure));
+    return evaluateAuditProcessResult('', error as AuditProcessFailure);
   }
 }
 export function formatAuditResult(result: AuditResult): string[] {

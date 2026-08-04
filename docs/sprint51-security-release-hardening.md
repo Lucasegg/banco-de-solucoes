@@ -10,11 +10,11 @@ O CI da PR #86 apontou uma vulnerabilidade moderada em `postcss <=8.5.22`, com c
 
 ## Resultado final do audit
 
-Após a correção para `postcss@8.5.25`, o gate `npm run security:audit` usa `npm audit --omit=dev --json` e bloqueia vulnerabilidades altas ou críticas aplicáveis à produção. Vulnerabilidades restantes esperadas: nenhuma de produção alta/crítica. Vulnerabilidades de desenvolvimento devem permanecer visíveis no `npm audit --json` completo e ser tratadas por Dependabot ou exceção temporária explícita quando não houver correção compatível.
+Após a correção para `postcss@8.5.25`, a execução de CI do SHA `8d260d5835a6ccb131560c92892b28d49b78194e` ficou verde em 2026-08-04 no run `30959106532`, incluindo `verify` e E2E, com aviso residual de runtime Node 20 apenas em `dorny/paths-filter@v3.0.3`. No ambiente local, o registry online continua retornando HTTP 403 para `npm audit --json` e `npm audit --omit=dev --json`; por isso foi executado também `npm audit --offline --json` e `npm audit --omit=dev --offline --json` contra o lockfile atual, ambos com `info=0`, `low=0`, `moderate=0`, `high=0`, `critical=0`, `total=0`. O gate `npm run security:audit` permanece online/fail-closed no CI e bloqueia vulnerabilidades altas ou críticas aplicáveis à produção.
 
 ## Correções realizadas
 
-- `scripts/securityAudit.ts` agora é fail-closed: rejeita JSON com `error`, JSON inválido, relatório vazio/incompleto, ausência de `metadata.vulnerabilities`, timeout e falhas de registry sem relatório válido.
+- `scripts/securityAudit.ts` agora é fail-closed e também processa corretamente o caminho real de `npm audit` com exit code não zero e stdout contendo relatório válido; rejeita JSON com `error`, JSON inválido, relatório vazio/incompleto, ausência de `metadata.vulnerabilities`, timeout e falhas de registry sem relatório válido.
 - O exit code não zero normal do `npm audit` continua aceito apenas quando há relatório JSON válido de vulnerabilidades.
 - `postcss` foi atualizado de `latest`/`8.5.19` para `8.5.25`, sem troca de major.
 - Todas as Actions em `.github/workflows/deploy.yml` foram fixadas por SHA completo de 40 caracteres com comentário da versão legível.
