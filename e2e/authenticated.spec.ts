@@ -42,9 +42,12 @@ test('membro edita perfil, alterna privacidade, vê perfil próprio privado e sa
   await expect(page).toHaveURL(/#\/login/);
 });
 
-test('membro recebe 403 e administrador abre dashboard', async ({ page, consoleErrors }) => {
+test('membro comum recebe 403 ao acessar administração', async ({ page, consoleErrors }) => {
   await authenticated(page); await mockApi(page); await page.goto('/#/admin');
-  await expect(page.getByRole('heading', { name: 'Acesso não autorizado' })).toBeVisible();
-  await page.evaluate(() => localStorage.setItem('e2e.role', 'admin')); await page.reload();
-  await expect(page.getByRole('heading', { name: 'Painel administrativo' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Acesso não autorizado' })).toBeVisible();
+});
+
+test('administrador autenticado acessa o dashboard', async ({ page, consoleErrors }) => {
+  await authenticated(page, { role: 'admin' }); await mockApi(page); await page.goto('/#/admin');
+  await expect(page.getByRole('heading', { level: 1, name: 'Painel administrativo' })).toBeVisible();
 });

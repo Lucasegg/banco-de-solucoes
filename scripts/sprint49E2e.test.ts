@@ -20,6 +20,10 @@ test('fixtures fail closed against production and contain no privileged secret',
   assert.match(fixture, /route\.abort\('blockedbyclient'\)/);
   assert.match(env, /127\.0\.0\.1:4173\/__e2e_supabase/);
   assert.doesNotMatch(`${fixture}\n${env}`, /service[_-]?role|supabase\.co|resend\.com/i);
+  assert.match(fixture, /expectedHttpErrors/);
+  assert.match(fixture, /error\.url\.includes\(endpoint\)/);
+  assert.match(fixture, /status of \${status}/);
+  assert.doesNotMatch(fixture, /message\.(?:includes|startsWith)\(['\"]Failed to load resource/);
   assert.match(env, /VITE_E2E_FIXTURES=true/);
   assert.match(main, /VITE_E2E_FIXTURES === 'true'[\s\S]*import\('\.\.\/e2e\/E2EHarness'\)/);
   assert.match(main, /initialLocale=\{useE2EFixtures \? 'pt-BR' : undefined\}/);

@@ -25,13 +25,28 @@ export async function mockApi(page: Page, mode: ApiMode = 'empty', ownProfile: '
   await page.route(/^https?:\/\/(?!127\.0\.0\.1(?::4173)?\/)/, (route) => route.abort('blockedbyclient'));
 }
 
-export const test = base.extend<{ consoleErrors: string[] }>({
-  consoleErrors: async ({ page }, use) => {
-    const errors: string[] = [];
-    page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    page.on('pageerror', (error) => errors.push(error.message));
+export type ExpectedHttpError = { status: 429 | 503; endpoint: string };
+type BrowserConsoleError = { text: string; url: string };
+
+export const test = base.extend<{ consoleErrors: BrowserConsoleError[]; expectedHttpErrors: ExpectedHttpError[] }>({
+  expectedHttpErrors: async ({}, use) => { await use([]); },
+  consoleErrors: async ({ page, expectedHttpErrors }, use) => {
+    const errors: BrowserConsoleError[] = [];
+    const pageErrors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push({ text: message.text(), url: message.location().url });
+    });
+    page.on('pageerror', (error) => pageErrors.push(error.message));
     await use(errors);
-    expect(errors, 'erros não tratados no navegador').toEqual([]);
+    expect(pageErrors, 'pageerror não tratado no navegador').toEqual([]);
+    const unexpected = errors.filter((error) => !expectedHttpErrors.some(({ status, endpoint }) =>
+      error.url.includes(endpoint) && new RegExp(`\\bstatus of ${status}\\b`).test(error.text)));
+    expect(unexpected, 'erros de console não previstos').toEqual([]);
+    for (const expected of expectedHttpErrors) {
+      expect(errors.some((error) => error.url.includes(expected.endpoint)
+        && new RegExp(`\\bstatus of ${expected.status}\\b`).test(error.text)),
+      `HTTP ${expected.status} esperado em ${expected.endpoint}`).toBe(true);
+    }
   },
 });
 export { expect };

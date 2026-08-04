@@ -21,7 +21,7 @@ test('início, menu, rodapé, teclado e idiomas são funcionais', async ({ page,
   await assertNoHorizontalOverflow(page);
 });
 
-test('busca apresenta vazio, sucesso e falha com estado anunciado', async ({ page, consoleErrors }) => {
+test('busca apresenta vazio, sucesso e falha com estado anunciado', async ({ page, consoleErrors, expectedHttpErrors }) => {
   await page.goto('/#/search');
   await expect(page.getByRole('status').first()).toContainText(/resultado/);
   await expect(page.getByRole('heading', { name: /Nenhum resultado/ })).toBeVisible();
@@ -29,6 +29,7 @@ test('busca apresenta vazio, sucesso e falha com estado anunciado', async ({ pag
   await page.getByLabel(/Termo de busca/).fill('horta');
   await expect(page.getByRole('button', { name: /Horta comunitária/ })).toBeVisible();
   await page.unroute('**/__e2e_supabase/**'); await mockApi(page, 'error');
+  expectedHttpErrors.push({ status: 503, endpoint: '/rest/v1/rpc/search_problems' });
   await page.getByLabel(/Termo de busca/).fill('falha');
   await expect(page.getByRole('heading', { name: /Não foi possível/ })).toBeVisible();
 });
@@ -45,7 +46,7 @@ test('documentos legais e rota inexistente mantêm navegação recuperável', as
   await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible();
 });
 
-test('contato valida consentimento e simula sucesso e rate limit sem segredos', async ({ page, consoleErrors }) => {
+test('contato valida consentimento e simula sucesso e rate limit sem segredos', async ({ page, consoleErrors, expectedHttpErrors }) => {
   await page.goto('/#/contact');
   await page.getByRole('button', { name: 'Enviar solicitação' }).click();
   await expect(page.getByText('Este campo é obrigatório.').first()).toBeVisible();
@@ -60,6 +61,7 @@ test('contato valida consentimento e simula sucesso e rate limit sem segredos', 
   await expect(page.getByRole('status')).toContainText('Solicitação enviada com sucesso.');
   expect(await page.content()).not.toContain('service_role');
   await page.unroute('**/__e2e_supabase/**'); await mockApi(page, 'rate-limit');
+  expectedHttpErrors.push({ status: 429, endpoint: '/functions/v1/contact-request' });
   await page.reload();
   await page.getByLabel('Nome').fill('Maria Teste'); await page.getByLabel('E-mail').fill('maria@example.test'); await page.getByLabel('Assunto').fill('Ajuda com cadastro'); await page.getByLabel('Categoria').selectOption('support'); await page.getByLabel('Mensagem').fill('Preciso de ajuda para entender como concluir o meu cadastro.'); await page.getByRole('checkbox', { name: 'Concordo com o tratamento dos meus dados somente para resposta a esta solicitação.' }).check();
   await page.getByRole('button', { name: 'Enviar solicitação' }).click();
