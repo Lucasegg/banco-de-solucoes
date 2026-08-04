@@ -1,8 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import { assertMutableE2eTargetIsSafe } from './scripts/productionEnvironment.ts';
 
 const port = 4173;
+const localBaseUrl = assertMutableE2eTargetIsSafe(process.env.E2E_BASE_URL ?? `http://127.0.0.1:${port}`);
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: 'production-smoke.spec.ts',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
@@ -11,7 +14,7 @@ export default defineConfig({
   expect: { timeout: 7_000 },
   reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: `http://127.0.0.1:${port}`,
+    baseURL: localBaseUrl,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'off',
