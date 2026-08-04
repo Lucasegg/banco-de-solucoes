@@ -23,7 +23,7 @@ test('MFA obrigatório aceita fixture determinística antes da rota protegida', 
   await authenticated(page, { mfaRequired: true }); await mockApi(page);
   await page.goto('/#/profile');
   await expect(page.getByRole('heading', { name: 'Confirme sua identidade' })).toBeVisible();
-  await page.getByLabel(/Código/).fill('123456');
+  await page.getByRole('textbox', { name: 'Código de seis dígitos' }).fill('123456');
   await page.getByRole('button', { name: 'Confirmar código' }).click();
   await expect(page.getByRole('heading', { name: 'Ana Silva' })).toBeVisible();
 });

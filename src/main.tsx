@@ -16,7 +16,7 @@ async function render() {
   const application = useE2EFixtures
     ? await import('../e2e/E2EHarness').then(({ E2EHarness }) => <E2EHarness><App /></E2EHarness>)
     : productionApp;
-  ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><I18nProvider>{application}</I18nProvider></React.StrictMode>);
+  ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><I18nProvider initialLocale={useE2EFixtures ? 'pt-BR' : undefined}>{application}</I18nProvider></React.StrictMode>);
 }
 
 void render();

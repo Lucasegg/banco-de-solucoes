@@ -25,7 +25,7 @@ O job E2E será dependente de `verify`, separado do deploy, com Node e browser f
 
 `playwright.config.ts` define dois projetos Chromium (desktop e 320 px), build Vite em modo `e2e`, preview estrito em `127.0.0.1:4173`, health wait e encerramento do processo pelo `webServer`. A fixture `e2e/fixtures.ts` intercepta toda a pseudo-API local e bloqueia tráfego externo. Console errors e exceções de página fazem cada cenário falhar. Não há delays fixos: as esperas são por URL, role, nome acessível ou estado anunciado.
 
-O harness de autenticação é carregado dinamicamente somente quando `VITE_E2E_FIXTURES=true` no modo E2E; builds normais preservam os providers e gates reais. O modo E2E usa somente `http://127.0.0.1:4173/__e2e_supabase` e uma chave pública explicitamente fictícia. Respostas de busca, contato e perfil são fixtures em memória; nenhum request alcança Supabase, serviço de e-mail ou produção. Não foram alterados AuthContext, RLS, migrations ou gates legais.
+O harness de autenticação é carregado dinamicamente somente quando `VITE_E2E_FIXTURES=true` no modo E2E; builds normais preservam os providers e gates reais. Nesse modo, um contexto de notificações inerte mantém o contrato visual sem montar o provider real, abrir Realtime/WebSocket, iniciar timers ou subscriptions. O locale inicial também é fixado explicitamente em `pt-BR`, sem depender do idioma do navegador do runner. O modo E2E usa somente `http://127.0.0.1:4173/__e2e_supabase` e uma chave pública explicitamente fictícia. Respostas de busca, contato e perfil são fixtures em memória; nenhum request alcança Supabase, serviço de e-mail ou produção. Não foram alterados AuthContext, RLS, migrations ou gates legais.
 
 ## Matriz de fluxos
 

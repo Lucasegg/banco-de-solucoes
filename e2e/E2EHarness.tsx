@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { AuthContext, type AuthContextValue } from '../src/context/AuthContext';
 import { LegalConsentContext } from '../src/context/LegalConsentContext';
-import { NotificationsProvider } from '../src/context/NotificationsContext';
+import { E2ENotificationsProvider } from './E2ENotificationsProvider';
 import { PersistenceProvider } from '../src/integrations/supabase/PersistenceProvider';
 import type { UserProfile, UserRole } from '../src/types/user';
 import { CURRENT_LEGAL_VERSIONS } from '../src/legal/versions';
@@ -48,5 +48,5 @@ export function E2EHarness({ children }: { children: ReactNode }) {
     ], pending: consentPending },
     accept: async () => { setConsentPending(false); return true; }, reload: async () => undefined,
   }), [consentPending]);
-  return <PersistenceProvider><AuthContext.Provider value={auth}><LegalConsentContext.Provider value={legal}><NotificationsProvider>{children}</NotificationsProvider></LegalConsentContext.Provider></AuthContext.Provider></PersistenceProvider>;
+  return <PersistenceProvider><AuthContext.Provider value={auth}><LegalConsentContext.Provider value={legal}><E2ENotificationsProvider>{children}</E2ENotificationsProvider></LegalConsentContext.Provider></AuthContext.Provider></PersistenceProvider>;
 }

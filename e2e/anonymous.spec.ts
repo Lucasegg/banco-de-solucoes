@@ -55,13 +55,13 @@ test('contato valida consentimento e simula sucesso e rate limit sem segredos', 
   await page.getByLabel('Categoria').selectOption('support');
   await page.getByLabel('Mensagem').fill('Preciso de ajuda para entender como concluir o meu cadastro.');
   await expect(page.getByText('É necessário consentir para enviar.')).toBeVisible();
-  await page.getByLabel(/Concordo com o tratamento/).check();
+  await page.getByRole('checkbox', { name: 'Concordo com o tratamento dos meus dados somente para resposta a esta solicitação.' }).check();
   await page.getByRole('button', { name: 'Enviar solicitação' }).click();
   await expect(page.getByRole('status')).toContainText('Solicitação enviada com sucesso.');
   expect(await page.content()).not.toContain('service_role');
   await page.unroute('**/__e2e_supabase/**'); await mockApi(page, 'rate-limit');
   await page.reload();
-  await page.getByLabel('Nome').fill('Maria Teste'); await page.getByLabel('E-mail').fill('maria@example.test'); await page.getByLabel('Assunto').fill('Ajuda com cadastro'); await page.getByLabel('Categoria').selectOption('support'); await page.getByLabel('Mensagem').fill('Preciso de ajuda para entender como concluir o meu cadastro.'); await page.getByLabel(/Concordo/).check();
+  await page.getByLabel('Nome').fill('Maria Teste'); await page.getByLabel('E-mail').fill('maria@example.test'); await page.getByLabel('Assunto').fill('Ajuda com cadastro'); await page.getByLabel('Categoria').selectOption('support'); await page.getByLabel('Mensagem').fill('Preciso de ajuda para entender como concluir o meu cadastro.'); await page.getByRole('checkbox', { name: 'Concordo com o tratamento dos meus dados somente para resposta a esta solicitação.' }).check();
   await page.getByRole('button', { name: 'Enviar solicitação' }).click();
   await expect(page.getByRole('status')).toContainText('Não foi possível enviar');
 });
