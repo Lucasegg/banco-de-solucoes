@@ -4,6 +4,8 @@ import test from 'node:test';
 
 const workflow = await readFile('.github/workflows/deploy.yml', 'utf8');
 const smoke = await readFile('e2e/production-smoke.spec.ts', 'utf8');
+const localAnonymous = await readFile('e2e/anonymous.spec.ts', 'utf8');
+const overflowHelper = await readFile('e2e/overflow.ts', 'utf8');
 const config = await readFile('playwright.production.config.ts', 'utf8');
 const localConfig = await readFile('playwright.config.ts', 'utf8');
 const budget = JSON.parse(await readFile('config/bundle-budget.json', 'utf8'));
@@ -45,7 +47,7 @@ test('locale do production smoke é explicitamente pt-BR', () => {
 test('smoke aceita navegação same-document sem enfraquecer as validações', () => {
   assert.match(smoke, /if \(response\) \{[\s\S]*response\.ok\(\)/);
   assert.match(smoke, /toHaveURL\(new URL\(hash, PRODUCTION_ORIGIN\)\.href\)/);
-  assert.match(smoke, /scrollWidth - rootWidth/);
+  assert.match(smoke, /assertNoHorizontalOverflow/);
   assert.match(smoke, /requests mutáveis bloqueados/);
   assert.match(smoke, /pageerror em produção/);
   assert.match(smoke, /erros inesperados no console/);
@@ -53,9 +55,15 @@ test('smoke aceita navegação same-document sem enfraquecer as validações', (
 
 test('diagnóstico de overflow expõe somente geometria e identificação visual', () => {
   for (const field of ['selector', 'tag', 'classes', 'width', 'left', 'right', 'clientWidth', 'scrollWidth']) {
-    assert.match(smoke, new RegExp(`\\b${field}\\b`));
+    assert.match(overflowHelper, new RegExp(`\\b${field}\\b`));
   }
-  assert.doesNotMatch(smoke, /textContent|innerText|innerHTML/);
+  assert.doesNotMatch(overflowHelper, /textContent|innerText|innerHTML|\.value/);
+  assert.match(overflowHelper, /toBeLessThanOrEqual\(1\)/);
+});
+
+test('E2E local valida o overflow da home também no projeto mobile-320', () => {
+  assert.match(localAnonymous, /heading[\s\S]*assertNoHorizontalOverflow\(page, 'home local'\)[\s\S]*Buscar/);
+  assert.match(localConfig, /name: 'mobile-320'[\s\S]*width: 320/);
 });
 
 test('domínio é centralizado, HTTPS e validado', async () => {

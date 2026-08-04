@@ -1,15 +1,12 @@
 import { expect, test, mockApi } from './fixtures';
-
-async function assertNoHorizontalOverflow(page: import('@playwright/test').Page) {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow).toBeLessThanOrEqual(1);
-}
+import { assertNoHorizontalOverflow } from './overflow';
 
 test.beforeEach(async ({ page }) => { await mockApi(page); });
 
 test('início, menu, rodapé, teclado e idiomas são funcionais', async ({ page, consoleErrors }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await assertNoHorizontalOverflow(page, 'home local');
   await page.getByRole('button', { name: 'Buscar' }).click();
   await expect(page).toHaveURL(/#\/search/);
   await page.getByRole('link', { name: 'Política de Privacidade' }).click();
@@ -18,7 +15,6 @@ test('início, menu, rodapé, teclado e idiomas são funcionais', async ({ page,
   await expect(page.getByRole('button', { name: 'Home' })).toBeVisible();
   await page.keyboard.press('Tab');
   expect(await page.evaluate(() => document.activeElement !== document.body)).toBe(true);
-  await assertNoHorizontalOverflow(page);
 });
 
 test('busca apresenta vazio, sucesso e falha com estado anunciado', async ({ page, consoleErrors, expectedHttpErrors }) => {
