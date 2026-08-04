@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+      - npm
+    groups:
+      npm-compatible-patches:
+        update-types:
+          - patch
+      npm-compatible-minors:
+        update-types:
+          - minor
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - security
+      - github-actions
+    groups:
+      actions-compatible-patches:
+        update-types:
+          - patch
+      actions-compatible-minors:
+        update-types:
+          - minor

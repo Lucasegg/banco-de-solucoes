@@ -46,7 +46,10 @@
     "test:sprint50": "node --experimental-strip-types --test scripts/sprint50ReleaseCandidate.test.ts scripts/productionEnvironment.test.ts scripts/productionSmokeSafety.test.ts",
     "test:production-smoke": "playwright test --config=playwright.production.config.ts",
     "check:bundle-budget": "node --experimental-strip-types scripts/checkBundleBudget.ts",
-    "test:router": "node --experimental-strip-types --test src/routing/hashRouter.test.ts"
+    "test:router": "node --experimental-strip-types --test src/routing/hashRouter.test.ts",
+    "security:audit": "node --experimental-strip-types scripts/securityAudit.ts",
+    "sbom:generate": "npm sbom --json > sbom.cyclonedx.json && node -e \"JSON.parse(require('node:fs').readFileSync('sbom.cyclonedx.json','utf8'))\"",
+    "test:sprint51": "node --experimental-strip-types --test scripts/sprint51SecurityHardening.test.ts"
   },
   "dependencies": {
     "vite": "latest",

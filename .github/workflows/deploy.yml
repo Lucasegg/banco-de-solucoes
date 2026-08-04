@@ -243,7 +243,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -289,6 +289,10 @@ jobs:
         run: npm run test:sprint48
       - name: Sprint 50 release candidate tests
         run: npm run test:sprint50
+      - name: Sprint 51 security hardening tests
+        run: npm run test:sprint51
+      - name: Security audit gate
+        run: npm run security:audit
       - name: Setup Deno for Edge Function
         uses: denoland/setup-deno@v2
         with:
@@ -304,6 +308,17 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       - name: Enforce bundle budget
         run: npm run check:bundle-budget
+      - name: Generate SBOM from npm lockfile
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm run sbom:generate
+      - name: Upload SBOM artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint51-sbom-${{ github.sha }}
+          path: sbom.cyclonedx.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Preserve build for deploy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -324,7 +339,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24.4.1
+          node-version-file: .nvmrc
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -362,7 +377,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -427,7 +442,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -450,7 +465,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -547,7 +562,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24.4.1
+          node-version-file: .nvmrc
           cache: npm
       - name: Install dependencies
         run: npm ci
