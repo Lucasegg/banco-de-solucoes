@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const workflow = await readFile('.github/workflows/deploy.yml', 'utf8');
 const smoke = await readFile('e2e/production-smoke.spec.ts', 'utf8');
+const smokeSafety = await readFile('scripts/productionSmokeSafety.ts', 'utf8');
 const localAnonymous = await readFile('e2e/anonymous.spec.ts', 'utf8');
 const overflowHelper = await readFile('e2e/overflow.ts', 'utf8');
 const config = await readFile('playwright.production.config.ts', 'utf8');
@@ -35,6 +36,10 @@ test('smoke é estritamente read-only e sem credenciais', () => {
   assert.match(smoke, /route\.abort\('blockedbyclient'\)/);
   assert.match(smoke, /sanitizedRequestTarget/);
   assert.doesNotMatch(productionJob, /secrets\.|SUPABASE_|service.role/i);
+  assert.match(smokeSafety, /READ_ONLY_PUBLIC_RPC_PATHS/);
+  assert.doesNotMatch(smokeSafety, /READ_ONLY_SEARCH_RPC_PATHS/);
+  assert.match(smokeSafety, /'\/rest\/v1\/rpc\/list_taxonomy_terms'/);
+  assert.match(smoke, /body: '\[\]'/);
 });
 
 test('locale do production smoke é explicitamente pt-BR', () => {
