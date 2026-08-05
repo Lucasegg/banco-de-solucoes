@@ -24,7 +24,11 @@ test('skip link focuses main content without changing HashRouter route', async (
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Soluções');
   const mouseHref = await page.evaluate(() => window.location.href);
   const mouseHash = await page.evaluate(() => window.location.hash);
-  await page.getByRole('link', { name: 'Pular para o conteúdo principal' }).click();
+  const skipLink = page.getByRole('link', { name: 'Pular para o conteúdo principal' });
+  await skipLink.focus();
+  await expect(skipLink).toBeFocused();
+  await expect(skipLink).toBeVisible();
+  await skipLink.click();
   await expect(page.locator('main#main-content')).toBeFocused();
   expect(await page.evaluate(() => document.activeElement === document.querySelector('main#main-content'))).toBe(true);
   expect(await page.evaluate(() => window.location.href)).toBe(mouseHref);
