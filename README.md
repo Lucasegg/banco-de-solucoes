@@ -44,6 +44,22 @@ A visão completa do Banco de Soluções está documentada em [VISION.md](VISION
 - Cadastrar Problema
 - Cadastrar Solução
 - Sobre
+- Busca pública
+- Mapa público
+- Fale Conosco
+- Política de Privacidade
+- Termos de Uso
+- LGPD
+- Login, cadastro, recuperação de senha, MFA e área de conta
+- Favoritos, notificações, contribuições e perfis públicos
+- Painéis administrativos protegidos por permissão
+
+
+## Versão pública 1.0
+
+A versão pública atual é **1.0.0**. O domínio oficial e canônico é **https://www.bancodesolucoes.com.br/**. Páginas legais e contato disponíveis publicamente: `#/privacy`, `#/terms`, `#/lgpd` e `#/contact`.
+
+A preparação técnica da versão 1.0 está documentada em [`docs/release/sprint-53-public-1.0.md`](docs/release/sprint-53-public-1.0.md), incluindo atualização de versão, SEO, acessibilidade, privacidade, checklist de release, rollback, validação de deploy, smoke, SBOM e auditorias. O manifesto de release deve ser preenchido a partir de [`docs/release/release-manifest-template.md`](docs/release/release-manifest-template.md) durante o processo aprovado, sem secrets.
 
 ## Como executar localmente
 
@@ -76,9 +92,9 @@ src/
   types/           Tipos compartilhados
 ```
 
-## Integração futura com Supabase
+## Integração com Supabase
 
-A integração ainda não está ativa para dados da aplicação. A infraestrutura inicial está documentada em [SUPABASE.md](SUPABASE.md), incluindo client, adapter, provider, diagnósticos, RLS, Auth, Storage e plano de migração futura. A rota `#/diagnostics` exibe o status atual sem substituir o `LocalStorageAdapter`.
+A aplicação usa Supabase para autenticação, dados persistidos, Storage, políticas RLS, funções operacionais e diagnósticos quando as variáveis públicas de ambiente estão configuradas. A arquitetura e os procedimentos seguem documentados em [SUPABASE.md](SUPABASE.md). A rota `#/diagnostics` permanece como diagnóstico operacional protegido contra exposição de secrets.
 
 ## Como contribuir
 
