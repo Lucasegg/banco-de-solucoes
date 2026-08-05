@@ -46,7 +46,11 @@
     "test:sprint50": "node --experimental-strip-types --test scripts/sprint50ReleaseCandidate.test.ts scripts/productionEnvironment.test.ts scripts/productionSmokeSafety.test.ts",
     "test:production-smoke": "playwright test --config=playwright.production.config.ts",
     "check:bundle-budget": "node --experimental-strip-types scripts/checkBundleBudget.ts",
-    "test:router": "node --experimental-strip-types --test src/routing/hashRouter.test.ts"
+    "test:router": "node --experimental-strip-types --test src/routing/hashRouter.test.ts",
+    "security:audit": "node --experimental-strip-types scripts/securityAudit.ts",
+    "sbom:generate": "npm sbom --json > sbom.cyclonedx.json && node -e \"JSON.parse(require('node:fs').readFileSync('sbom.cyclonedx.json','utf8'))\"",
+    "test:sprint51": "node --experimental-strip-types --test scripts/securityAudit.test.ts scripts/securityAuditReport.test.ts scripts/sprint51SecurityHardening.test.ts",
+    "security:audit:report": "node --experimental-strip-types scripts/securityAuditReport.ts"
   },
   "dependencies": {
     "vite": "latest",
@@ -59,9 +63,9 @@
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17",
-    "postcss": "latest",
+    "postcss": "8.5.25",
     "autoprefixer": "latest",
     "@types/leaflet": "1.9.21",
-    "@playwright/test": "1.54.2"
+    "@playwright/test": "1.62.1"
   }
 }
