@@ -50,7 +50,7 @@ test('Node is standardized through .nvmrc across Node setup steps', () => {
 });
 
 test('SBOM is generated from lockfile and uploaded only on push to main', () => {
-  assert.match(pkg.scripts['sbom:generate'], /npm sbom --json/);
+  assert.match(pkg.scripts['sbom:generate'], /npm sbom --sbom-format cyclonedx/);
   const sbom = workflow.slice(workflow.indexOf('Generate SBOM from npm lockfile'), workflow.indexOf('Preserve build for deploy'));
   assert.match(sbom, /github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
   assert.match(sbom, /uses: actions\/upload-artifact@[a-f0-9]{40} # v7\.0\.1/);
