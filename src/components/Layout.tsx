@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { DatabaseZap, LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
@@ -6,6 +6,7 @@ import { NotificationBell } from './notifications/NotificationBell';
 import { useTranslation } from '../i18n/I18nProvider';
 import type { TranslationKey } from '../i18n/resources';
 import { InstitutionalFooter } from './InstitutionalFooter';
+import { PUBLIC_VERSION } from '../version';
 
 interface LayoutProps {
   children: ReactNode;
@@ -20,8 +21,14 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   const permissions = usePermissions(user);
   const { locale, setLocale, t } = useTranslation();
 
+  const focusMainContent = (event: FormEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    document.getElementById('main-content')?.focus({ preventScroll: false });
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-ink">
+      <a href="#main-content" onClick={focusMainContent} className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-slate-950 focus:shadow-lg">{t('a11y.skipToContent')}</a>
       <header className="sticky top-0 z-10 border-b border-line bg-white/85 backdrop-blur">
         <nav className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
           <button className="flex items-center gap-3 text-left" onClick={() => onNavigate('home')}>
@@ -91,7 +98,8 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
           </div>
         </nav>
       </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">{children}</main>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+      <p className="sr-only" aria-label={`Versão pública ${PUBLIC_VERSION}`}>v{PUBLIC_VERSION}</p>
       <InstitutionalFooter />
     </div>
   );

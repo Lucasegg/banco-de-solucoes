@@ -10,6 +10,7 @@ import { hashFromPage, pageFromHash } from './routing/hashRouter';
 import { LegalConsentGate } from './components/legal/LegalConsentGate';
 import { RouteLoadingFallback } from './components/RouteLoadingFallback';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
+import { applySeo } from './seo';
 
 const About = lazy(() => import('./pages/About').then((m) => ({ default: m.About })));
 const ProblemDetails = lazy(() => import('./pages/Details').then((m) => ({ default: m.ProblemDetails })));
@@ -63,6 +64,10 @@ export function App() {
 
     window.location.hash = nextHash;
   }, []);
+
+  useEffect(() => {
+    applySeo(page);
+  }, [page]);
 
   useEffect(() => {
     const sync = () => setPageState(pageFromHash(window.location.hash));
