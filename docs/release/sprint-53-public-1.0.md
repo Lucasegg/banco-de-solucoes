@@ -11,9 +11,13 @@ A interface expõe a versão apenas como texto acessível para operação e supo
 
 ## SEO técnico e HashRouter
 
-O domínio canônico oficial é `https://www.bancodesolucoes.com.br/`. Metadados técnicos básicos são aplicados no HTML inicial e atualizados por rota pública durante a navegação: `title`, `description`, `canonical`, Open Graph, Twitter Card e `robots`.
+O domínio canônico oficial é `https://www.bancodesolucoes.com.br/`. Metadados técnicos básicos são aplicados no HTML inicial e atualizados por estado público do frontend durante a navegação: `title`, `description`, Open Graph, Twitter Card e `robots`.
 
-O app preserva o `HashRouter` existente. Essa decisão evita impacto de infraestrutura nesta sprint, mas tem limitação para indexação: muitos robôs tratam fragmentos `#/...` como parte cliente, não como rotas HTTP distintas. Por isso o `sitemap.xml` lista somente rotas públicas estáveis em hash e exclui páginas administrativas, privadas, callbacks, recuperação de senha e MFA.
+Enquanto o app preservar `HashRouter` sem prerenderização, `canonical` e `og:url` devem continuar apontando para a URL HTTP raiz oficial (`https://www.bancodesolucoes.com.br/`). Fragmentos `#/...` não representam recursos HTTP canônicos independentes e não devem ser publicados como URLs canônicas.
+
+Títulos e descriptions client-side por rota ajudam compartilhamento e contexto quando o JavaScript executa, mas títulos client-side não garantem indexação independente. SEO completo por rota exigiria rotas HTTP reais, SSR ou prerenderização com HTML estável por rota pública.
+
+O `sitemap.xml` lista somente a URL HTTP raiz canônica enquanto não existirem rotas HTTP reais. Ele não indexa rotas hash separadamente e não deve listar páginas administrativas, privadas, callbacks, recuperação de senha, MFA ou qualquer rota sensível.
 
 ## Segurança, privacidade e terceiros
 
@@ -33,12 +37,13 @@ O bundle público não deve conter `service_role`, secrets, tokens administrativ
 5. Rodar `npm run security:audit:report` e `npm run security:audit`.
 6. Rodar `npm run build` e `npm run check:bundle-budget`.
 7. Rodar E2E crítico com `npm run build:e2e` e `npm run test:e2e`.
-8. Validar 320 px, tablet e desktop via Playwright ou inspeção equivalente.
-9. Validar `dist/robots.txt`, `dist/sitemap.xml` e metadados de `dist/index.html`.
-10. Verificar ausência de secrets no `dist/` com busca por padrões proibidos.
-11. Rodar `git diff --check`.
-12. Executar Production Preflight manual no SHA final antes da aprovação do deploy.
-13. Preencher `docs/release/release-manifest-template.md` com SHA, resultados e artefatos.
+8. Validar o E2E do skip link em rota pública hash.
+9. Validar 320 px, tablet e desktop via Playwright ou inspeção equivalente.
+10. Validar `dist/robots.txt`, `dist/sitemap.xml` e metadados de `dist/index.html`.
+11. Verificar ausência de secrets no `dist/` com busca por padrões proibidos.
+12. Rodar `git diff --check`.
+13. Executar Production Preflight manual no SHA final antes da aprovação do deploy.
+14. Preencher `docs/release/release-manifest-template.md` com SHA, resultados e artefatos.
 
 Rollback: identificar o último SHA saudável em `main`, executar o workflow de deploy/preflight para esse SHA, validar smoke somente-leitura em produção e registrar o rollback no manifesto sem expor secrets.
 

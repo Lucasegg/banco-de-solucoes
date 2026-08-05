@@ -1,0 +1,25 @@
+import { expect, test, mockApi } from './fixtures';
+
+test.beforeEach(async ({ page }) => { await mockApi(page); });
+
+test('skip link focuses main content without changing HashRouter route', async ({ page }) => {
+  await page.goto('/#/search');
+  const originalHash = await page.evaluate(() => window.location.hash);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Busca');
+
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Pular para o conteúdo principal' })).toBeFocused();
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('main#main-content')).toBeFocused();
+  expect(await page.evaluate(() => window.location.hash)).toBe(originalHash);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Busca');
+  await expect(page.getByText('Página não encontrada')).toHaveCount(0);
+
+  await page.goto('/#/solutions');
+  const mouseHash = await page.evaluate(() => window.location.hash);
+  await page.getByRole('link', { name: 'Pular para o conteúdo principal' }).click();
+  await expect(page.locator('main#main-content')).toBeFocused();
+  expect(await page.evaluate(() => window.location.hash)).toBe(mouseHash);
+  await expect(page.getByText('Página não encontrada')).toHaveCount(0);
+});
