@@ -48,7 +48,7 @@
     "check:bundle-budget": "node --experimental-strip-types scripts/checkBundleBudget.ts",
     "test:router": "node --experimental-strip-types --test src/routing/hashRouter.test.ts",
     "security:audit": "node --experimental-strip-types scripts/securityAudit.ts",
-    "sbom:generate": "npm sbom --json > sbom.cyclonedx.json && node -e \"JSON.parse(require('node:fs').readFileSync('sbom.cyclonedx.json','utf8'))\"",
+    "sbom:generate": "npm sbom --sbom-format cyclonedx > sbom.cyclonedx.json && node -e \"JSON.parse(require('node:fs').readFileSync('sbom.cyclonedx.json','utf8'))\"",
     "test:sprint51": "node --experimental-strip-types --test scripts/securityAudit.test.ts scripts/securityAuditReport.test.ts scripts/sprint51SecurityHardening.test.ts",
     "security:audit:report": "node --experimental-strip-types scripts/securityAuditReport.ts"
   },
