@@ -24,8 +24,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-${{ github.event_name }}
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || github.event_name == 'push' && 'deploy-main' || format('production-preflight-{0}', inputs.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   PRODUCTION_BASE_URL: https://www.bancodesolucoes.com.br
@@ -304,6 +304,8 @@ jobs:
         run: npm run test:sprint50
       - name: Sprint 51 security hardening tests
         run: npm run test:sprint51
+      - name: Sprint 52 dependency governance tests
+        run: npm run test:sprint52
       - name: Full dependency audit report
         run: npm run security:audit:report
       - name: Security audit gate

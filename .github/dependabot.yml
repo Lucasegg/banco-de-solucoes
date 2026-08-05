@@ -5,7 +5,7 @@ updates:
     target-branch: main
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     labels:
       - dependencies
       - security
@@ -17,12 +17,18 @@ updates:
       npm-compatible-minors:
         update-types:
           - minor
+        exclude-patterns:
+          - tailwindcss
+    ignore:
+      - dependency-name: tailwindcss
+        update-types:
+          - version-update:semver-major
   - package-ecosystem: github-actions
     directory: /
     target-branch: main
     schedule:
       interval: weekly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
     labels:
       - dependencies
       - security
@@ -34,3 +40,7 @@ updates:
       actions-compatible-minors:
         update-types:
           - minor
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
