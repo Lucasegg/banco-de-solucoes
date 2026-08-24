@@ -4,6 +4,7 @@ export const READ_ONLY_PUBLIC_RPC_PATHS = new Set([
   '/rest/v1/rpc/search_nearby_problems',
   '/rest/v1/rpc/search_nearby_solutions',
   '/rest/v1/rpc/list_taxonomy_terms',
+  '/rest/v1/rpc/get_problems_in_bounds',
 ]);
 
 export type ProductionRequestDecision = 'continue' | 'intercept-read-only-rpc' | 'block-mutation';
