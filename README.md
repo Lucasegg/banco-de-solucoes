@@ -59,7 +59,7 @@ A visão completa do Banco de Soluções está documentada em [VISION.md](VISION
 
 A versão pública atual é **1.0.0**. O domínio oficial e canônico é **https://www.bancodesolucoes.com.br/**. Páginas legais e contato disponíveis publicamente: `#/privacy`, `#/terms`, `#/lgpd` e `#/contact`.
 
-A preparação técnica da versão 1.0 está documentada em [`docs/release/sprint-53-public-1.0.md`](docs/release/sprint-53-public-1.0.md), incluindo atualização de versão, SEO, acessibilidade, privacidade, checklist de release, rollback, validação de deploy, smoke, SBOM e auditorias. O manifesto de release deve ser preenchido a partir de [`docs/release/release-manifest-template.md`](docs/release/release-manifest-template.md) durante o processo aprovado, sem secrets. Enquanto o app usar `HashRouter` sem SSR/prerenderização, o sitemap lista somente a URL HTTP raiz canônica; títulos e descriptions dinâmicos por estado do frontend não garantem indexação independente de cada rota hash.
+O encerramento publicado está consolidado no [`manifesto final`](docs/release/1.0.0-manifest.md), no [`changelog 1.0.0`](docs/release/CHANGELOG-1.0.0.md) e no [`runbook pós-go-live`](docs/release/post-go-live-runbook.md). O material da Sprint 53 permanece como histórico de preparação, não como checklist pendente da versão já publicada. Enquanto o app usar `HashRouter` sem SSR/prerenderização, o sitemap lista somente a URL HTTP raiz canônica; títulos e descriptions dinâmicos por estado do frontend não garantem indexação independente de cada rota hash.
 
 ## Como executar localmente
 
@@ -102,7 +102,9 @@ Leia o arquivo [CONTRIBUTING.md](CONTRIBUTING.md) para entender o fluxo de contr
 
 ## Licença
 
-Este projeto é open source. A licença definitiva será definida antes da primeira versão pública estável.
+O repositório não contém uma licença definitiva. A disponibilidade pública do
+código não concede, por si só, permissão de uso, modificação ou redistribuição;
+uma licença é item explicitamente pendente para versão futura.
 
 ## Decisões de arquitetura
 

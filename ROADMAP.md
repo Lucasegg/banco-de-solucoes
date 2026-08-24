@@ -8,28 +8,28 @@
 - [x] Estrutura preparada para Supabase.
 - [x] GitHub Actions e GitHub Pages.
 
-## Fase 2 — Dados reais
+## Fase 2 — Dados reais (entregue na 1.0)
 
-- [ ] Criar schema inicial no Supabase.
-- [ ] Persistir problemas e soluções.
-- [ ] Implementar autenticação.
-- [ ] Criar perfis públicos de pessoas e organizações.
-- [ ] Adicionar relacionamento muitos-para-muitos entre problemas e soluções.
+- [x] Criar schema inicial no Supabase.
+- [x] Persistir problemas e soluções.
+- [x] Implementar autenticação.
+- [x] Criar perfis públicos de pessoas e organizações.
+- [x] Relacionar problemas e soluções por recomendações e contribuições.
 
-## Fase 3 — Colaboração
+## Fase 3 — Colaboração (parcialmente entregue na 1.0)
 
-- [ ] Comentários e discussões.
-- [ ] Votos, relevância e sinalização de qualidade.
-- [ ] Moderação comunitária.
-- [ ] Histórico de alterações.
+- [x] Comentários, reações e discussões.
+- [x] Reputação, conquistas e sinalização de qualidade.
+- [x] Denúncias e moderação de conteúdo.
+- [x] Histórico auditável de contribuições.
 - [ ] Convites para projetos e times.
 
-## Fase 4 — Descoberta avançada
+## Fase 4 — Descoberta avançada (entregue na 1.0)
 
-- [ ] Busca textual robusta.
-- [ ] Tags globais e taxonomia colaborativa.
-- [ ] Filtros por região, setor, maturidade e impacto.
-- [ ] Recomendações de soluções para problemas similares.
+- [x] Busca textual robusta.
+- [x] Tags globais e taxonomia colaborativa.
+- [x] Filtros e busca geográfica por região e proximidade.
+- [x] Recomendações de soluções para problemas similares.
 
 ## Fase 5 — Escala mundial
 
