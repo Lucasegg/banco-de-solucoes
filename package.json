@@ -55,6 +55,7 @@
     "test:sprint53": "node --experimental-strip-types --test scripts/sprint53PublicRelease.test.ts",
     "test:sprint54": "node --experimental-strip-types --test scripts/sprint54Observability.test.ts",
     "test:sprint55": "node --experimental-strip-types --test scripts/sprint55FinalAudit.test.ts",
+    "test:sprint56": "node --experimental-strip-types --test scripts/sprint56ReleaseClosure.test.ts",
     "test:e2e:skip-link": "playwright test e2e/skip-link.spec.ts"
   },
   "dependencies": {
