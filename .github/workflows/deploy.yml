@@ -308,6 +308,8 @@ jobs:
         run: npm run test:sprint52
       - name: Sprint 54 observability contract tests
         run: npm run test:sprint54
+      - name: Sprint 55 final production audit contract tests
+        run: npm run test:sprint55
       - name: Full dependency audit report
         run: npm run security:audit:report
       - name: Security audit gate
