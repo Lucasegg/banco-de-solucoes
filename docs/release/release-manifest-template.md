@@ -1,10 +1,10 @@
 # Manifesto de release
 
-- Versão: 1.0.0
+- Versão: `<preencher no release>`
 - SHA: `<preencher no release>`
 - Data UTC: `<preencher no release>`
 - Ambiente: produção pública (`https://www.bancodesolucoes.com.br/`)
-- Migrations incluídas: nenhuma nesta sprint
+- Migrations incluídas: `<preencher no release>`
 - Auditorias: `<npm test, test:previous, test:sprint53, security:audit:report, security:audit>`
 - Artefato SBOM: `sbom.cyclonedx.json` gerado pelo workflow/comando `npm run sbom:generate`
 - Production Preflight: `<resultado e link do workflow>`

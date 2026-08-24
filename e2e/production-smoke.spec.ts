@@ -42,6 +42,8 @@ test('home, HTTPS e assets críticos estão funcionais', async ({ page, request 
   await openReadOnly(page);
   await expect(page).toHaveTitle(/Banco de Soluções/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${PRODUCTION_ORIGIN}/`);
+  await expect(page.locator('meta[name="application-version"]')).toHaveAttribute('content', '1.0.0');
   const assets = await page.locator('script[src], link[rel="stylesheet"][href], link[rel="manifest"][href]').evaluateAll(nodes => nodes.map(node => (node as HTMLScriptElement).src || (node as HTMLLinkElement).href));
   expect(assets.length).toBeGreaterThan(1);
   for (const asset of assets) {
@@ -51,11 +53,31 @@ test('home, HTTPS e assets críticos estão funcionais', async ({ page, request 
   }
 });
 
+test('robots e sitemap preservam o contrato público seguro', async ({ request }) => {
+  const robotsResponse = await request.get('/robots.txt');
+  expect(robotsResponse.ok(), 'robots.txt deve responder com sucesso').toBe(true);
+  const robots = await robotsResponse.text();
+  expect(robots, 'robots.txt não pode bloquear a raiz').not.toMatch(/Disallow:\s*\/$/im);
+  expect(robots).toContain(`Sitemap: ${PRODUCTION_ORIGIN}/sitemap.xml`);
+
+  const sitemapResponse = await request.get('/sitemap.xml');
+  expect(sitemapResponse.ok(), 'sitemap.xml deve responder com sucesso').toBe(true);
+  const sitemap = await sitemapResponse.text();
+  expect(sitemap).toContain(`<loc>${PRODUCTION_ORIGIN}/</loc>`);
+  expect(sitemap, 'sitemap não pode publicar fragmentos hash').not.toContain('#');
+  for (const route of ['admin', 'login', 'register', 'account', 'profile', 'notifications', 'callback']) {
+    expect(sitemap, `sitemap não pode publicar rota privada: ${route}`).not.toMatch(new RegExp(`(?:/|>)${route}(?:/|<)`, 'i'));
+  }
+});
+
 test('navegação pública permanece somente leitura', async ({ page }) => {
   await openReadOnly(page);
   await page.getByRole('button', { name: 'Buscar' }).click();
   await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/search`);
   await expect(page.getByRole('heading', { level: 1 })).toContainText(/Busca/);
+  for (const [route, heading] of [['problems', /Problemas/], ['solutions', /Soluções/], ['mapa', /Mapa/]] as const) {
+    await openReadOnly(page, `/#/${route}`); await expect(page.getByRole('heading', { level: 1 })).toContainText(heading);
+  }
   for (const [route, heading] of [['privacy', /Privacidade/], ['terms', /Termos/], ['lgpd', /LGPD/], ['contact', /Fale Conosco/]] as const) {
     await openReadOnly(page, `/#/${route}`); await expect(page.getByRole('heading', { level: 1 })).toContainText(heading);
   }

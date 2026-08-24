@@ -53,6 +53,7 @@
     "test:sprint52": "node --experimental-strip-types --test scripts/sprint52DependencyGovernance.test.ts",
     "security:audit:report": "node --experimental-strip-types scripts/securityAuditReport.ts",
     "test:sprint53": "node --experimental-strip-types --test scripts/sprint53PublicRelease.test.ts",
+    "test:sprint54": "node --experimental-strip-types --test scripts/sprint54Observability.test.ts",
     "test:e2e:skip-link": "playwright test e2e/skip-link.spec.ts"
   },
   "dependencies": {
