@@ -1,4 +1,5 @@
 import { expect, test, mockApi } from './fixtures';
+import { assertNoHorizontalOverflow } from './overflow';
 
 async function authenticated(page: import('@playwright/test').Page, options: { role?: 'member' | 'admin'; consentPending?: boolean; mfaRequired?: boolean } = {}) {
   await page.addInitScript((value) => {
@@ -50,4 +51,18 @@ test('membro comum recebe 403 ao acessar administração', async ({ page, consol
 test('administrador autenticado acessa o dashboard', async ({ page, consoleErrors }) => {
   await authenticated(page, { role: 'admin' }); await mockApi(page); await page.goto('/#/admin');
   await expect(page.getByRole('heading', { level: 1, name: 'Painel administrativo' })).toBeVisible();
+});
+
+test('início oferece contribuição ao membro e administração somente ao administrador', async ({ page, consoleErrors }) => {
+  await authenticated(page); await mockApi(page); await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Cadastrar problema' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Entrar para contribuir' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Abrir administração' })).toHaveCount(0);
+  await assertNoHorizontalOverflow(page, 'home membro');
+
+  await page.evaluate(() => localStorage.setItem('e2e.role', 'admin'));
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Abrir administração' })).toBeVisible();
+  await page.getByRole('button', { name: 'Abrir administração' }).click();
+  await expect(page).toHaveURL(/#\/admin/);
 });

@@ -3,6 +3,22 @@ import { assertNoHorizontalOverflow } from './overflow';
 
 test.beforeEach(async ({ page }) => { await mockApi(page); });
 
+test('visitante recebe orientação e CTAs públicos sem controles administrativos em 320 px', async ({ page, consoleErrors }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Da descoberta à colaboração em quatro etapas' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pesquisar soluções' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Entrar para contribuir' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Abrir administração' })).toHaveCount(0);
+  await assertNoHorizontalOverflow(page, 'home visitante 320px');
+  await page.getByRole('button', { name: 'Pesquisar soluções' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#\/search/);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Solicitar suporte pelo Fale Conosco' }).click();
+  await expect(page).toHaveURL(/#\/contact/);
+});
+
 test('início, menu, rodapé, teclado e idiomas são funcionais', async ({ page, consoleErrors }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
