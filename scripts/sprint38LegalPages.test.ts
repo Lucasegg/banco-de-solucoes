@@ -20,15 +20,20 @@ async function render(modulePath: string, exportName: string, locale: SupportedL
   return renderToStaticMarkup(createElement(I18nProvider, { initialLocale: locale }, createElement(Component)));
 }
 
-test('rendered footer has native hash links, accessible landmark and dynamic year in both languages', async () => {
+test('rendered footer has native hash links, accessible landmark and author credit in both languages', async () => {
   const pt = await render('/src/components/InstitutionalFooter.tsx', 'InstitutionalFooter', 'pt-BR');
   const en = await render('/src/components/InstitutionalFooter.tsx', 'InstitutionalFooter', 'en-US');
   assert.match(pt, /^<footer /);
   for (const href of ['#/contact', '#/privacy', '#/terms', '#/lgpd']) assert.ok(pt.includes(`href="${href}"`), href);
-  assert.ok(pt.includes(String(new Date().getFullYear())));
+  assert.ok(pt.includes('© 2026 Banco de Soluções. Todos os direitos Reservados - Criado por:'));
+  assert.ok(pt.includes('href="https://www.linkedin.com/in/lucas-gomes-da-silva-1407/"'));
+  assert.ok(pt.includes('target="_blank"'));
+  assert.ok(pt.includes('rel="noopener noreferrer"'));
+  assert.ok(pt.includes('>Lucas Gomes</a>'));
   assert.ok(pt.includes('Política de Privacidade'));
   assert.ok(en.includes('Privacy Policy'));
   assert.ok(en.includes('Institutional footer'));
+  assert.ok(en.includes('© 2026 Solution Bank. All rights reserved - Created by:'));
 });
 
 test('rendered legal pages expose headings, essential sections and native Contact links', async () => {
