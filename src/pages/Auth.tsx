@@ -66,7 +66,7 @@ export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
 
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
-      <div className="rounded-[2rem] border border-line bg-white p-8 shadow-sm">
+      <div className="min-w-0 rounded-[2rem] border border-line bg-white p-5 shadow-sm sm:p-8">
         <h1 className="text-4xl font-semibold tracking-tight">{t('auth.loginTitle')}</h1>
         <p className="mt-4 leading-7 text-muted">{t('auth.loginDescription')}</p>
         <div className="mt-8 flex items-start gap-4 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
@@ -77,7 +77,7 @@ export function Login({ onNavigate }: { onNavigate: (page: string) => void }) {
           </div>
         </div>
       </div>
-      <form onSubmit={submit} className="rounded-[2rem] border border-line bg-white p-8 shadow-soft">
+      <form onSubmit={submit} className="min-w-0 rounded-[2rem] border border-line bg-white p-5 shadow-soft sm:p-8">
         <h2 className="text-2xl font-semibold">{t('auth.login')}</h2>
         <label className="mt-6 grid gap-2 text-sm font-medium">{t('form.email')}<input className={inputClass} type="email" autoComplete="email" value={email} onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} required /></label>
         <label className="mt-4 grid gap-2 text-sm font-medium">{t('form.password')}<input className={inputClass} type="password" autoComplete="current-password" value={password} onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} required /></label>

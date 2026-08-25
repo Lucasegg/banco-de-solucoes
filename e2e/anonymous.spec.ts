@@ -19,6 +19,15 @@ test('visitante recebe orientação e CTAs públicos sem controles administrativ
   await expect(page).toHaveURL(/#\/contact/);
 });
 
+test('login e cadastro não criam rolagem horizontal em 320 px', async ({ page, consoleErrors }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  for (const [route, label] of [['login', 'login'], ['register', 'cadastro']] as const) {
+    await page.goto(`/#/${route}`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await assertNoHorizontalOverflow(page, `${label} visitante 320px`);
+  }
+});
+
 test('início, menu, rodapé, teclado e idiomas são funcionais', async ({ page, consoleErrors }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
