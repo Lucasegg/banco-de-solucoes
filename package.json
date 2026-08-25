@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node --experimental-strip-types scripts/generateSeoEntrypoints.ts && tsc -b && vite build",
     "preview": "vite preview",
     "test": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
@@ -60,7 +60,8 @@
     "test:e2e:skip-link": "playwright test e2e/skip-link.spec.ts",
     "test:sprint58": "node --experimental-strip-types --test scripts/sprint58FirstContribution.test.ts",
     "test:sprint59": "node --experimental-strip-types --test scripts/sprint59ProductionAcceptance.test.ts",
-    "test:sprint60": "node --experimental-strip-types --test scripts/sprint60FinalHandoff.test.ts"
+    "test:sprint60": "node --experimental-strip-types --test scripts/sprint60FinalHandoff.test.ts",
+    "test:sprint61": "node --experimental-strip-types --test scripts/sprint61Seo.test.ts"
   },
   "dependencies": {
     "vite": "latest",
