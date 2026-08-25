@@ -5,7 +5,7 @@ Obrigado por considerar contribuir. O projeto busca ser simples, aberto e acolhe
 ## Como começar
 
 1. Leia o README e o PRD.
-2. Instale as dependências com `npm install`.
+2. Crie uma branch exclusiva a partir de `main` atualizado e instale com `npm ci`.
 3. Rode o projeto com `npm run dev`.
 4. Antes de abrir uma proposta, execute `npm run build`.
 
@@ -18,13 +18,18 @@ Obrigado por considerar contribuir. O projeto busca ser simples, aberto e acolhe
 - Evite dependências novas sem justificativa.
 - Não envolva imports com `try/catch`.
 
-## Fluxo sugerido
+## Fluxo obrigatório de sprint e correção
 
-- Crie uma branch curta e descritiva.
-- Faça commits pequenos e focados.
-- Explique o problema e a solução no Pull Request.
+- Nunca desenvolva ou faça push diretamente em `main`; use uma branch curta e descritiva.
+- Faça commits pequenos e focados e mantenha o lockfile coerente.
+- Execute os gates aplicáveis, `git diff --check`, build e E2E antes da revisão.
+- Explique problema, causa, solução, migrations, dependências, secrets, RLS e impacto de deploy no Pull Request.
 - Inclua screenshots quando alterar interface.
 - Documente decisões relevantes.
+- Execute Production Preflight no SHA final quando tocar banco, workflow ou entrega;
+  não faça merge com qualquer gate pendente ou vermelho.
+- Aguarde revisão completa. O autor da implementação não deve tratar a abertura da PR
+  como autorização para merge.
 
 ## Critérios para novas funcionalidades
 
