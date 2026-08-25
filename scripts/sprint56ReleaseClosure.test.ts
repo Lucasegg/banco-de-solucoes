@@ -88,7 +88,7 @@ test('workflow preserva o gate bloqueante da Sprint 56 após novas sprints', () 
   assert.doesNotMatch(sprint56Gate, /continue-on-error|\|\|\s*true/);
   assert.match(workflow, /npm run test:sprint55\n      - name: Sprint 56[\s\S]*npm run test:sprint56\n      - name: Full dependency audit report/);
 
-  const baselineWorkflow = workflow.replace(sprint56Step, '').replace(sprint57Step, '').replace(sprint58Step, '').replace(sprint59Step, '').replace(sprint60Step, '');
+  const baselineWorkflow = workflow.replace(sprint56Step, '').replace(sprint57Step, '').replace(sprint58Step, '').replace(sprint59Step, '').replace(sprint60Step, '').replace(sprint61Step, '');
   assert.equal(contentDigestText(baselineWorkflow), 'e44deace66ea1046da2378ef726431503f8f3f1035bcec53a324947e072e4e19');
   for (const contract of ['security:audit:report', 'security:audit', 'npm run build', 'Critical browser flows',
     'migrate-and-health:', 'deploy:', 'production-smoke:']) assert.ok(workflow.includes(contract));
