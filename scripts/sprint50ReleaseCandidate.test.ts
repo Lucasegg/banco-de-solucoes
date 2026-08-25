@@ -50,9 +50,15 @@ test('locale do production smoke é explicitamente pt-BR', () => {
 });
 
 test('smoke aceita navegação same-document sem enfraquecer as validações', () => {
+  assert.match(smoke, /async function openReadOnly\(page: Page, hash = '\/', expectedHash = hash\)/);
   assert.match(smoke, /if \(response\) \{[\s\S]*response\.ok\(\)/);
-  assert.match(smoke, /toHaveURL\(new URL\(hash, PRODUCTION_ORIGIN\)\.href\)/);
-  assert.match(smoke, /assertNoHorizontalOverflow/);
+  assert.match(smoke, /page\.url\(\)\)\.toMatch\(\/\^https:\\\/\\\/www\\\.bancodesolucoes\\\.com\\\.br\\\//);
+  assert.match(smoke, /toHaveURL\(new URL\(expectedHash, PRODUCTION_ORIGIN\)\.href\)/);
+  assert.match(smoke, /document\.documentElement\.lang[\s\S]*toBe\('pt-BR'\)/);
+  assert.match(smoke, /assertNoHorizontalOverflow\(page, expectedHash\)/);
+  assert.match(smoke, /openReadOnly\(page, '\/#\/privacy'\)/);
+  assert.match(smoke, /openReadOnly\(page, '\/#\/admin', '\/#\/login'\)/);
+  assert.doesNotMatch(smoke, /openReadOnly\(page, '\/#\/admin'\);/);
   assert.match(smoke, /requests mutáveis bloqueados/);
   assert.match(smoke, /pageerror em produção/);
   assert.match(smoke, /erros inesperados no console/);

@@ -16,6 +16,7 @@ As evidências combinam: (1) smoke contra o artefato publicado; (2) E2E determin
 - O [production monitor no SHA `25d6b92c1100035d8c15a38e496f29b275914897`](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32800112330) executou o smoke e falhou nos dois viewports: a preparação de locale sobrescrevia EN-US no reload e o heading esperado não correspondia à tradução real. Esta execução é evidência da reprodução, não de aprovação. Uma nova execução verde do **Daily production health monitor**, na branch e no SHA corrigido, continua obrigatória antes de declarar o smoke ampliado aprovado.
 - O [production monitor #3 no SHA `38dfd48be8bed34fc915a4acf21b4886f97824e5`](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32800737307) confirmou as correções anteriores: 8/10 testes passaram. Os dois restantes, um por viewport, falharam por strict mode porque “Entrar” existia no cabeçalho e no prompt protegido. O CI bloqueante #384 ficou verde, mas isso não substitui uma nova execução verde do production monitor.
 - O [production monitor #4 no SHA `fd9ae871335b2bded406a51f3e7ae7dd4482bed1`](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32801277916) também terminou em 8/10. O CI bloqueante #385 ficou verde, mas desktop e 320 px expuseram uma contradição no helper: ao abrir `/admin`, ele exigia `/admin` antes de o cenário confirmar corretamente o redirect para `/login`. A homologação permanece pendente até 10/10.
+- O [CI #386 no SHA `4fe6c2cfdbcd1c234ae7d3c42ff7c3aca4b350b7`](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32801604803) falhou porque o contrato legado da Sprint 50 ainda exigia literalmente a validação contra `hash`, embora o helper corretamente use `expectedHash = hash`. A falha era do contrato estático, não evidência de smoke verde.
 
 Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente** = fluxo validado sem escrita real; **Limitado** = depende de credencial ou integração externa indisponível e não foi executado em produção.
 
@@ -117,6 +118,13 @@ Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente
 - **Correção aplicada:** `openReadOnly` aceita um `expectedHash` explícito, usado para validar URL final e overflow. O cenário chama `openReadOnly(page, '/#/admin', '/#/login')` e mantém a asserção explícita do redirect.
 - **Regressão:** o contrato exige os hashes inicial/final e rejeita a forma contraditória antiga. Resposta HTTP, HTTPS canônico, idioma, overflow e interceptor read-only continuam no helper.
 
+### Defeito T59-07 — contrato cumulativo da Sprint 50 rejeitava a evolução compatível do helper
+
+- **Reprodução:** o CI #386 (`32801604803`) falhou em `scripts/sprint50ReleaseCandidate.test.ts` porque procurava somente `new URL(hash, PRODUCTION_ORIGIN)`, incompatível com o novo `expectedHash`.
+- **Causa raiz:** o contrato verificava uma implementação literal em vez de expressar a compatibilidade entre navegação comum e redirect explícito.
+- **Correção aplicada:** o contrato exige `expectedHash = hash`, URL final baseada em `expectedHash`, chamada pública comum sem override e `/admin` com `/login` explícito.
+- **Garantias preservadas:** asserções estritas continuam exigindo resposta HTTP válida, HTTPS/domínio canônico, PT-BR, overflow na URL final e interceptor de mutações, sem regex opcional que aceite ausência dessas validações.
+
 Nenhum defeito funcional comprovado no código da aplicação exigiu correção. Não foram feitas mudanças cosméticas ou arquiteturais.
 
 ## Confirmações de segurança e mudança
@@ -139,4 +147,4 @@ Nenhum defeito funcional comprovado no código da aplicação exigiu correção.
 
 ## Decisão final de homologação
 
-**PENDENTE DE HOMOLOGAÇÃO FINAL**, até que um **Daily production health monitor** no SHA final conclua 10/10. O CI #385 ficou verde, porém o production monitor #4 (`32801277916`) terminou com 8/10: desktop e 320 px reproduziram a expectativa contraditória de URL agora corrigida. A superfície continua somente leitura; não há afirmação de aprovação dinâmica do cenário corrigido antes da nova evidência verde. Jornadas que exigem identidade ou escrita continuam limitadas ao ambiente determinístico.
+**PENDENTE DE HOMOLOGAÇÃO FINAL**, até que o CI corrigido e um **Daily production health monitor** no SHA final concluam verdes, este último com 10/10. O CI #386 falhou por divergência do contrato cumulativo, e o último production monitor comprovado terminou em 8/10. A superfície continua somente leitura; não há afirmação de aprovação dinâmica antes da nova evidência verde. Jornadas que exigem identidade ou escrita continuam limitadas ao ambiente determinístico.
