@@ -76,7 +76,8 @@ test('visitante escolhe problema ou solução e recebe autenticação contextual
   await choice.getByRole('button', { name: 'Cadastrar solução' }).click();
   await expect(page).toHaveURL(/#\/solutions\/new/);
   await expect(page.getByText(/Depois você voltará diretamente a este formulário/)).toBeVisible();
-  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+  const authPrompt = page.getByRole('region', { name: 'Entre ou crie uma conta para continuar' });
+  await authPrompt.getByRole('button', { name: 'Entrar', exact: true }).click();
   await expect(page).toHaveURL(/#\/login/);
   expect(await page.evaluate(() => sessionStorage.getItem('banco-de-solucoes.auth-return-to'))).toBe('#/solutions/new');
 });
@@ -94,7 +95,13 @@ test('submete problema uma vez, anuncia moderação e bloqueia submits simultân
   const calls = await mockContributionData(page, { delayMs: 150 });
   await page.goto('/#/problems/new');
   await fillProblem(page);
-  await page.locator('form').evaluate((form: HTMLFormElement) => { form.requestSubmit(); form.requestSubmit(); });
+  const save = page.getByRole('button', { name: 'Salvar', exact: true });
+  await save.evaluate((button: HTMLButtonElement) => {
+    const form = button.form;
+    if (!form) throw new Error('Formulário principal não encontrado');
+    form.requestSubmit();
+    form.requestSubmit();
+  });
   await expect(page.getByRole('button', { name: 'Salvando…' })).toBeDisabled();
   await expect(page.getByRole('status')).toContainText('pode passar por moderação antes de ser publicado');
   expect(calls.problemCalls()).toBe(1);
