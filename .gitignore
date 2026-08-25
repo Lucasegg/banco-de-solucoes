@@ -9,3 +9,13 @@ dist
 # Playwright artifacts
 playwright-report/
 test-results/
+
+# Generated multi-page SEO entrypoints
+/about/
+/contact/
+/lgpd/
+/mapa/
+/privacy/
+/problems/
+/solutions/
+/terms/
