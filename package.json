@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node --experimental-strip-types scripts/generateSeoEntrypoints.ts && tsc -b && vite build",
+    "build": "npm run generate:social-card && node --experimental-strip-types scripts/generateSeoEntrypoints.ts && tsc -b && vite build",
     "preview": "vite preview",
     "test": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
@@ -39,7 +39,7 @@
     "test:sprint46": "node --experimental-strip-types --test scripts/sprint46CommentReactions.test.ts",
     "test:sprint47": "node --experimental-strip-types --test scripts/sprint47ReputationAchievements.test.ts",
     "test:sprint48": "node --experimental-strip-types --test scripts/sprint48PublicProfile.test.ts",
-    "build:e2e": "node --experimental-strip-types scripts/generateSeoEntrypoints.ts && tsc -b && vite build --mode e2e",
+    "build:e2e": "npm run generate:social-card && node --experimental-strip-types scripts/generateSeoEntrypoints.ts && tsc -b && vite build --mode e2e",
     "test:e2e": "playwright test",
     "test:previous": "npm run test:sprint26 && npm run test:reconciliation && npm run test:pending-migrations && npm run test:sprint28 && npm run test:sprint29 && npm run test:auth-hotfix && npm run test:favorites-permissions && npm run test:sprint30 && npm run test:sprint31 && npm run test:sprint32 && npm run test:sprint33 && npm run test:sprint34 && npm run test:sprint35 && npm run test:sprint36 && npm run test:sprint37 && npm run test:sprint38 && npm run test:sprint39 && npm run test:sprint40 && npm run test:sprint41 && npm run test:sprint42 && npm run test:sprint43 && npm run test:sprint44 && npm run test:sprint45 && npm run test:sprint46 && npm run test:sprint47 && npm run test:sprint48 && npm run test:router",
     "test:sprint49": "node --experimental-strip-types --test scripts/sprint49E2e.test.ts",
@@ -61,7 +61,9 @@
     "test:sprint58": "node --experimental-strip-types --test scripts/sprint58FirstContribution.test.ts",
     "test:sprint59": "node --experimental-strip-types --test scripts/sprint59ProductionAcceptance.test.ts",
     "test:sprint60": "node --experimental-strip-types --test scripts/sprint60FinalHandoff.test.ts",
-    "test:sprint61": "node --experimental-strip-types --test scripts/sprint61Seo.test.ts"
+    "test:sprint61": "node --experimental-strip-types --test scripts/sprint61Seo.test.ts",
+    "test:sprint62": "node --experimental-strip-types --test scripts/sprint62SocialSeo.test.ts",
+    "generate:social-card": "node --experimental-strip-types scripts/generateSocialCard.ts"
   },
   "dependencies": {
     "vite": "latest",

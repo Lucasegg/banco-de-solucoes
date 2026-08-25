@@ -19,3 +19,6 @@ test-results/
 /problems/
 /solutions/
 /terms/
+
+# Generated from the reviewable Base64 social image source
+/public/social-card.png

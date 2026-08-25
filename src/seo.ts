@@ -2,6 +2,8 @@ import { OFFICIAL_ORIGIN } from './version.ts';
 import { publicPagePaths } from './routing/hashRouter.ts';
 
 export type SeoEntry = { title: string; description: string; index: boolean };
+export const SOCIAL_IMAGE_URL = `${OFFICIAL_ORIGIN}/social-card.png`;
+export const SITE_NAME = 'Banco de Soluções';
 const fallback: SeoEntry = { title: 'Banco de Soluções', description: 'Banco de Soluções — conhecimento compartilhado para desafios reais.', index: true };
 
 export const publicSeo: Record<string, SeoEntry> = {
@@ -43,7 +45,13 @@ export function applySeo(page: string) {
   upsertMeta('meta[property="og:title"]', { property: 'og:title', content: seo.title });
   upsertMeta('meta[property="og:description"]', { property: 'og:description', content: seo.description });
   upsertMeta('meta[property="og:type"]', { property: 'og:type', content: 'website' });
-  upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary' });
+  upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: SITE_NAME });
+  upsertMeta('meta[property="og:image"]', { property: 'og:image', content: SOCIAL_IMAGE_URL });
+  upsertMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '1200' });
+  upsertMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '630' });
+  upsertMeta('meta[property="og:image:alt"]', { property: 'og:image:alt', content: 'Banco de Soluções — conhecimento compartilhado para desafios reais' });
+  upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
   upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: seo.title });
   upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: seo.description });
+  upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: SOCIAL_IMAGE_URL });
 }
