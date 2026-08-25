@@ -12,6 +12,7 @@ As evidências combinam: (1) smoke contra o artefato publicado; (2) E2E determin
 - `npm ci` não concluiu porque o registry respondeu HTTP 403 ao tarball de `@types/leaflet`; a instalação pôde ser restaurada exclusivamente do cache local com `npm install --offline`, sem alterar o lockfile.
 - `npm run security:audit:report` e `npm run security:audit` falharam de modo fechado porque o registry retornou um relatório de erro, não um resultado de vulnerabilidades.
 - `npm run test:e2e` e `npm run test:production-smoke` não puderam ser executados: o Chromium não existe na imagem e `npx playwright install chromium` recebeu HTTP 403 do CDN. Portanto, os novos cenários de produção estão **pendentes de comprovação dinâmica no CI**; as afirmações abaixo sobre o smoke descrevem o contrato automatizado e a evidência publicada anterior, não uma execução local bem-sucedida nesta sprint.
+- O [Actions #382](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32798449061), sobre o SHA revisado `aec86fb7f51004154d52e3ae9f0eb8da26b5136e`, falhou porque o contrato executava `git merge-base --is-ancestor` em um checkout raso. Nessa mesma revisão foram identificados rota externa e nome da chave de retorno incorretos no novo smoke. Até uma nova execução verde, o cenário protegido permanece **pendente**, não dinamicamente aprovado.
 
 Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente** = fluxo validado sem escrita real; **Limitado** = depende de credencial ou integração externa indisponível e não foi executado em produção.
 
@@ -25,7 +26,7 @@ Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente
 | Privacidade, Termos e LGPD | Aprovado | Smoke abre diretamente cada hash e valida seus títulos; contrato legal cumulativo da Sprint 38. |
 | Fale Conosco | Aprovado localmente | Produção abre a página sem enviar dados. Validação, consentimento, sucesso simulado e rate limit estão em `e2e/anonymous.spec.ts` e Sprint 37. |
 | Cadastro e login | Aprovado localmente | Telas e validações cobertas pelos E2E; nenhuma conta descartável foi criada em produção. |
-| Rotas protegidas e continuidade | Aprovado | Smoke confirma que o formulário protegido não é montado, que `/admin` redireciona e que o hash pretendido é preservado em `sessionStorage`. |
+| Rotas protegidas e continuidade | Pendente de CI verde | O smoke corrigido usa `/#/problems/new`, espera `#/problems/new` na chave real `banco-de-solucoes.auth-return-to` e confirma o redirecionamento de `/admin`; a execução dinâmica corrigida ainda precisa ficar verde. |
 
 ## Membro autenticado
 
@@ -78,6 +79,20 @@ Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente
 - **Regressão:** `scripts/sprint59ProductionAcceptance.test.ts` exige os cenários e o bloqueio de mutações; `npm run test:production-smoke` os executa no domínio canônico.
 - **Impactos verificados:** nenhuma alteração no código de autenticação, autorização, banco, RLS ou deploy; apenas observação do navegador e CI/contrato.
 
+### Defeito T59-02 — contrato dependia de histórico Git completo
+
+- **Reprodução:** o Actions #382 falhou em `git merge-base --is-ancestor 94a4b070a4ded88d790dd84f62f4fa5e2e53e983 HEAD`, pois `actions/checkout` fornece checkout raso.
+- **Causa raiz:** uma confirmação de metadata da PR foi implementada como inspeção dinâmica de histórico indisponível no job.
+- **Correção aplicada:** removidos `execFileSync` e `git merge-base`; o contrato agora valida estaticamente o SHA obrigatório neste documento. A ancestralidade real permanece responsabilidade da metadata da PR e da revisão do SHA, sem aumentar `fetch-depth`.
+- **Regressão:** `npm run test:sprint59` exige o SHA documentado e impede que `package.json` introduza `merge-base`.
+
+### Defeito T59-03 — smoke confundia identificador interno, rota externa e chave de retorno
+
+- **Reprodução:** o teste navegava para `/#/novo-problema` e lia `banco-de-solucoes.auth.return-to`, embora o HashRouter publique `/#/problems/new` e `authReturnTo.ts` defina `banco-de-solucoes.auth-return-to`.
+- **Causa raiz:** o identificador interno de página foi tratado como rota externa e uma chave de storage foi duplicada manualmente de forma incorreta.
+- **Correção aplicada:** navegação corrigida para `/#/problems/new`, retorno esperado `#/problems/new` e leitura pela chave real `banco-de-solucoes.auth-return-to`.
+- **Regressão:** o contrato lê `src/components/auth/authReturnTo.ts`, extrai sua chave e exige que o smoke use exatamente essa chave, rota e retorno, rejeitando as variantes inventadas.
+
 Nenhum defeito funcional comprovado no código da aplicação exigiu correção. Não foram feitas mudanças cosméticas ou arquiteturais.
 
 ## Confirmações de segurança e mudança
@@ -100,4 +115,4 @@ Nenhum defeito funcional comprovado no código da aplicação exigiu correção.
 
 ## Decisão final de homologação
 
-**APROVADO COM RESSALVAS para seguir à sprint de encerramento**, condicionado aos gates obrigatórios verdes na PR e ao preflight/smoke do deploy. A superfície pública foi homologada em produção sem mutação; jornadas que exigem identidade ou escrita estão aprovadas pelo ambiente determinístico, não por operação real. Os riscos acima são explícitos e não justificam ampliar permissões, criar dados ou alterar arquitetura nesta sprint.
+**PENDENTE DE HOMOLOGAÇÃO FINAL**, até que a execução corrigida da PR fique verde. O Actions #382 não comprova o novo cenário protegido: sua falha foi causada pelo contrato incompatível com checkout raso, e a revisão também revelou rota/chave incorretas no teste. A superfície anteriormente coberta continua somente leitura; não há afirmação de aprovação dinâmica dos novos checks antes da evidência verde. Jornadas que exigem identidade ou escrita continuam limitadas ao ambiente determinístico.

@@ -102,13 +102,13 @@ test('idiomas, skip link e foco permanecem funcionais após recarga direta', asy
 });
 
 test('visitante não monta contribuição protegida e conserva o destino no login', async ({ page }) => {
-  await openReadOnly(page, '/#/novo-problema');
+  await openReadOnly(page, '/#/problems/new');
   await expect(page.getByRole('heading', { name: 'Continue para contribuir' })).toBeVisible();
   await expect(page.locator('form')).toHaveCount(0);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/login`);
-  const returnTo = await page.evaluate(() => sessionStorage.getItem('banco-de-solucoes.auth.return-to'));
-  expect(returnTo).toBe('#/novo-problema');
+  const returnTo = await page.evaluate(() => sessionStorage.getItem('banco-de-solucoes.auth-return-to'));
+  expect(returnTo).toBe('#/problems/new');
 
   await openReadOnly(page, '/#/admin');
   await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/login`);

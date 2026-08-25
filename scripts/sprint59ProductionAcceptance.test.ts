@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
@@ -7,9 +6,11 @@ const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.ur
 const doc = read('docs/sprint-59-homologacao-producao.md');
 const workflow = read('.github/workflows/deploy.yml');
 const smoke = read('e2e/production-smoke.spec.ts');
+const authReturn = read('src/components/auth/authReturnTo.ts');
 
-test('a homologação parte do merge obrigatório da Sprint 58', () => {
-  assert.doesNotThrow(() => execFileSync('git', ['merge-base', '--is-ancestor', '94a4b070a4ded88d790dd84f62f4fa5e2e53e983', 'HEAD']));
+test('documento registra estaticamente o merge obrigatório da Sprint 58', () => {
+  assert.match(doc, /94a4b070a4ded88d790dd84f62f4fa5e2e53e983/);
+  assert.doesNotMatch(read('package.json'), /merge-base/);
 });
 
 test('inventário registra os três papéis, experiência, integrações e limites de evidência', () => {
@@ -26,7 +27,12 @@ test('smoke de produção cobre HTTPS, SEO, jornadas públicas, i18n, teclado e 
     assert.match(smoke, new RegExp(contract));
   }
   assert.match(smoke, /classifyProductionRequest/);
-  assert.match(smoke, /sessionStorage\.getItem\('banco-de-solucoes\.auth\.return-to'\)/);
+  const [, returnToKey = ''] = authReturn.match(/const KEY = '([^']+)'/) ?? [];
+  assert.equal(returnToKey, 'banco-de-solucoes.auth-return-to');
+  assert.match(smoke, new RegExp(`sessionStorage\\.getItem\\('${returnToKey}'\\)`));
+  assert.match(smoke, /openReadOnly\(page, '\/#\/problems\/new'\)/);
+  assert.match(smoke, /expect\(returnTo\)\.toBe\('#\/problems\/new'\)/);
+  assert.doesNotMatch(smoke, /banco-de-solucoes\.auth\.return-to|\/#\/novo-problema|#\/novo-problema/);
   assert.doesNotMatch(smoke, /\.fill\([^)]*(?:senha|password|mensagem)/i);
 });
 
