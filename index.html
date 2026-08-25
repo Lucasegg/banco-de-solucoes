@@ -11,19 +11,38 @@
     <meta property="og:title" content="Banco de Soluções" />
     <meta property="og:description" content="Banco de Soluções — conhecimento compartilhado para desafios reais." />
     <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:site_name" content="Banco de Soluções" />
+    <meta property="og:image" content="https://www.bancodesolucoes.com.br/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Banco de Soluções — conhecimento compartilhado para desafios reais" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Banco de Soluções" />
     <meta name="twitter:description" content="Banco de Soluções — conhecimento compartilhado para desafios reais." />
+    <meta name="twitter:image" content="https://www.bancodesolucoes.com.br/social-card.png" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "Banco de Soluções",
-        "url": "https://www.bancodesolucoes.com.br/",
-        "description": "Conhecimento compartilhado para desafios reais.",
-        "inLanguage": ["pt-BR", "en-US"]
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://www.bancodesolucoes.com.br/#website",
+            "name": "Banco de Soluções",
+            "url": "https://www.bancodesolucoes.com.br/",
+            "description": "Conhecimento compartilhado para desafios reais.",
+            "inLanguage": ["pt-BR", "en-US"],
+            "publisher": { "@id": "https://www.bancodesolucoes.com.br/#organization" }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://www.bancodesolucoes.com.br/#organization",
+            "name": "Banco de Soluções",
+            "url": "https://www.bancodesolucoes.com.br/",
+            "logo": "https://www.bancodesolucoes.com.br/favicon.svg"
+          }
+        ]
       }
     </script>
     <title>Banco de Soluções</title>

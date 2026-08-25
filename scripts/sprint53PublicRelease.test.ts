@@ -13,7 +13,8 @@ test('versão pública 1.0.0 é única e documentada', () => {
 });
 
 test('seoForPage marca rotas públicas esperadas como indexáveis', () => {
-  const routes = ['home','problemas','solucoes','mapa','search','sobre','contact','privacy','terms','lgpd','problema:123','solucao:456','member:ana'];
+  // Atualizado explicitamente na Sprint 62: somente as nove rotas HTTP públicas estáveis são indexáveis.
+  const routes = ['home','problemas','solucoes','mapa','sobre','contact','privacy','terms','lgpd'];
   for (const route of routes) {
     const seo = seoForPage(route);
     assert.equal(seo.index, true, `${route} must be indexable`);
@@ -27,21 +28,21 @@ test('seoForPage marca rotas administrativas, privadas e sensíveis como noindex
   for (const route of privateRoutes) assert.equal(seoForPage(route).index, false, `${route} must be noindex`);
 });
 
-test('SEO usa canonical e og:url raiz enquanto não há rotas HTTP reais', () => {
+test('SEO usa canonical e og:url HTTP sem fragmentos', () => {
   const html = read('index.html');
   const seo = read('src/seo.ts');
   assert.match(html, /<link rel="canonical" href="https:\/\/www\.bancodesolucoes\.com\.br\/"/);
   assert.match(html, /property="og:url" content="https:\/\/www\.bancodesolucoes\.com\.br\/"/);
-  assert.match(seo, /const canonical = `\$\{OFFICIAL_ORIGIN\}\/`/);
+  assert.match(seo, /canonicalForPage/);
   assert.doesNotMatch(seo, /canonical = `\$\{OFFICIAL_ORIGIN\}.*#/);
 });
 
-test('robots e sitemap publicam somente a URL HTTP raiz canônica sem fragmentos', () => {
+test('robots e sitemap publicam as nove URLs HTTP canônicas sem fragmentos', () => {
   const robots = read('public/robots.txt');
   const sitemap = read('public/sitemap.xml');
   assert.match(robots, /Sitemap: https:\/\/www\.bancodesolucoes\.com\.br\/sitemap\.xml/);
   assert.match(sitemap, /<loc>https:\/\/www\.bancodesolucoes\.com\.br\/<\/loc>/);
-  assert.equal([...sitemap.matchAll(/<loc>/g)].length, 1);
+  assert.equal([...sitemap.matchAll(/<loc>/g)].length, 9);
   assert.doesNotMatch(sitemap, /#/);
   for (const forbidden of ['admin','login','register','password-recovery','mfa-challenge','account','profile','notifications','callback']) assert.doesNotMatch(sitemap, new RegExp(forbidden));
 });

@@ -7,6 +7,7 @@ import { assertNoHorizontalOverflow } from './overflow';
 type SmokePage = Page & { assertSmokeErrors?: () => void };
 type RequestViolation = { method: string; url: string };
 const LOCALE_STORAGE_KEY = 'banco-de-solucoes.locale';
+const PUBLIC_PATHS = ['', 'problems', 'solutions', 'mapa', 'about', 'contact', 'privacy', 'terms', 'lgpd'] as const;
 async function openReadOnly(page: Page, hash = '/', expectedHash = hash) {
   const response = await page.goto(hash, { waitUntil: 'networkidle' });
   if (response) {
@@ -66,11 +67,32 @@ test('robots e sitemap preservam o contrato público seguro', async ({ request }
   const sitemapResponse = await request.get('/sitemap.xml');
   expect(sitemapResponse.ok(), 'sitemap.xml deve responder com sucesso').toBe(true);
   const sitemap = await sitemapResponse.text();
-  expect(sitemap).toContain(`<loc>${PRODUCTION_ORIGIN}/</loc>`);
+  expect((sitemap.match(/<loc>/g) ?? []).length, 'sitemap deve conter exatamente nove URLs').toBe(9);
+  for (const path of PUBLIC_PATHS) expect(sitemap).toContain(`<loc>${PRODUCTION_ORIGIN}/${path ? `${path}/` : ''}</loc>`);
   expect(sitemap, 'sitemap não pode publicar fragmentos hash').not.toContain('#');
   for (const route of ['admin', 'login', 'register', 'account', 'profile', 'notifications', 'callback']) {
     expect(sitemap, `sitemap não pode publicar rota privada: ${route}`).not.toMatch(new RegExp(`(?:/|>)${route}(?:/|<)`, 'i'));
   }
+});
+
+test('nove páginas públicas expõem HTTP, indexação e metadados sociais', async ({ request }) => {
+  for (const path of PUBLIC_PATHS) {
+    const url = `${PRODUCTION_ORIGIN}/${path ? `${path}/` : ''}`;
+    const response = await request.get(url);
+    expect(response.ok(), `HTTP inválido em ${url}`).toBe(true);
+    const html = await response.text();
+    expect(html, `canonical individual em ${url}`).toContain(`<link rel="canonical" href="${url}" />`);
+    expect(html, `robots indexável em ${url}`).toContain('<meta name="robots" content="index,follow" />');
+    for (const property of ['og:title', 'og:description', 'og:url', 'og:type', 'og:site_name']) {
+      expect(html, `${property} ausente em ${url}`).toMatch(new RegExp(`<meta property="${property}" content="[^"]+" \\/>`));
+    }
+    for (const name of ['twitter:card', 'twitter:title', 'twitter:description']) {
+      expect(html, `${name} ausente em ${url}`).toMatch(new RegExp(`<meta name="${name}" content="[^"]+" \\/>`));
+    }
+  }
+  const image = await request.get('/social-card.png');
+  expect(image.ok(), 'imagem social local deve responder com sucesso').toBe(true);
+  expect(image.headers()['content-type']).toContain('image/png');
 });
 
 test('navegação pública permanece somente leitura', async ({ page }) => {

@@ -18,6 +18,29 @@ const template = readFileSync(resolve(root, 'index.html'), 'utf8');
 
 for (const page of pages) {
   const canonical = `${origin}/${page.path}/`;
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': `${canonical}#webpage`,
+        url: canonical,
+        name: page.title,
+        description: page.description,
+        inLanguage: 'pt-BR',
+        isPartOf: { '@id': `${origin}/#website` },
+        breadcrumb: { '@id': `${canonical}#breadcrumb` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${canonical}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Início', item: `${origin}/` },
+          { '@type': 'ListItem', position: 2, name: page.title.replace(' | Banco de Soluções', ''), item: canonical },
+        ],
+      },
+    ],
+  };
   const html = template
     .replace(/<title>[^<]*<\/title>/, `<title>${page.title}</title>`)
     .replace(/<meta name="description" content="[^"]*" \/>/, `<meta name="description" content="${page.description}" />`)
@@ -26,7 +49,8 @@ for (const page of pages) {
     .replace(/<meta property="og:title" content="[^"]*" \/>/, `<meta property="og:title" content="${page.title}" />`)
     .replace(/<meta property="og:description" content="[^"]*" \/>/, `<meta property="og:description" content="${page.description}" />`)
     .replace(/<meta name="twitter:title" content="[^"]*" \/>/, `<meta name="twitter:title" content="${page.title}" />`)
-    .replace(/<meta name="twitter:description" content="[^"]*" \/>/, `<meta name="twitter:description" content="${page.description}" />`);
+    .replace(/<meta name="twitter:description" content="[^"]*" \/>/, `<meta name="twitter:description" content="${page.description}" />`)
+    .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, `<script type="application/ld+json">\n      ${JSON.stringify(structuredData, null, 2).replace(/\n/g, '\n      ')}\n    </script>`);
   const destination = resolve(root, page.path, 'index.html');
   mkdirSync(dirname(destination), { recursive: true });
   writeFileSync(destination, html);

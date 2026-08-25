@@ -83,13 +83,14 @@ test('workflow preserva o gate bloqueante da Sprint 56 após novas sprints', () 
   const sprint59Step = /      - name: Sprint 59 production acceptance contract tests\n        run: npm run test:sprint59\n/;
   const sprint60Step = /      - name: Sprint 60 final handoff contract tests\n        run: npm run test:sprint60\n/;
   const sprint61Step = /      - name: Sprint 61 technical SEO contract tests\n        run: npm run test:sprint61\n/;
+  const sprint62Step = /      - name: Sprint 62 social SEO and structured data contract tests\n        run: npm run test:sprint62\n/;
   assert.equal((workflow.match(/npm run test:sprint56/g) ?? []).length, 1);
   assert.match(workflow, sprint56Step);
   const [sprint56Gate] = workflow.match(sprint56Step) ?? [];
   assert.doesNotMatch(sprint56Gate, /continue-on-error|\|\|\s*true/);
   assert.match(workflow, /npm run test:sprint55\n      - name: Sprint 56[\s\S]*npm run test:sprint56\n      - name: Full dependency audit report/);
 
-  const baselineWorkflow = workflow.replace(sprint56Step, '').replace(sprint57Step, '').replace(sprint58Step, '').replace(sprint59Step, '').replace(sprint60Step, '').replace(sprint61Step, '');
+  const baselineWorkflow = workflow.replace(sprint56Step, '').replace(sprint57Step, '').replace(sprint58Step, '').replace(sprint59Step, '').replace(sprint60Step, '').replace(sprint61Step, '').replace(sprint62Step, '');
   assert.equal(contentDigestText(baselineWorkflow), 'e44deace66ea1046da2378ef726431503f8f3f1035bcec53a324947e072e4e19');
   for (const contract of ['security:audit:report', 'security:audit', 'npm run build', 'Critical browser flows',
     'migrate-and-health:', 'deploy:', 'production-smoke:']) assert.ok(workflow.includes(contract));

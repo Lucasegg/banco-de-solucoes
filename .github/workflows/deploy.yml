@@ -318,6 +318,8 @@ jobs:
         run: npm run test:sprint60
       - name: Sprint 61 technical SEO contract tests
         run: npm run test:sprint61
+      - name: Sprint 62 social SEO and structured data contract tests
+        run: npm run test:sprint62
       - name: Sprint 55 final production audit contract tests
         run: npm run test:sprint55
       - name: Sprint 56 release closure contract tests
