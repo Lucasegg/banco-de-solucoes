@@ -312,6 +312,8 @@ jobs:
         run: npm run test:sprint57
       - name: Sprint 58 first contribution contract tests
         run: npm run test:sprint58
+      - name: Sprint 59 production acceptance contract tests
+        run: npm run test:sprint59
       - name: Sprint 55 final production audit contract tests
         run: npm run test:sprint55
       - name: Sprint 56 release closure contract tests

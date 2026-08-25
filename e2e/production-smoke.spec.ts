@@ -84,3 +84,32 @@ test('navegação pública permanece somente leitura', async ({ page }) => {
   await openReadOnly(page, '/#/sprint-50-rota-inexistente');
   await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible();
 });
+
+test('idiomas, skip link e foco permanecem funcionais após recarga direta', async ({ page }) => {
+  await openReadOnly(page, '/#/privacy');
+  await page.keyboard.press('Tab');
+  const skipLink = page.getByRole('link', { name: 'Pular para o conteúdo principal' });
+  await expect(skipLink).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#main-content')).toBeFocused();
+
+  await page.getByLabel('Idioma da interface').selectOption('en-US');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Privacy');
+  await page.reload({ waitUntil: 'networkidle' });
+  await expect(page.getByLabel('Interface language')).toHaveValue('en-US');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+});
+
+test('visitante não monta contribuição protegida e conserva o destino no login', async ({ page }) => {
+  await openReadOnly(page, '/#/novo-problema');
+  await expect(page.getByRole('heading', { name: 'Continue para contribuir' })).toBeVisible();
+  await expect(page.locator('form')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/login`);
+  const returnTo = await page.evaluate(() => sessionStorage.getItem('banco-de-solucoes.auth.return-to'));
+  expect(returnTo).toBe('#/novo-problema');
+
+  await openReadOnly(page, '/#/admin');
+  await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/login`);
+});
