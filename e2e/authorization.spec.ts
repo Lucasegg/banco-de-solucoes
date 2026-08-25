@@ -14,5 +14,5 @@ test('controles visíveis possuem ação e nenhum controle inativo recebe foco',
   expect(inactiveFocusable).toBe(0);
   const home = page.getByRole('button', { name: /Banco de Soluções/ });
   await home.focus(); await expect(home).toBeFocused(); await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(/\/$/);
 });
