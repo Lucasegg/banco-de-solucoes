@@ -7,6 +7,7 @@ const doc = read('docs/sprint-59-homologacao-producao.md');
 const workflow = read('.github/workflows/deploy.yml');
 const smoke = read('e2e/production-smoke.spec.ts');
 const authReturn = read('src/components/auth/authReturnTo.ts');
+const sharedLocale = read('src/i18n/locales/shared.ts');
 
 test('documento registra estaticamente o merge obrigatório da Sprint 58', () => {
   assert.match(doc, /94a4b070a4ded88d790dd84f62f4fa5e2e53e983/);
@@ -32,6 +33,9 @@ test('smoke de produção cobre HTTPS, SEO, jornadas públicas, i18n, teclado e 
   assert.match(smoke, new RegExp(`sessionStorage\\.getItem\\('${returnToKey}'\\)`));
   assert.match(smoke, /openReadOnly\(page, '\/#\/problems\/new'\)/);
   assert.match(smoke, /expect\(returnTo\)\.toBe\('#\/problems\/new'\)/);
+  assert.match(smoke, /localStorage\.getItem\(key\) === null/);
+  assert.match(smoke, /sharedPtBR\['auth\.continue'\]/);
+  assert.match(sharedLocale, /'auth\.continue':'Entre ou crie uma conta para continuar'/);
   assert.doesNotMatch(smoke, /banco-de-solucoes\.auth\.return-to|\/#\/novo-problema|#\/novo-problema/);
   assert.doesNotMatch(smoke, /\.fill\([^)]*(?:senha|password|mensagem)/i);
 });

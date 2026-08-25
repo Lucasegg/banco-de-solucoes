@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PRODUCTION_ORIGIN } from '../scripts/productionEnvironment.ts';
 import { classifyProductionRequest, sanitizedRequestTarget } from '../scripts/productionSmokeSafety.ts';
+import { sharedPtBR } from '../src/i18n/locales/shared.ts';
 import { assertNoHorizontalOverflow } from './overflow';
 
 type SmokePage = Page & { assertSmokeErrors?: () => void };
@@ -19,7 +20,9 @@ async function openReadOnly(page: Page, hash = '/') {
 
 test.beforeEach(async ({ page }) => {
   const consoleErrors: string[] = []; const pageErrors: string[] = []; const violations: RequestViolation[] = [];
-  await page.addInitScript(([key, locale]) => localStorage.setItem(key, locale), [LOCALE_STORAGE_KEY, 'pt-BR']);
+  await page.addInitScript(([key, locale]) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, locale);
+  }, [LOCALE_STORAGE_KEY, 'pt-BR']);
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.route('**/*', async route => {
@@ -103,7 +106,7 @@ test('idiomas, skip link e foco permanecem funcionais após recarga direta', asy
 
 test('visitante não monta contribuição protegida e conserva o destino no login', async ({ page }) => {
   await openReadOnly(page, '/#/problems/new');
-  await expect(page.getByRole('heading', { name: 'Continue para contribuir' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: sharedPtBR['auth.continue'] })).toBeVisible();
   await expect(page.locator('form')).toHaveCount(0);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/login`);

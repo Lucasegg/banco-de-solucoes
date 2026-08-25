@@ -13,6 +13,7 @@ As evidências combinam: (1) smoke contra o artefato publicado; (2) E2E determin
 - `npm run security:audit:report` e `npm run security:audit` falharam de modo fechado porque o registry retornou um relatório de erro, não um resultado de vulnerabilidades.
 - `npm run test:e2e` e `npm run test:production-smoke` não puderam ser executados: o Chromium não existe na imagem e `npx playwright install chromium` recebeu HTTP 403 do CDN. Portanto, os novos cenários de produção estão **pendentes de comprovação dinâmica no CI**; as afirmações abaixo sobre o smoke descrevem o contrato automatizado e a evidência publicada anterior, não uma execução local bem-sucedida nesta sprint.
 - O [Actions #382](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32798449061), sobre o SHA revisado `aec86fb7f51004154d52e3ae9f0eb8da26b5136e`, falhou porque o contrato executava `git merge-base --is-ancestor` em um checkout raso. Nessa mesma revisão foram identificados rota externa e nome da chave de retorno incorretos no novo smoke. Até uma nova execução verde, o cenário protegido permanece **pendente**, não dinamicamente aprovado.
+- O [production monitor no SHA `25d6b92c1100035d8c15a38e496f29b275914897`](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32800112330) executou o smoke e falhou nos dois viewports: a preparação de locale sobrescrevia EN-US no reload e o heading esperado não correspondia à tradução real. Esta execução é evidência da reprodução, não de aprovação. Uma nova execução verde do **Daily production health monitor**, na branch e no SHA corrigido, continua obrigatória antes de declarar o smoke ampliado aprovado.
 
 Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente** = fluxo validado sem escrita real; **Limitado** = depende de credencial ou integração externa indisponível e não foi executado em produção.
 
@@ -93,6 +94,13 @@ Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente
 - **Correção aplicada:** navegação corrigida para `/#/problems/new`, retorno esperado `#/problems/new` e leitura pela chave real `banco-de-solucoes.auth-return-to`.
 - **Regressão:** o contrato lê `src/components/auth/authReturnTo.ts`, extrai sua chave e exige que o smoke use exatamente essa chave, rota e retorno, rejeitando as variantes inventadas.
 
+### Defeito T59-04 — preparação do smoke invalidava i18n persistida e texto divergia do catálogo
+
+- **Reprodução:** o production monitor `32800112330` falhou em desktop e 320 px. `page.addInitScript` gravava PT-BR novamente após `page.reload()`, apagando a preferência EN-US; o cenário protegido procurava “Continue para contribuir”, ausente da interface.
+- **Causa raiz:** o setup inicial não distinguia storage ausente de preferência já persistida, e o seletor duplicava texto fora do contrato de tradução.
+- **Correção aplicada:** PT-BR só é gravado quando a chave ainda não existe. O heading é obtido de `sharedPtBR['auth.continue']`, cujo valor real é “Entre ou crie uma conta para continuar”.
+- **Regressão:** o contrato exige inicialização condicional, import do catálogo compartilhado e a tradução canônica. O bloqueio fail-closed de mutações não foi alterado.
+
 Nenhum defeito funcional comprovado no código da aplicação exigiu correção. Não foram feitas mudanças cosméticas ou arquiteturais.
 
 ## Confirmações de segurança e mudança
@@ -115,4 +123,4 @@ Nenhum defeito funcional comprovado no código da aplicação exigiu correção.
 
 ## Decisão final de homologação
 
-**PENDENTE DE HOMOLOGAÇÃO FINAL**, até que a execução corrigida da PR fique verde. O Actions #382 não comprova o novo cenário protegido: sua falha foi causada pelo contrato incompatível com checkout raso, e a revisão também revelou rota/chave incorretas no teste. A superfície anteriormente coberta continua somente leitura; não há afirmação de aprovação dinâmica dos novos checks antes da evidência verde. Jornadas que exigem identidade ou escrita continuam limitadas ao ambiente determinístico.
+**PENDENTE DE HOMOLOGAÇÃO FINAL**, até que a execução corrigida da PR e um **Daily production health monitor** no SHA atual fiquem verdes. O Actions #382 não comprovou o contrato, e a execução `32800112330` reproduziu falhas de persistência de locale e seletor em desktop/320 px. A superfície anteriormente coberta continua somente leitura; não há afirmação de aprovação dinâmica dos novos checks antes da evidência verde. Jornadas que exigem identidade ou escrita continuam limitadas ao ambiente determinístico.
