@@ -21,11 +21,13 @@ export const homePtBR = {
   'home.how.step4.title': 'Acompanhe interações', 'home.how.step4.description': 'Quando conectado, acompanhe contribuições, conversas e notificações.',
   'home.guide.eyebrow': 'Sua primeira contribuição', 'home.guide.title': 'Compartilhe conteúdo útil e verificável',
   'home.guide.description': 'Antes de participar, veja o que ajuda a comunidade a compreender e reaproveitar cada registro.',
+  'home.guide.account': 'Você precisará entrar ou criar um perfil com seus dados básicos antes de enviar.',
+  'home.guide.choose': 'Escolha o tipo da primeira contribuição', 'home.guide.choiceProblemTitle': 'Quero relatar um problema', 'home.guide.choiceSolutionTitle': 'Quero compartilhar uma solução',
   'home.guide.problem': 'Problema é um desafio real, descrito com contexto, pessoas afetadas e evidências.',
   'home.guide.solution': 'Solução é uma resposta proposta ou aplicada, com funcionamento, resultados e limites claros.',
   'home.guide.sources': 'Inclua fontes e informações verificáveis sempre que possível.',
   'home.guide.moderation': 'Todo conteúdo segue as regras da plataforma e pode passar por moderação.',
-  'home.startContribution': 'Começar contribuição', 'home.createAccount': 'Criar conta para contribuir', 'home.requestSupport': 'Solicitar suporte pelo Fale Conosco',
+  'home.startContribution': 'Começar contribuição', 'home.createAccount': 'Criar conta para contribuir', 'home.addSolution': 'Cadastrar solução', 'home.requestSupport': 'Solicitar suporte pelo Fale Conosco',
 } as const;
 
 export const homeEnUS = {
@@ -51,9 +53,11 @@ export const homeEnUS = {
   'home.how.step4.title': 'Follow interactions', 'home.how.step4.description': 'When signed in, follow contributions, conversations, and notifications.',
   'home.guide.eyebrow': 'Your first contribution', 'home.guide.title': 'Share useful, verifiable content',
   'home.guide.description': 'Before participating, see what helps the community understand and reuse each entry.',
+  'home.guide.account': 'You will need to sign in or create a profile with your basic details before submitting.',
+  'home.guide.choose': 'Choose your first contribution type', 'home.guide.choiceProblemTitle': 'I want to report a problem', 'home.guide.choiceSolutionTitle': 'I want to share a solution',
   'home.guide.problem': 'A problem is a real challenge described with context, affected people, and evidence.',
   'home.guide.solution': 'A solution is a proposed or implemented response with clear operation, results, and limitations.',
   'home.guide.sources': 'Include sources and verifiable information whenever possible.',
   'home.guide.moderation': 'All content follows platform rules and may be moderated.',
-  'home.startContribution': 'Start contributing', 'home.createAccount': 'Create account to contribute', 'home.requestSupport': 'Request support through Contact Us',
+  'home.startContribution': 'Start contributing', 'home.createAccount': 'Create account to contribute', 'home.addSolution': 'Submit a solution', 'home.requestSupport': 'Request support through Contact Us',
 } as const;

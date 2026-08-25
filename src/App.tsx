@@ -11,6 +11,7 @@ import { LegalConsentGate } from './components/legal/LegalConsentGate';
 import { RouteLoadingFallback } from './components/RouteLoadingFallback';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { applySeo } from './seo';
+import { useTranslation } from './i18n/I18nProvider';
 
 const About = lazy(() => import('./pages/About').then((m) => ({ default: m.About })));
 const ProblemDetails = lazy(() => import('./pages/Details').then((m) => ({ default: m.ProblemDetails })));
@@ -50,6 +51,7 @@ const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m
 const PublicProfile = lazy(() => import('./pages/PublicProfile').then((m) => ({ default: m.PublicProfile })));
 
 export function App() {
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
   const permissions = usePermissions(user);
   const [page, setPageState] = useState(() => isPasswordRecoveryCallbackUrl() ? 'password-recovery' : pageFromHash(window.location.hash));
@@ -110,8 +112,8 @@ export function App() {
       {page === 'solucoes' && <ExploreSolutions onNavigate={setPage} onOpen={(solutionId) => setPage(`solucao:${solutionId}`)} />}
       {kind === 'problema' && <ProblemDetails id={id} onNavigate={setPage} />}
       {kind === 'solucao' && <SolutionDetails id={id} onNavigate={setPage} />}
-      {page === 'novo-problema' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin} authPrompt={{ description: 'Para registrar um problema, você precisa estar conectado à sua conta.', onRegisterRequired: redirectToRegister, onBack: () => setPage('problemas') }}><ProblemForm /></AuthenticatedRoute>}
-      {page === 'nova-solucao' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin} authPrompt={{ description: 'Para cadastrar uma solução, você precisa estar conectado à sua conta.', onRegisterRequired: redirectToRegister, onBack: () => setPage('solucoes') }}><SolutionForm /></AuthenticatedRoute>}
+      {page === 'novo-problema' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin} authPrompt={{ description: t('forms.authProblem'), onRegisterRequired: redirectToRegister, onBack: () => setPage('problemas') }}><ProblemForm /></AuthenticatedRoute>}
+      {page === 'nova-solucao' && <AuthenticatedRoute isAuthenticated={isAuthenticated} isLoading={isLoading} onLoginRequired={redirectToLogin} authPrompt={{ description: t('forms.authSolution'), onRegisterRequired: redirectToRegister, onBack: () => setPage('solucoes') }}><SolutionForm /></AuthenticatedRoute>}
       {page === 'sobre' && <About />}
       {page === 'contact' && <Contact />}
       {page === 'privacy' && <Privacy />}
