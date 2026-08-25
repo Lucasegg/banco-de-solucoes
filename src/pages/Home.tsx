@@ -83,7 +83,7 @@ export function Home({ onNavigate }: HomeProps) {
 
     <section aria-labelledby="first-contribution" className="rounded-[2rem] border border-sky-100 bg-sky-50 p-6 sm:p-8">
       <div className="min-w-0 max-w-3xl"><p className="text-sm font-semibold text-sky-800">{t('home.guide.eyebrow')}</p><h2 id="first-contribution" className="mt-2 text-3xl font-semibold">{t('home.guide.title')}</h2><p className="mt-3 leading-7 text-slate-700">{t('home.guide.description')}</p><ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700"><li>{t('home.guide.account')}</li><li>{t('home.guide.sources')}</li><li>{t('home.guide.moderation')}</li></ul></div>
-      <div aria-label={t('home.guide.choose')} className="mt-7 grid min-w-0 gap-4 md:grid-cols-2">
+      <div role="region" aria-label={t('home.guide.choose')} className="mt-7 grid min-w-0 gap-4 md:grid-cols-2">
         <article className="min-w-0 rounded-3xl border border-sky-100 bg-white p-5"><h3 className="text-lg font-semibold">{t('home.guide.choiceProblemTitle')}</h3><p className="mt-2 text-sm leading-6 text-muted">{t('home.guide.problem')}</p><div className="mt-5"><Action page="novo-problema" onNavigate={onNavigate} primary>{t('home.addProblem')}</Action></div></article>
         <article className="min-w-0 rounded-3xl border border-teal-100 bg-white p-5"><h3 className="text-lg font-semibold">{t('home.guide.choiceSolutionTitle')}</h3><p className="mt-2 text-sm leading-6 text-muted">{t('home.guide.solution')}</p><div className="mt-5"><Action page="nova-solucao" onNavigate={onNavigate}>{t('home.addSolution')}</Action></div></article>
       </div>

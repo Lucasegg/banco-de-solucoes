@@ -36,16 +36,19 @@ test('guidance, differentiated choices, moderation-safe success and bilingual pa
 });
 
 test('forms retain validation, recoverable values, accessible feedback and duplicate-submit protection', () => {
-  assert.match(forms, /if \(saving\) return/);
+  assert.match(forms, /const submissionLock = useRef\(false\)/);
+  assert.match(forms, /if \(submissionLock\.current\) return/);
+  assert.equal((forms.match(/submissionLock\.current = false/g) ?? []).length, 2);
   assert.match(forms, /disabled=\{saving\}/);
   assert.match(forms, /aria-invalid=/);
+  assert.match(forms, /aria-describedby=/);
   assert.match(forms, /role="alert"/);
-  assert.match(forms, /role="status"/);
+  assert.match(forms, /feedbackIsSuccess \? 'status' : 'alert'/);
   assert.doesNotMatch(forms, /setValues\(initial(?:Problem|Solution)\)/);
 });
 
 test('browser journey and blocking CI contract are wired without weakening prior gates', () => {
-  for (const scenario of ['visitante escolhe', 'continua no formulário pretendido', 'membro acessa os dois formulários']) assert.match(e2e, new RegExp(scenario));
+  for (const scenario of ['visitante escolhe', 'continua no formulário pretendido', 'submete problema uma vez', 'erro recuperável', 'submete solução', 'sem administração ou overflow']) assert.match(e2e, new RegExp(scenario));
   assert.match(workflow, /npm run test:sprint58/);
   assert.match(workflow, /npm run test:sprint57/);
   assert.match(workflow, /npm run security:audit/);
