@@ -25,7 +25,8 @@ test('rendered footer has native hash links, accessible landmark and author cred
   const en = await render('/src/components/InstitutionalFooter.tsx', 'InstitutionalFooter', 'en-US');
   assert.match(pt, /^<footer /);
   for (const href of ['#/contact', '#/privacy', '#/terms', '#/lgpd']) assert.ok(pt.includes(`href="${href}"`), href);
-  assert.ok(pt.replaceAll('<!-- -->', '').includes('© 2026 Banco de Soluções. Todos os direitos Reservados - Criado por:'));
+  const ptText = pt.replace(/<[^>]+>/g, '').replaceAll('<!-- -->', '').replace(/\\s+/g, ' ').trim();
+  assert.ok(ptText.includes('© 2026 Banco de Soluções. Todos os direitos Reservados - Criado por:'));
   assert.ok(pt.includes('href="https://www.linkedin.com/in/lucas-gomes-da-silva-1407/"'));
   assert.ok(pt.includes('target="_blank"'));
   assert.ok(pt.includes('rel="noopener noreferrer"'));
