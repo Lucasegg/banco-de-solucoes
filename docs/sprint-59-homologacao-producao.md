@@ -15,6 +15,7 @@ As evidências combinam: (1) smoke contra o artefato publicado; (2) E2E determin
 - O [Actions #382](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32798449061), sobre o SHA revisado `aec86fb7f51004154d52e3ae9f0eb8da26b5136e`, falhou porque o contrato executava `git merge-base --is-ancestor` em um checkout raso. Nessa mesma revisão foram identificados rota externa e nome da chave de retorno incorretos no novo smoke. Até uma nova execução verde, o cenário protegido permanece **pendente**, não dinamicamente aprovado.
 - O [production monitor no SHA `25d6b92c1100035d8c15a38e496f29b275914897`](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32800112330) executou o smoke e falhou nos dois viewports: a preparação de locale sobrescrevia EN-US no reload e o heading esperado não correspondia à tradução real. Esta execução é evidência da reprodução, não de aprovação. Uma nova execução verde do **Daily production health monitor**, na branch e no SHA corrigido, continua obrigatória antes de declarar o smoke ampliado aprovado.
 - O [production monitor #3 no SHA `38dfd48be8bed34fc915a4acf21b4886f97824e5`](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32800737307) confirmou as correções anteriores: 8/10 testes passaram. Os dois restantes, um por viewport, falharam por strict mode porque “Entrar” existia no cabeçalho e no prompt protegido. O CI bloqueante #384 ficou verde, mas isso não substitui uma nova execução verde do production monitor.
+- O [production monitor #4 no SHA `fd9ae871335b2bded406a51f3e7ae7dd4482bed1`](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32801277916) também terminou em 8/10. O CI bloqueante #385 ficou verde, mas desktop e 320 px expuseram uma contradição no helper: ao abrir `/admin`, ele exigia `/admin` antes de o cenário confirmar corretamente o redirect para `/login`. A homologação permanece pendente até 10/10.
 
 Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente** = fluxo validado sem escrita real; **Limitado** = depende de credencial ou integração externa indisponível e não foi executado em produção.
 
@@ -109,6 +110,13 @@ Legenda: **Aprovado** = evidência executável suficiente; **Aprovado localmente
 - **Correção aplicada:** o teste localiza a região nomeada pelo heading canônico `sharedPtBR['auth.continue']` e, dentro dela, aciona exatamente `sharedPtBR['auth.signIn']`.
 - **Regressão:** o contrato exige o escopo semântico e rejeita `.first()`, `.last()` e `.nth()`. Formulário ausente, redirect, chave de retorno, dois viewports e bloqueio read-only permanecem inalterados.
 
+### Defeito T59-06 — helper contradizia o redirecionamento administrativo esperado
+
+- **Reprodução:** o production monitor #4 (`32801277916`) passou 8/10. Nos dois viewports, `openReadOnly(page, '/#/admin')` exigia permanência em `/admin`, enquanto a autorização redirecionava corretamente o visitante a `/login`.
+- **Causa raiz:** o helper presumia que a rota solicitada e a URL final seriam sempre iguais, contrato inválido para navegação protegida.
+- **Correção aplicada:** `openReadOnly` aceita um `expectedHash` explícito, usado para validar URL final e overflow. O cenário chama `openReadOnly(page, '/#/admin', '/#/login')` e mantém a asserção explícita do redirect.
+- **Regressão:** o contrato exige os hashes inicial/final e rejeita a forma contraditória antiga. Resposta HTTP, HTTPS canônico, idioma, overflow e interceptor read-only continuam no helper.
+
 Nenhum defeito funcional comprovado no código da aplicação exigiu correção. Não foram feitas mudanças cosméticas ou arquiteturais.
 
 ## Confirmações de segurança e mudança
@@ -131,4 +139,4 @@ Nenhum defeito funcional comprovado no código da aplicação exigiu correção.
 
 ## Decisão final de homologação
 
-**PENDENTE DE HOMOLOGAÇÃO FINAL**, até que um **Daily production health monitor** no SHA final fique verde. O CI #384 ficou verde, porém o production monitor #3 (`32800737307`) terminou com 8/10: os dois viewports reproduziram a ambiguidade do botão de login agora corrigida. A superfície continua somente leitura; não há afirmação de aprovação dinâmica do cenário corrigido antes da nova evidência verde. Jornadas que exigem identidade ou escrita continuam limitadas ao ambiente determinístico.
+**PENDENTE DE HOMOLOGAÇÃO FINAL**, até que um **Daily production health monitor** no SHA final conclua 10/10. O CI #385 ficou verde, porém o production monitor #4 (`32801277916`) terminou com 8/10: desktop e 320 px reproduziram a expectativa contraditória de URL agora corrigida. A superfície continua somente leitura; não há afirmação de aprovação dinâmica do cenário corrigido antes da nova evidência verde. Jornadas que exigem identidade ou escrita continuam limitadas ao ambiente determinístico.

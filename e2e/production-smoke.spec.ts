@@ -7,15 +7,15 @@ import { assertNoHorizontalOverflow } from './overflow';
 type SmokePage = Page & { assertSmokeErrors?: () => void };
 type RequestViolation = { method: string; url: string };
 const LOCALE_STORAGE_KEY = 'banco-de-solucoes.locale';
-async function openReadOnly(page: Page, hash = '/') {
+async function openReadOnly(page: Page, hash = '/', expectedHash = hash) {
   const response = await page.goto(hash, { waitUntil: 'networkidle' });
   if (response) {
     expect(response.ok(), `HTTP inválido ao carregar ${hash}`).toBe(true);
   }
   expect(page.url()).toMatch(/^https:\/\/www\.bancodesolucoes\.com\.br\//);
-  await expect(page).toHaveURL(new URL(hash, PRODUCTION_ORIGIN).href);
+  await expect(page).toHaveURL(new URL(expectedHash, PRODUCTION_ORIGIN).href);
   expect(await page.evaluate(() => document.documentElement.lang)).toBe('pt-BR');
-  await assertNoHorizontalOverflow(page, hash);
+  await assertNoHorizontalOverflow(page, expectedHash);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -114,6 +114,6 @@ test('visitante não monta contribuição protegida e conserva o destino no logi
   const returnTo = await page.evaluate(() => sessionStorage.getItem('banco-de-solucoes.auth-return-to'));
   expect(returnTo).toBe('#/problems/new');
 
-  await openReadOnly(page, '/#/admin');
+  await openReadOnly(page, '/#/admin', '/#/login');
   await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/login`);
 });
