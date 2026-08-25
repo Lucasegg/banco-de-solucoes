@@ -82,6 +82,7 @@ test('workflow preserva o gate bloqueante da Sprint 56 após novas sprints', () 
   const sprint58Step = /      - name: Sprint 58 first contribution contract tests\n        run: npm run test:sprint58\n/;
   const sprint59Step = /      - name: Sprint 59 production acceptance contract tests\n        run: npm run test:sprint59\n/;
   const sprint60Step = /      - name: Sprint 60 final handoff contract tests\n        run: npm run test:sprint60\n/;
+  const sprint61Step = /      - name: Sprint 61 technical SEO contract tests\n        run: npm run test:sprint61\n/;
   assert.equal((workflow.match(/npm run test:sprint56/g) ?? []).length, 1);
   assert.match(workflow, sprint56Step);
   const [sprint56Gate] = workflow.match(sprint56Step) ?? [];
