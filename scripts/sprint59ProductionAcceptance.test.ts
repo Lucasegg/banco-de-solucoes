@@ -35,6 +35,9 @@ test('smoke de produção cobre HTTPS, SEO, jornadas públicas, i18n, teclado e 
   assert.match(smoke, /expect\(returnTo\)\.toBe\('#\/problems\/new'\)/);
   assert.match(smoke, /localStorage\.getItem\(key\) === null/);
   assert.match(smoke, /sharedPtBR\['auth\.continue'\]/);
+  assert.match(smoke, /getByRole\('region', \{ name: sharedPtBR\['auth\.continue'\] \}\)/);
+  assert.match(smoke, /authPrompt\.getByRole\('button', \{ name: sharedPtBR\['auth\.signIn'\], exact: true \}\)/);
+  assert.doesNotMatch(smoke, /getByRole\('button', \{ name: 'Entrar' \}\)|\.(?:first|last)\(\)|\.nth\(/);
   assert.match(sharedLocale, /'auth\.continue':'Entre ou crie uma conta para continuar'/);
   assert.doesNotMatch(smoke, /banco-de-solucoes\.auth\.return-to|\/#\/novo-problema|#\/novo-problema/);
   assert.doesNotMatch(smoke, /\.fill\([^)]*(?:senha|password|mensagem)/i);
