@@ -58,7 +58,8 @@
     "test:sprint56": "node --experimental-strip-types --test scripts/sprint56ReleaseClosure.test.ts",
     "test:sprint57": "node --experimental-strip-types --test scripts/sprint57FirstExperience.test.ts",
     "test:e2e:skip-link": "playwright test e2e/skip-link.spec.ts",
-    "test:sprint58": "node --experimental-strip-types --test scripts/sprint58FirstContribution.test.ts"
+    "test:sprint58": "node --experimental-strip-types --test scripts/sprint58FirstContribution.test.ts",
+    "test:sprint59": "node --experimental-strip-types --test scripts/sprint59ProductionAcceptance.test.ts"
   },
   "dependencies": {
     "vite": "latest",

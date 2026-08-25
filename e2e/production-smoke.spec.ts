@@ -1,25 +1,28 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PRODUCTION_ORIGIN } from '../scripts/productionEnvironment.ts';
 import { classifyProductionRequest, sanitizedRequestTarget } from '../scripts/productionSmokeSafety.ts';
+import { sharedPtBR } from '../src/i18n/locales/shared.ts';
 import { assertNoHorizontalOverflow } from './overflow';
 
 type SmokePage = Page & { assertSmokeErrors?: () => void };
 type RequestViolation = { method: string; url: string };
 const LOCALE_STORAGE_KEY = 'banco-de-solucoes.locale';
-async function openReadOnly(page: Page, hash = '/') {
+async function openReadOnly(page: Page, hash = '/', expectedHash = hash) {
   const response = await page.goto(hash, { waitUntil: 'networkidle' });
   if (response) {
     expect(response.ok(), `HTTP inválido ao carregar ${hash}`).toBe(true);
   }
   expect(page.url()).toMatch(/^https:\/\/www\.bancodesolucoes\.com\.br\//);
-  await expect(page).toHaveURL(new URL(hash, PRODUCTION_ORIGIN).href);
+  await expect(page).toHaveURL(new URL(expectedHash, PRODUCTION_ORIGIN).href);
   expect(await page.evaluate(() => document.documentElement.lang)).toBe('pt-BR');
-  await assertNoHorizontalOverflow(page, hash);
+  await assertNoHorizontalOverflow(page, expectedHash);
 }
 
 test.beforeEach(async ({ page }) => {
   const consoleErrors: string[] = []; const pageErrors: string[] = []; const violations: RequestViolation[] = [];
-  await page.addInitScript(([key, locale]) => localStorage.setItem(key, locale), [LOCALE_STORAGE_KEY, 'pt-BR']);
+  await page.addInitScript(([key, locale]) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, locale);
+  }, [LOCALE_STORAGE_KEY, 'pt-BR']);
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.route('**/*', async route => {
@@ -83,4 +86,34 @@ test('navegação pública permanece somente leitura', async ({ page }) => {
   }
   await openReadOnly(page, '/#/sprint-50-rota-inexistente');
   await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible();
+});
+
+test('idiomas, skip link e foco permanecem funcionais após recarga direta', async ({ page }) => {
+  await openReadOnly(page, '/#/privacy');
+  await page.keyboard.press('Tab');
+  const skipLink = page.getByRole('link', { name: 'Pular para o conteúdo principal' });
+  await expect(skipLink).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#main-content')).toBeFocused();
+
+  await page.getByLabel('Idioma da interface').selectOption('en-US');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Privacy');
+  await page.reload({ waitUntil: 'networkidle' });
+  await expect(page.getByLabel('Interface language')).toHaveValue('en-US');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+});
+
+test('visitante não monta contribuição protegida e conserva o destino no login', async ({ page }) => {
+  await openReadOnly(page, '/#/problems/new');
+  const authPrompt = page.getByRole('region', { name: sharedPtBR['auth.continue'] });
+  await expect(authPrompt.getByRole('heading', { name: sharedPtBR['auth.continue'] })).toBeVisible();
+  await expect(page.locator('form')).toHaveCount(0);
+  await authPrompt.getByRole('button', { name: sharedPtBR['auth.signIn'], exact: true }).click();
+  await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/login`);
+  const returnTo = await page.evaluate(() => sessionStorage.getItem('banco-de-solucoes.auth-return-to'));
+  expect(returnTo).toBe('#/problems/new');
+
+  await openReadOnly(page, '/#/admin', '/#/login');
+  await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/login`);
 });
