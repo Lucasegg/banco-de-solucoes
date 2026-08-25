@@ -1,63 +1,71 @@
-# Arquitetura — Banco de Soluções
+# Arquitetura da versão 1.0
 
 ## Visão geral
 
-Nesta fase, o Banco de Soluções é uma aplicação frontend estática. A arquitetura privilegia simplicidade, tipagem e separação clara entre apresentação, dados mockados e pontos futuros de integração.
-
-## Camadas
-
-```text
-Interface React
-  ↓
-Componentes e páginas
-  ↓
-Dados mockados tipados
-  ↓
-Contrato futuro com Supabase
-```
-
-## Estrutura de diretórios
+O Banco de Soluções 1.0 é uma SPA React/TypeScript construída pelo Vite, publicada
+como conteúdo estático no GitHub Pages e integrada ao Supabase. O domínio canônico é
+`https://www.bancodesolucoes.com.br/`; o roteamento por hash permite acesso direto
+sem exigir regras de rewrite no host.
 
 ```text
-src/
-  components/      Layout, navegação, cartões e elementos reutilizáveis
-  data/            Problemas e soluções fictícios
-  lib/             Configuração de integrações externas
-  pages/           Telas principais
-  types/           Tipos de domínio
+Browser (React + HashRouter + i18n)
+  ├─ pages/components → hooks → repositories
+  ├─ Supabase JS (anon key + sessão do usuário)
+  └─ contact-request Edge Function
+          ↓
+Supabase Auth + PostgreSQL/RLS + Realtime + Storage
+          ↓
+Resend (e-mail do Fale Conosco)
+
+GitHub Actions → verify → migrate-and-health → deploy → production-smoke
 ```
 
-## Modelo de domínio inicial
+## Frontend
 
-### Problema
+- `src/pages` compõe jornadas e estados de rota; `src/components` concentra UI
+  reutilizável, autenticação e administração.
+- `src/hooks` orquestra estado assíncrono; `src/repositories` é a fronteira de dados.
+  Componentes não devem importar o cliente Supabase diretamente.
+- `src/integrations/supabase` contém cliente, adapters e integração de sessão;
+  `src/i18n` mantém catálogos tipados pt-BR/en-US.
+- `src/routing` implementa o contrato do HashRouter e retorno seguro após login.
+- `e2e` oferece jornadas determinísticas com backend simulado; o smoke de produção é
+  separado e estritamente somente leitura.
 
-Representa um desafio real com título, resumo, categoria, impacto, região, tags e soluções relacionadas.
+## Supabase, migrations e RLS
 
-### Solução
+As migrations ordenadas estão em `supabase/migrations`; elas são imutáveis depois de
+aplicadas. Tabelas de identidade, conteúdo, interações, contribuições, denúncias,
+notificações, taxonomia e reputação usam RLS. Leitura pública é limitada aos dados
+publicáveis, ações de membro exigem `auth.uid()` e operações de moderação exigem papel
+administrativo validado no banco. A `service_role` nunca pertence ao frontend.
 
-Representa uma abordagem, produto, processo ou projeto que responde a um ou mais problemas. Inclui maturidade, organização responsável, métricas de impacto e tags.
+A Edge Function `supabase/functions/contact-request` valida conteúdo e consentimento,
+aplica rate limit persistente e entrega pelo Resend. Mudanças SQL exigem migration
+aditiva, teste local, `test:pending-migrations` e preflight remoto; a Sprint 60 não cria
+nem modifica migration, RLS ou permissões. O inventário histórico e os procedimentos
+de baseline estão em [SUPABASE.md](SUPABASE.md).
 
-## Estratégia de dados
+## Autenticação e autorização
 
-A Fase 1 usa dados mockados para validar navegação, conteúdo e componentes. A transição para Supabase deve manter os tipos de domínio como contrato principal e substituir gradualmente os módulos em `src/data` por consultas reais.
+Supabase Auth fornece e-mail/senha, OAuth, recuperação PKCE e MFA TOTP. O contexto de
+autenticação centraliza sessão e nível de garantia. Rotas de membro preservam o destino
+e direcionam visitantes ao login; rotas administrativas exigem papel `admin`. A UI é
+defesa em profundidade: autorização definitiva de dados permanece em RLS/RPCs.
 
-## Preparação para Supabase
+## Entrega e operação
 
-O arquivo `src/lib/supabase.ts` centraliza variáveis públicas esperadas:
+O workflow **Verify, migrate and deploy** executa `verify`; em PR com SQL também valida
+PostgreSQL isolado. Um dispatch explícito executa `production-preflight` sem escrita.
+Em `main`, `migrate-and-health` aplica migrations e prepara o artifact, `deploy`
+publica no Pages e `production-smoke` observa o domínio. O workflow **Daily production
+health monitor** repete o smoke somente leitura. Sequência, secrets, rollback e
+diagnóstico estão no [runbook](docs/operations-runbook.md).
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+## Decisões e limites
 
-Enquanto não houver backend, o módulo apenas expõe configuração e um indicador de disponibilidade.
-
-## Deploy
-
-O GitHub Actions executa instalação, build e publicação do diretório `dist` no GitHub Pages em pushes para `main`.
-
-## Princípios técnicos
-
-- Começar simples antes de otimizar.
-- Manter a experiência acessível e minimalista.
-- Usar TypeScript como documentação viva do domínio.
-- Separar dados, componentes e páginas.
-- Evitar acoplamento prematuro com backend.
+Hash routing, segurança local e decisões históricas estão em
+[ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md). A ausência de SSR limita a
+indexação por rota; disponibilidade depende de GitHub Pages, Supabase, DNS e Resend;
+ações autenticadas reais não são exercidas pelo smoke para evitar mutações. Consulte
+os [riscos residuais do manifesto](docs/release-1.0-manifesto.md#riscos-residuais).
