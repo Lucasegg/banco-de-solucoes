@@ -16,7 +16,7 @@ test('visitante recebe orientação e CTAs públicos sem controles administrativ
   await expect(page).toHaveURL(/#\/search/);
   await page.goto('/');
   await page.getByRole('button', { name: 'Solicitar suporte pelo Fale Conosco' }).click();
-  await expect(page).toHaveURL(/#\/contact/);
+  await expect(page).toHaveURL(/\/contact\/$/);
 });
 
 test('login e cadastro não criam rolagem horizontal em 320 px', async ({ page, consoleErrors }) => {
@@ -62,7 +62,7 @@ test('documentos legais e rota inexistente mantêm navegação recuperável', as
   await page.goto('/#/nao-existe');
   await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible();
   await page.getByRole('button', { name: 'Voltar ao início' }).click();
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(/\/$/);
   await page.goto('/#/members/%E0%A4%A');
   await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible();
 });

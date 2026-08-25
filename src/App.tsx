@@ -6,7 +6,7 @@ import { ensureMfaReturnTo, setMfaReturnTo } from './repositories/users/mfaRetur
 import { isPasswordRecoveryCallbackUrl } from './repositories/users/passwordRecoveryCallback';
 import { AuthenticatedRoute } from './components/auth/AuthenticatedRoute';
 import { AdminRoute } from './components/admin/AdminRoute';
-import { hashFromPage, pageFromHash } from './routing/hashRouter';
+import { pageFromLocation, urlFromPage } from './routing/hashRouter';
 import { LegalConsentGate } from './components/legal/LegalConsentGate';
 import { RouteLoadingFallback } from './components/RouteLoadingFallback';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
@@ -54,17 +54,14 @@ export function App() {
   const { t } = useTranslation();
   const { isAuthenticated, isLoading, user, mfaRequired } = useAuth();
   const permissions = usePermissions(user);
-  const [page, setPageState] = useState(() => isPasswordRecoveryCallbackUrl() ? 'password-recovery' : pageFromHash(window.location.hash));
+  const [page, setPageState] = useState(() => isPasswordRecoveryCallbackUrl() ? 'password-recovery' : pageFromLocation(window.location.pathname, window.location.hash));
   const [kind, id] = page.split(':');
   const setPage = useCallback((nextPage: string) => {
-    const nextHash = hashFromPage(nextPage);
+    const nextUrl = urlFromPage(nextPage);
+    const currentUrl = `${window.location.pathname}${window.location.hash}`;
 
-    if (window.location.hash === nextHash) {
-      setPageState(nextPage);
-      return;
-    }
-
-    window.location.hash = nextHash;
+    if (currentUrl !== nextUrl) window.history.pushState({}, '', nextUrl);
+    setPageState(nextPage);
   }, []);
 
   useEffect(() => {
@@ -72,9 +69,13 @@ export function App() {
   }, [page]);
 
   useEffect(() => {
-    const sync = () => setPageState(pageFromHash(window.location.hash));
+    const sync = () => setPageState(pageFromLocation(window.location.pathname, window.location.hash));
     window.addEventListener('hashchange', sync);
-    return () => window.removeEventListener('hashchange', sync);
+    window.addEventListener('popstate', sync);
+    return () => {
+      window.removeEventListener('hashchange', sync);
+      window.removeEventListener('popstate', sync);
+    };
   }, []);
 
   useEffect(() => {
