@@ -14,7 +14,17 @@ export function InstitutionalFooter() {
       <nav aria-label={t('footer.label')}><ul className="grid gap-3 text-sm sm:grid-cols-2">
         {links.map(([href, label]) => <li key={href}><a href={href} className="rounded-sm text-left underline decoration-slate-500 underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">{t(label)}</a></li>)}
       </ul></nav>
-      <p className="border-t border-slate-700 pt-6 text-xs text-slate-400 md:col-span-2">{t('footer.copyright', { year: new Date().getFullYear() })}</p>
+      <p className="border-t border-slate-700 pt-6 text-xs text-slate-400 md:col-span-2">
+        {t('footer.copyright', { year: 2026 })} {' - '}{t('footer.createdBy')}{' '}
+        <a
+          href="https://www.linkedin.com/in/lucas-gomes-da-silva-1407/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-sm underline decoration-slate-500 underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        >
+          Lucas Gomes
+        </a>
+      </p>
     </div>
   </footer>;
 }
