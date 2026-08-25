@@ -5,6 +5,6 @@
     { "asset": "client-*.js", "maxBytes": 226000 },
     { "asset": "leaflet-*.js", "maxBytes": 164000 },
     { "asset": "I18nProvider-*.js", "maxBytes": 155000 },
-    { "asset": "index-*.css", "maxBytes": 39000 }
+    { "asset": "main-*.css", "maxBytes": 39000 }
   ]
 }
