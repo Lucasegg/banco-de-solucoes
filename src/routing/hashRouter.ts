@@ -8,6 +8,13 @@ const pageToHashPath: Record<string, string> = {
   search: '/search', contact: '/contact', privacy: '/privacy', terms: '/terms', lgpd: '/lgpd',
 };
 
+export const publicPagePaths: Record<string, string> = {
+  home: '/', problemas: '/problems/', solucoes: '/solutions/', mapa: '/mapa/', sobre: '/about/',
+  contact: '/contact/', privacy: '/privacy/', terms: '/terms/', lgpd: '/lgpd/',
+};
+
+const normalizedPath = (pathname: string) => pathname === '/' ? '/' : `${pathname.replace(/\/+$/, '')}/`;
+
 export function pageFromHash(hash: string): string {
   const path = (hash.replace(/^#/, '') || '/').split('?')[0];
   if (path === '/problems') return 'problemas';
@@ -27,10 +34,20 @@ export function pageFromHash(hash: string): string {
   return 'not-found';
 }
 
+export function pageFromLocation(pathname: string, hash: string): string {
+  if (hash) return pageFromHash(hash);
+  const path = normalizedPath(pathname);
+  return Object.entries(publicPagePaths).find(([, route]) => route === path)?.[0] ?? 'not-found';
+}
+
 export function hashFromPage(page: string): string {
   if (page.startsWith('problema:')) return `#/problems/${page.replace('problema:', '')}`;
   if (page.startsWith('solucao:')) return `#/solutions/${page.replace('solucao:', '')}`;
   if (page.startsWith('contribution:')) return `#/contributions/${page.replace('contribution:', '')}`;
   if (page.startsWith('member:')) return `#/members/${encodeURIComponent(page.replace('member:', ''))}`;
   return `#${pageToHashPath[page] ?? '/'}`;
+}
+
+export function urlFromPage(page: string): string {
+  return publicPagePaths[page] ?? `/${hashFromPage(page)}`;
 }
