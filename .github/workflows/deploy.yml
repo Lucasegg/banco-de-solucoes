@@ -242,6 +242,18 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/sprint48_public_profile_assertions.sql
+      - name: Install insecure app schema version regression fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/app_schema_version_security_schema.sql
+      - name: Apply app schema version RLS hardening
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260826010000_secure_app_schema_version_rls.sql
+      - name: Verify app schema version RLS hardening
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/app_schema_version_security_assertions.sql
       - name: Verify Sprint 45 notification security and behavior
         env:
           PGPASSWORD: postgres
