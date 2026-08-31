@@ -262,6 +262,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/solution_problem_optional_assertions.sql
+      - name: Restore authenticated search index maintenance
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260831134538_restore_search_tags_index_permissions.sql
+      - name: Verify authenticated problem and solution writes
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/search_tags_index_permissions_assertions.sql
       - name: Verify Sprint 45 notification security and behavior
         env:
           PGPASSWORD: postgres

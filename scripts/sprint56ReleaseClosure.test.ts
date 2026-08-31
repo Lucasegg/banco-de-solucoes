@@ -63,7 +63,7 @@ function contentDigestText(content: string): string {
 }
 
 test('Sprint 56 preserva migrations, secrets e dependências sem depender do histórico Git', () => {
-  assert.equal(contentDigest(filesUnder('supabase/migrations')), 'df4886fb5b560ae7be0a93a18778f63ae4d2e648ef8cdff04bc9097ae0ed63e6');
+  assert.equal(contentDigest(filesUnder('supabase/migrations')), 'a4159b4f386077bd73f10273f28d81675b68da965359dd115b36a486c97ee3af');
   assert.equal(contentDigest(['package-lock.json']), '813aab0afa542a4c57fac0b9831cbc918e7dcc426fc0dd807476f4a375491e3f');
 
   const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).trim().split('\n');
@@ -91,7 +91,7 @@ test('workflow preserva o gate bloqueante da Sprint 56 após novas sprints', () 
   assert.match(workflow, /npm run test:sprint55\n      - name: Sprint 56[\s\S]*npm run test:sprint56\n      - name: Full dependency audit report/);
 
   const baselineWorkflow = workflow.replace(sprint56Step, '').replace(sprint57Step, '').replace(sprint58Step, '').replace(sprint59Step, '').replace(sprint60Step, '').replace(sprint61Step, '').replace(sprint62Step, '');
-  assert.equal(contentDigestText(baselineWorkflow), '5a6ccaade49ea0e7566f8823297e18c442d5ecbe8a15b6de0f5eec632904e9ba');
+  assert.equal(contentDigestText(baselineWorkflow), '73e87986f79918336c25acd6d82f04835167b869066cda40f4488d675bb40c06');
   for (const contract of ['security:audit:report', 'security:audit', 'npm run build', 'Critical browser flows',
     'migrate-and-health:', 'deploy:', 'production-smoke:']) assert.ok(workflow.includes(contract));
 });

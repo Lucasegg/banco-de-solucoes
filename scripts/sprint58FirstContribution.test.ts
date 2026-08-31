@@ -13,6 +13,8 @@ const workflow = read('.github/workflows/deploy.yml');
 const e2e = read('e2e/first-contribution.spec.ts');
 const optionalLinksMigration = read('supabase/migrations/20260831010000_allow_solutions_without_related_problems.sql');
 const optionalLinksAssertions = read('scripts/fixtures/solution_problem_optional_assertions.sql');
+const searchTagsPermissions = read('supabase/migrations/20260831134538_restore_search_tags_index_permissions.sql');
+const searchTagsAssertions = read('scripts/fixtures/search_tags_index_permissions_assertions.sql');
 
 test('journey uses the existing protected problem and solution routes', () => {
   assert.match(home, /page="novo-problema"/);
@@ -58,6 +60,16 @@ test('solution problem links are optional in the form, RPCs and real PostgreSQL 
   assert.match(optionalLinksAssertions, /update_solution_with_problems[\s\S]*p_problem_ids := '\{\}'::uuid\[\]/);
   assert.match(workflow, /Apply optional solution problem link hotfix[\s\S]*Verify solutions without related problems/);
   assert.match(e2e, /submete solução sem problema relacionado/);
+});
+
+test('authenticated contributions can maintain private full-text indexes', () => {
+  assert.match(searchTagsPermissions, /revoke all on function public\.search_tags_text\(text\[\]\) from public, anon/);
+  assert.match(searchTagsPermissions, /grant execute on function public\.search_tags_text\(text\[\]\) to authenticated/);
+  assert.doesNotMatch(searchTagsPermissions, /grant execute[\s\S]*\bto\s+(?:public|anon)\b/i);
+  assert.match(searchTagsAssertions, /set local role authenticated/);
+  assert.match(searchTagsAssertions, /insert into public\.problems/);
+  assert.match(searchTagsAssertions, /insert into public\.solutions/);
+  assert.match(workflow, /Restore authenticated search index maintenance[\s\S]*Verify authenticated problem and solution writes/);
 });
 
 test('browser journey and blocking CI contract are wired without weakening prior gates', () => {
