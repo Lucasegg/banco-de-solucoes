@@ -254,6 +254,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/app_schema_version_security_assertions.sql
+      - name: Apply optional solution problem link hotfix
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260831010000_allow_solutions_without_related_problems.sql
+      - name: Verify solutions without related problems
+        env:
+          PGPASSWORD: postgres
+        run: psql --host localhost --port 5432 --username postgres --dbname postgres -v ON_ERROR_STOP=1 -f scripts/fixtures/solution_problem_optional_assertions.sql
       - name: Verify Sprint 45 notification security and behavior
         env:
           PGPASSWORD: postgres
