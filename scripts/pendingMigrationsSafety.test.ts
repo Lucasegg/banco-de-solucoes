@@ -25,6 +25,7 @@ const sprint47 = '20260803120000_sprint47_reputation_achievements.sql';
 const sprint48 = '20260803130000_sprint48_public_member_profile.sql';
 const appSchemaVersionRls = '20260826010000_secure_app_schema_version_rls.sql';
 const optionalSolutionProblems = '20260831010000_allow_solutions_without_related_problems.sql';
+const searchTagsIndexPermissions = '20260831134538_restore_search_tags_index_permissions.sql';
 const auditedRpcs = new Set([
   'create_solution_with_problems', 'update_solution_with_problems', 'report_comment',
   'mark_comment_best_answer', 'moderate_comment_visibility', 'review_contribution',
@@ -50,7 +51,7 @@ test('pending migrations are ordered, transactional, and do not self-mark histor
   const all = files();
   assert.deepEqual(all, [...all].sort(), 'migration filenames must be chronological');
   const pending = all.filter((file) => version(file) > remoteBaseline);
-  assert.deepEqual(pending, [sprint29, authorshipHotfix, sprint30, sprint31, sprint32, sprint33, sprint34, sprint35, sprint37, sprint39, sprint42, sprint43, sprint44, sprint45, sprint46, sprint47, sprint48, appSchemaVersionRls, optionalSolutionProblems], 'documented remote baseline must leave pending migrations in order');
+  assert.deepEqual(pending, [sprint29, authorshipHotfix, sprint30, sprint31, sprint32, sprint33, sprint34, sprint35, sprint37, sprint39, sprint42, sprint43, sprint44, sprint45, sprint46, sprint47, sprint48, appSchemaVersionRls, optionalSolutionProblems, searchTagsIndexPermissions], 'documented remote baseline must leave pending migrations in order');
   for (const file of pending) {
     const sql = contents(file).trim().toLowerCase();
     assert.match(sql, /^--[\s\S]*?\bbegin\s*;/, `${file} must begin a transaction`);
