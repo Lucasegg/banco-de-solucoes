@@ -9,6 +9,7 @@ alter table public.solutions
   add column if not exists location text not null default 'Não informado',
   add column if not exists country text not null default 'Brasil',
   add column if not exists views integer not null default 0;
+alter table public.solutions alter column id set default gen_random_uuid();
 
 insert into public.profiles (id, role, display_name, username)
 values ('63000000-0000-4000-8000-000000000001', 'member', 'Regression Member', 'regression-member')
