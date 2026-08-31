@@ -1,20 +1,29 @@
 begin;
 
+alter table public.solutions
+  add column if not exists image_url text,
+  add column if not exists maturity_level text not null default 'Ideia',
+  add column if not exists implementation_difficulty text not null default 'Baixa',
+  add column if not exists estimated_cost text,
+  add column if not exists implementation_time text,
+  add column if not exists location text not null default 'Não informado',
+  add column if not exists country text not null default 'Brasil',
+  add column if not exists views integer not null default 0;
+
 insert into public.profiles (id, role, display_name, username)
 values ('63000000-0000-4000-8000-000000000001', 'member', 'Regression Member', 'regression-member')
 on conflict (id) do nothing;
 
 insert into public.problems (
   id, author_id, author_name, title, summary, description, category,
-  city, state, country, status, impact_level
+  city, state, status
 ) values (
   '63000000-0000-4000-8000-000000000010',
   '63000000-0000-4000-8000-000000000001',
   'Regression Member', 'Optional link fixture', 'Fixture', 'Fixture for optional solution links',
-  'Infraestrutura', 'Recife', 'PE', 'Brasil', 'Reportado', 'local'
+  'Infraestrutura', 'Recife', 'PE', 'Aberto'
 ) on conflict (id) do nothing;
 
-set local role authenticated;
 select set_config('request.jwt.claim.sub', '63000000-0000-4000-8000-000000000001', true);
 
 select public.create_solution_with_problems(
