@@ -18,6 +18,7 @@ async function asMember(page: Page, role: 'member' | 'admin' = 'member') {
 async function mockContributionData(page: Page, options: { problemStatus?: number; delayMs?: number } = {}) {
   let problemCreates = 0;
   let solutionCreates = 0;
+  let lastSolutionProblemIds: string[] | null = null;
   await page.route('**/__e2e_supabase/**', async (route) => {
     const request = route.request();
     const url = request.url();
@@ -35,12 +36,14 @@ async function mockContributionData(page: Page, options: { problemStatus?: numbe
     if (url.includes('/rest/v1/problems')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([problemRow]) });
     if (url.includes('/rest/v1/rpc/create_solution_with_problems')) {
       solutionCreates += 1;
+      const payload = JSON.parse(request.postData() || '{}');
+      lastSolutionProblemIds = payload.p_problem_ids;
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(solutionId) });
     }
     if (url.includes('/rest/v1/solutions')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(url.includes('id=eq.') ? solutionRow : [solutionRow]) });
     return route.fallback();
   });
-  return { problemCalls: () => problemCreates, solutionCalls: () => solutionCreates };
+  return { problemCalls: () => problemCreates, solutionCalls: () => solutionCreates, solutionProblemIds: () => lastSolutionProblemIds };
 }
 
 async function fillProblem(page: Page) {
@@ -52,7 +55,7 @@ async function fillProblem(page: Page) {
   await page.getByLabel('Estado').fill(problemRow.state);
 }
 
-async function fillSolution(page: Page) {
+async function fillSolution(page: Page, options: { linkProblem?: boolean } = {}) {
   await page.getByLabel('Título').fill(solutionRow.title);
   await page.getByLabel('Resumo').fill(solutionRow.summary);
   await page.getByLabel('Descrição').fill(solutionRow.description);
@@ -61,7 +64,7 @@ async function fillSolution(page: Page) {
   await page.getByLabel('Localização').fill(solutionRow.location);
   await page.getByLabel('Métrica de impacto').fill(solutionRow.impact_metric);
   await page.getByLabel('Links de evidência').fill(solutionRow.evidence_links[0]);
-  await page.getByRole('checkbox', { name: problemRow.title }).check();
+  if (options.linkProblem !== false) await page.getByRole('checkbox', { name: problemRow.title }).check();
 }
 
 test.beforeEach(async ({ page }) => { await mockApi(page); });
@@ -129,6 +132,20 @@ test('submete solução com vínculo e anuncia moderação', async ({ page, cons
   await page.getByRole('button', { name: 'Salvar' }).click();
   await expect(page.getByRole('status')).toContainText('pode passar por moderação antes de ser publicada');
   expect(calls.solutionCalls()).toBe(1);
+  expect(calls.solutionProblemIds()).toEqual([problemId]);
+});
+
+test('submete solução sem problema relacionado quando o vínculo não se aplica', async ({ page, consoleErrors }) => {
+  await asMember(page);
+  const calls = await mockContributionData(page);
+  await page.goto('/#/solutions/new');
+  await fillSolution(page, { linkProblem: false });
+  const related = page.getByRole('group', { name: /Problemas relacionados.*opcional/ });
+  await expect(related).not.toHaveAttribute('aria-invalid');
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page.getByRole('status')).toContainText('pode passar por moderação antes de ser publicada');
+  expect(calls.solutionCalls()).toBe(1);
+  expect(calls.solutionProblemIds()).toEqual([]);
 });
 
 test('membro usa os formulários por teclado, sem administração ou overflow em 320 px', async ({ page, consoleErrors }) => {
@@ -144,7 +161,7 @@ test('membro usa os formulários por teclado, sem administração ou overflow em
   }
 });
 
-test('campos obrigatórios associam erros e grupo relacionado ao estado inválido', async ({ page, consoleErrors }) => {
+test('campos obrigatórios associam erros sem invalidar o vínculo opcional', async ({ page, consoleErrors }) => {
   await asMember(page);
   await mockContributionData(page);
   await page.goto('/#/solutions/new');
@@ -153,7 +170,7 @@ test('campos obrigatórios associam erros e grupo relacionado ao estado inválid
   await expect(description).toHaveAttribute('aria-invalid', 'true');
   const errorId = await description.getAttribute('aria-describedby');
   await expect(page.locator(`#${errorId}`)).toHaveRole('alert');
-  const related = page.getByRole('group', { name: /Problemas relacionados/ });
-  await expect(related).toHaveAttribute('aria-invalid', 'true');
-  await expect(related).toHaveAttribute('aria-describedby', 'related-problems-error');
+  const related = page.getByRole('group', { name: /Problemas relacionados.*opcional/ });
+  await expect(related).not.toHaveAttribute('aria-invalid');
+  await expect(related).not.toHaveAttribute('aria-describedby');
 });
