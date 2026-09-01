@@ -71,7 +71,7 @@
     "react": "latest",
     "react-dom": "latest",
     "lucide-react": "latest",
-    "@supabase/supabase-js": "2.110.5",
+    "@supabase/supabase-js": "2.112.4",
     "leaflet": "1.9.4"
   },
   "devDependencies": {
