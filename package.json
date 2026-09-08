@@ -71,7 +71,7 @@
     "react": "latest",
     "react-dom": "latest",
     "lucide-react": "latest",
-    "@supabase/supabase-js": "2.110.5",
+    "@supabase/supabase-js": "2.115.0",
     "leaflet": "1.9.4"
   },
   "devDependencies": {
@@ -79,6 +79,6 @@
     "postcss": "8.5.25",
     "autoprefixer": "latest",
     "@types/leaflet": "1.9.21",
-    "@playwright/test": "1.62.1"
+    "@playwright/test": "1.63.0"
   }
 }
