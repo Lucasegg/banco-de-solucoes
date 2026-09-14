@@ -1,6 +1,6 @@
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
-import { DatabaseZap, LogIn, Menu, X } from 'lucide-react';
+import { DatabaseZap, LogIn, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { NotificationBell } from './notifications/NotificationBell';
@@ -16,6 +16,16 @@ interface LayoutProps {
 }
 
 const links: [string, TranslationKey][] = [['home', 'nav.home'], ['problemas', 'nav.problems'], ['mapa', 'nav.map'], ['solucoes', 'nav.solutions'], ['search', 'nav.search'], ['novo-problema', 'nav.newProblem'], ['nova-solucao', 'nav.newSolution'], ['sobre', 'nav.about']];
+
+function HamburgerIcon() {
+  return (
+    <span aria-hidden="true" className="flex w-5 flex-col gap-1.5">
+      <span className="h-0.5 w-full rounded-full bg-current" />
+      <span className="h-0.5 w-full rounded-full bg-current" />
+      <span className="h-0.5 w-full rounded-full bg-current" />
+    </span>
+  );
+}
 
 export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   const { user, isAuthenticated } = useAuth();
@@ -61,7 +71,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
               onClick={() => setMobileMenuOpen((open) => !open)}
               className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-white text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-900 md:hidden"
             >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              {mobileMenuOpen ? <X size={22} /> : <HamburgerIcon />}
             </button>
 
             <div id="primary-navigation" className="hidden flex-wrap items-center justify-end gap-2 md:flex">
