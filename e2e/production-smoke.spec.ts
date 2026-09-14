@@ -8,6 +8,26 @@ type SmokePage = Page & { assertSmokeErrors?: () => void };
 type RequestViolation = { method: string; url: string };
 const LOCALE_STORAGE_KEY = 'banco-de-solucoes.locale';
 const PUBLIC_PATHS = ['', 'problems', 'solutions', 'mapa', 'about', 'contact', 'privacy', 'terms', 'lgpd'] as const;
+
+async function isMobileViewport(page: Page) {
+  return page.viewportSize()?.width !== undefined && (page.viewportSize()?.width ?? 9999) < 768;
+}
+
+async function openMobileMenuIfNeeded(page: Page) {
+  if (!(await isMobileViewport(page))) return;
+  const menuButton = page.getByRole('button', { name: 'Abrir menu' });
+  if (await menuButton.isVisible()) await menuButton.click();
+}
+
+async function selectInterfaceLanguage(page: Page, locale: 'pt-BR' | 'en-US') {
+  if (await isMobileViewport(page)) {
+    await openMobileMenuIfNeeded(page);
+    await page.locator('#mobile-language-selector').selectOption(locale);
+    return;
+  }
+  await page.locator('#language-selector').selectOption(locale);
+}
+
 async function openReadOnly(page: Page, hash = '/', expectedHash = hash) {
   const response = await page.goto(hash, { waitUntil: 'networkidle' });
   if (response) {
@@ -97,6 +117,7 @@ test('nove páginas públicas expõem HTTP, indexação e metadados sociais', as
 
 test('navegação pública permanece somente leitura', async ({ page }) => {
   await openReadOnly(page);
+  await openMobileMenuIfNeeded(page);
   await page.getByRole('button', { name: 'Buscar' }).click();
   await expect(page).toHaveURL(`${PRODUCTION_ORIGIN}/#/search`);
   await expect(page.getByRole('heading', { level: 1 })).toContainText(/Busca/);
@@ -118,11 +139,13 @@ test('idiomas, skip link e foco permanecem funcionais após recarga direta', asy
   await page.keyboard.press('Enter');
   await expect(page.locator('#main-content')).toBeFocused();
 
-  await page.getByLabel('Idioma da interface').selectOption('en-US');
+  await selectInterfaceLanguage(page, 'en-US');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Privacy');
   await page.reload({ waitUntil: 'networkidle' });
-  await expect(page.getByLabel('Interface language')).toHaveValue('en-US');
+  const languageSelector = (await isMobileViewport(page)) ? page.locator('#mobile-language-selector') : page.locator('#language-selector');
+  if (await isMobileViewport(page)) await openMobileMenuIfNeeded(page);
+  await expect(languageSelector).toHaveValue('en-US');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
 });
 
