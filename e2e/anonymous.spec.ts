@@ -32,11 +32,22 @@ test('início, menu, rodapé, teclado e idiomas são funcionais', async ({ page,
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await assertNoHorizontalOverflow(page, 'home local');
+
+  const mobileMenuButton = page.getByRole('button', { name: 'Abrir menu' });
+  if (await mobileMenuButton.isVisible()) await mobileMenuButton.click();
+
   await page.getByRole('button', { name: 'Buscar' }).click();
   await expect(page).toHaveURL(/#\/search/);
   await page.getByRole('link', { name: 'Política de Privacidade' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Privacidade');
-  await page.getByLabel('Idioma da interface').selectOption('en-US');
+
+  if (await mobileMenuButton.isVisible()) {
+    await mobileMenuButton.click();
+    await page.locator('#mobile-language-selector').selectOption('en-US');
+  } else {
+    await page.locator('#language-selector').selectOption('en-US');
+  }
+
   await expect(page.getByRole('button', { name: 'Home' })).toBeVisible();
   await page.keyboard.press('Tab');
   expect(await page.evaluate(() => document.activeElement !== document.body)).toBe(true);
