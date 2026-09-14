@@ -55,7 +55,7 @@ test('administrador autenticado acessa o dashboard', async ({ page, consoleError
 
 test('início oferece contribuição ao membro sem controles administrativos', async ({ page, consoleErrors }) => {
   await authenticated(page, { role: 'member' }); await mockApi(page); await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Cadastrar problema' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cadastrar problema' }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Entrar para contribuir' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Abrir administração' })).toHaveCount(0);
   await assertNoHorizontalOverflow(page, 'home membro');
