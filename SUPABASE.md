@@ -1,98 +1,91 @@
 # Infraestrutura Supabase
 
-Esta sprint prepara a base de integração com Supabase sem alterar o comportamento atual da aplicação. O `LocalStorageAdapter` continua sendo o adapter ativo, e nenhum fluxo de usuários, comentários, favoritos, contribuições ou moderação foi migrado.
+## Estado atual
+
+O Supabase é o backend real do ambiente de produção do Banco de Soluções. A aplicação publicada usa Supabase Auth, PostgreSQL com RLS, Realtime, Storage e Edge Functions conforme os domínios implementados.
+
+A documentação abaixo descreve o estado operacional atual. Trechos de sprints antigas que tratavam Supabase como integração futura não representam mais a produção.
 
 ## Client
 
-O client fica em `src/integrations/supabase/client.ts` e usa as variáveis públicas do Vite:
+O client fica em `src/integrations/supabase/client.ts` e usa somente as variáveis públicas do Vite:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-Quando as variáveis não estão preenchidas, o client exportado é `null`. Isso permite que a aplicação rode localmente sem credenciais e evita ativar Supabase por acidente. O health check da tela de diagnósticos usa a REST API do projeto, com `HEAD /rest/v1/`, em vez de tratar sessão de Auth como conectividade geral.
+Quando ausentes, ambientes locais podem operar sem conexão ao projeto remoto conforme o código permitir. Isso não altera o fato de que a produção publicada é conectada ao backend real.
 
-## Adapter
-
-`src/integrations/supabase/SupabaseAdapter.ts` é um scaffold assíncrono para uma migração futura. Ele não é registrado como substituto direto do `StorageAdapter`, porque o adapter atual é síncrono e Supabase depende de rede.
-
-O objetivo é evitar uma falsa intercambialidade: antes de trocar o mecanismo ativo, os repositórios e hooks precisarão receber uma API assíncrona ou uma camada de serviço própria por domínio.
-
-## Provider
-
-`src/integrations/supabase/PersistenceProvider.tsx` centraliza qual adapter está ativo. Inicialmente, o provider expõe:
-
-- adapter ativo: `LocalStorageAdapter`
-- modo: `local`
-- scaffold Supabase disponível como adapter futuro assíncrono
-
-A API pública dos hooks existentes não foi alterada.
-
-## RLS
-
-Antes de migrar dados para Supabase, cada tabela deverá ter Row Level Security habilitado. As políticas devem ser desenhadas por domínio:
-
-- leitura pública apenas para dados realmente públicos;
-- escrita restrita ao usuário autenticado dono do registro;
-- moderação restrita a perfis autorizados;
-- auditoria de ações sensíveis.
+O frontend nunca recebe credenciais administrativas, token de gerenciamento, senha do banco ou chave equivalente.
 
 ## Auth
 
-A autenticação atual continua local. A futura adoção do Supabase Auth deve acontecer em uma sprint própria, com plano de migração para sessão, cadastro, login, recuperação de senha e perfis.
+A autenticação de produção usa Supabase Auth. O fluxo inclui cadastro/login, sessão e os recursos implementados no produto, com perfis persistidos em PostgreSQL e autorização apoiada por RLS/RPCs.
+
+Metadados enviados pelo cliente não podem conceder papel administrativo. Papel, autoria e permissões persistentes devem ser validados pelo backend.
+
+## PostgreSQL e RLS
+
+O schema de produção é versionado em `supabase/migrations/`. Tabelas persistentes usam RLS e regras específicas de domínio. Em termos gerais:
+
+- leitura pública somente onde os dados são efetivamente públicos;
+- escritas autenticadas limitadas por autoria/contrato;
+- moderação e administração exigem papel autorizado;
+- operações sensíveis podem ser encapsuladas em RPCs;
+- auditoria e histórico são preservados quando previstos.
+
+A interface não substitui RLS. Esconder controles é apenas defesa em profundidade.
 
 ## Storage
 
-Nenhum arquivo foi migrado para Supabase Storage. Caso a aplicação passe a aceitar uploads, será necessário definir buckets, políticas de acesso, limites de tamanho e fluxo de limpeza.
+Supabase Storage é usado nos fluxos que possuem buckets e policies versionados. Uploads devem respeitar tipo, tamanho, autoria e escopo definidos pelo produto. Buckets/policies não devem ser ampliados sem revisão de segurança.
 
-## Migração futura
+## Realtime
 
-Uma migração segura deve acontecer por etapas:
+Realtime é usado nos domínios que possuem contrato explícito, como notificações. Alterações de publicação/assinatura exigem migration e revisão para não expor linhas além do permitido.
 
-1. modelar tabelas e políticas RLS;
-2. implementar métodos reais no `SupabaseAdapter`;
-3. criar testes de paridade entre adapters;
-4. adaptar hooks/repositórios para uma fronteira assíncrona ou criar serviços por domínio;
-5. ativar o `PersistenceProvider` por feature flag;
-6. migrar um domínio por vez;
-7. validar rollback para `LocalStorageAdapter` enquanto a migração estiver em progresso.
+## Edge Functions
 
-## Diagnósticos
+`supabase/functions/contact-request` implementa o fluxo server-side do Fale Conosco. A função valida entrada/consentimento, aplica as proteções previstas e integra o serviço de e-mail configurado no ambiente.
 
-A rota `#/diagnostics` mostra o adapter ativo, status de configuração Supabase, URL configurada, health check, versão da aplicação e modo atual.
+Secrets da função são mantidos no provedor/ambiente de execução. A documentação e o código nunca devem conter valores reais.
 
-## Sprint 13 — Auth, sessão e profiles reais
+## Migrations e deploy
 
-A Sprint 13 migra exclusivamente autenticação, sessão e perfis para Supabase Auth e PostgreSQL. Problemas, soluções, comentários, reações, favoritos, contribuições e moderação continuam usando os repositórios atuais com `LocalStorageAdapter`.
+O pipeline da `main`:
 
-### Configuração pública
+1. executa testes, auditorias, build e E2E;
+2. valida secrets obrigatórios sem imprimir seus valores;
+3. vincula o projeto Supabase configurado;
+4. verifica baseline e lista local/remoto;
+5. valida migrations pendentes;
+6. executa `supabase db push`;
+7. publica a Edge Function prevista;
+8. prepara e publica o frontend;
+9. executa smoke de produção somente leitura.
 
-Use somente variáveis públicas do Vite, sem valores reais versionados:
+Migrations já aplicadas são imutáveis. Mudanças de banco devem entrar como migration nova e, quando aplicável, ser validadas também em PostgreSQL isolado e por Production Preflight antes do merge.
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+## Configuração e segredos
 
-Quando ausentes, o build continua funcionando e a UI informa `Supabase não configurado`. O frontend nunca usa `service_role`, secret key, access token ou refresh token hardcoded.
+Somente nomes de configuração são documentados. Nunca versione ou copie para Markdown valores reais de:
 
-### Fluxo de cadastro e confirmação de e-mail
+- tokens de gerenciamento;
+- senhas de banco;
+- chaves administrativas/server-side;
+- segredos de OAuth;
+- chaves de serviços de e-mail;
+- salts ou outros segredos operacionais.
 
-O cadastro chama `supabase.auth.signUp` e envia em `options.data` apenas `username`, `display_name`, `country`, `bio` e `avatar_url`. A role nunca é enviada pelo formulário. Se o Supabase exigir confirmação de e-mail, a sessão vem nula e a aplicação mostra mensagem para confirmar o e-mail, sem login automático artificial.
+Se houver suspeita de exposição, rotacione a credencial no provedor e trate o incidente conforme o runbook.
 
-### Profiles, trigger e RLS
+## Diagnósticos e operação
 
-A migração versionada `supabase/migrations/20260715130000_create_profiles.sql` cria `public.profiles`, constraints de username/role, timestamps, trigger de `updated_at`, trigger `security definer` em `auth.users` e RLS. Ela remove triggers/policies pelo nome antes de recriá-los, reduzindo risco em reexecuções após falhas parciais. A trigger cria o profile automaticamente a partir de `raw_user_meta_data`, atribui sempre `member` e ignora qualquer role em metadata. Usuários autenticados leem perfis e atualizam apenas o próprio perfil; `id`, `role` e `created_at` não podem ser alterados pelo usuário comum. A policy de update não consulta `profiles` dentro de `WITH CHECK`, evitando recursão de RLS; o bloqueio de campos imutáveis fica em trigger. Permissões administrativas críticas ainda exigirão claims confiáveis ou validação segura no backend em sprint posterior.
+Diagnósticos administrativos devem ser executados somente por usuários autorizados e sem exibir secrets, tokens, headers sensíveis ou corpos de resposta que revelem credenciais.
 
-### Como aplicar a migração pelo SQL Editor
+Para operação, baseline, rollback e incidentes consulte:
 
-1. Após revisar a PR, abra o painel do Supabase do projeto.
-2. Acesse **SQL Editor**.
-3. Copie todo o conteúdo de `supabase/migrations/20260715130000_create_profiles.sql`.
-4. Cole no editor e execute uma única vez.
-5. Não execute comandos com `service_role` no navegador e não copie credenciais para o repositório.
-
-### Como verificar a migração
-
-- **Tabela profiles:** em Table Editor, confirme `public.profiles` com `id`, `username`, `display_name`, `country`, `bio`, `avatar_url`, `role`, `created_at` e `updated_at`.
-- **Trigger:** em Database > Triggers, confirme `on_auth_user_created_create_profile` em `auth.users`.
-- **RLS:** confirme Row Level Security habilitado em `public.profiles`.
-- **Políticas:** confirme as policies de leitura autenticada e atualização do próprio perfil.
-- **Cadastro criando profile:** crie um usuário pelo fluxo da aplicação, confirme o e-mail se necessário e verifique se `public.profiles` recebeu o registro automaticamente sem chamada `insert` do frontend.
+- [Arquitetura](ARCHITECTURE.md)
+- [Persistência](PERSISTENCE.md)
+- [Segurança](SECURITY.md)
+- [Deployment preflight](docs/deployment-preflight.md)
+- [Runbook operacional](docs/operations-runbook.md)
