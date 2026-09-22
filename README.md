@@ -27,8 +27,7 @@ npm run build
 npm run test:e2e
 ```
 
-Somente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` são configuração pública do
-frontend. Copie `.env.example` para uso local e nunca versione credenciais.
+A configuração do backend é fornecida por variáveis de ambiente. Os nomes operacionais e os valores ficam fora da documentação pública; consulte os arquivos de configuração e os cofres protegidos do CI sem copiá-los para Markdown.
 
 ## Banco de dados e ambiente de produção
 
@@ -42,8 +41,7 @@ Os dados criados por usuários em produção são dados persistidos no ambiente 
 devem ser tratados como fixtures ou dados descartáveis de demonstração. Alterações de
 schema devem ser feitas exclusivamente por migrations versionadas em
 `supabase/migrations/`, preservando migrations já aplicadas. O acesso do frontend usa
-somente as credenciais públicas previstas e as regras de autorização/RLS do banco; nunca
-versione `service_role`, senha do banco, access token ou outros segredos.
+somente a configuração pública prevista e as regras de autorização/RLS do banco. Nomes internos de credenciais, tokens, senhas e identificadores operacionais não devem ser reproduzidos na documentação pública.
 
 Para detalhes de arquitetura, migrations, RLS, Auth e operação do backend, consulte
 [SUPABASE.md](SUPABASE.md) e o
