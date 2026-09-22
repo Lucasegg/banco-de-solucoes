@@ -30,6 +30,25 @@ npm run test:e2e
 Somente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` são configuração pública do
 frontend. Copie `.env.example` para uso local e nunca versione credenciais.
 
+## Banco de dados e ambiente de produção
+
+A aplicação publicada usa **Supabase/PostgreSQL real e persistente** como backend de
+produção. O deploy da `main` valida as credenciais obrigatórias, vincula o projeto
+Supabase configurado, compara as migrations locais e remotas, aplica migrations
+pendentes com `supabase db push` e publica a Edge Function de contato antes do deploy
+do frontend.
+
+Os dados criados por usuários em produção são dados persistidos no ambiente real; não
+devem ser tratados como fixtures ou dados descartáveis de demonstração. Alterações de
+schema devem ser feitas exclusivamente por migrations versionadas em
+`supabase/migrations/`, preservando migrations já aplicadas. O acesso do frontend usa
+somente as credenciais públicas previstas e as regras de autorização/RLS do banco; nunca
+versione `service_role`, senha do banco, access token ou outros segredos.
+
+Para detalhes de arquitetura, migrations, RLS, Auth e operação do backend, consulte
+[SUPABASE.md](SUPABASE.md) e o
+[runbook operacional](docs/operations-runbook.md).
+
 ## Documentação 1.0
 
 - [Arquitetura e estrutura técnica](ARCHITECTURE.md)
