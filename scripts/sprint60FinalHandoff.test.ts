@@ -24,16 +24,15 @@ test('documentos finais existem e o README funciona como índice sem duplicar o 
   assert.ok(docs['README.md'].length < 6_000, 'README deve permanecer um ponto de entrada conciso');
 });
 
-test('handoff ancora o merge da Sprint 59 e limita afirmações à evidência', () => {
+test('handoff preserva o baseline histórico e descreve corretamente o estado publicado', () => {
   const baseline = '6acf9ed60d9c60ec74d1bf287650e7f428c926d5';
-  for (const path of ['docs/sprint-60-final-audit.md', 'docs/release-1.0-manifesto.md']) {
-    assert.ok(docs[path].includes(baseline), `${path} não registra o baseline`);
-  }
+  assert.ok(docs['docs/sprint-60-final-audit.md'].includes(baseline), 'auditoria final não registra o baseline histórico');
   assert.match(combined, /32802239294/);
   assert.match(combined, /ECONNRESET/);
-  assert.match(docs['docs/release-1.0-manifesto.md'], /CANDIDATA, NÃO ENCERRADA/);
-  assert.match(docs['docs/release-1.0-manifesto.md'], /PENDENTES?.*SHA final/is);
-  assert.doesNotMatch(combined, /Sprint 60[^\n]{0,80}(?:foi|está|ficou) (?:integralmente )?(?:aprovada|verde|concluída)/i);
+  assert.match(docs['docs/release-1.0-manifesto.md'], /PUBLICADA E EM PRODUÇÃO/);
+  assert.match(docs['docs/release-1.0-manifesto.md'], /Um run verde comprova somente\s+a revisão que ele executou/is);
+  assert.match(docs['docs/release-1.0-manifesto.md'], /Não reutilize um run\s+antigo como prova de saúde atual/is);
+  assert.doesNotMatch(docs['docs/release-1.0-manifesto.md'], /CANDIDATA, NÃO ENCERRADA/);
 });
 
 test('arquitetura registra frontend, Supabase, RLS, Edge Function e dependências', () => {

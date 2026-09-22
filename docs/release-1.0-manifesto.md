@@ -1,19 +1,18 @@
 # Manifesto de entrega — Banco de Soluções 1.0
 
-## Estado da decisão
+## Estado atual
 
-**CANDIDATA, NÃO ENCERRADA.** A conclusão formal só ocorre após todos os gates do SHA
-final da Sprint 60, Production Preflight e Daily production health monitor ficarem
-verdes e seus links serem registrados na PR. Documentação ou execução anterior não
-substitui essa evidência.
+**PUBLICADA E EM PRODUÇÃO.** A versão 1.0 está em operação no domínio canônico
+<https://www.bancodesolucoes.com.br/>. A evidência histórica de go-live permanece
+registrada em [docs/release/1.0.0-manifest.md](release/1.0.0-manifest.md); execuções
+mais recentes de `main` devem ser usadas para comprovar o estado atual de cada revisão.
 
-## Escopo entregue e sprints
+## Escopo entregue
 
-As Sprints 1–60 construíram e estabilizaram a versão 1.0; a Sprint 59 foi integrada pela
-PR #107 no merge `6acf9ed60d9c60ec74d1bf287650e7f428c926d5`. O escopo inclui catálogo público
-de problemas/soluções, busca textual e geográfica, taxonomia/recomendações, identidade e
-perfis, contribuições moderadas, interações, reputação, notificações, contato, páginas
-legais/LGPD, administração, acessibilidade, i18n e operação de produção.
+A versão 1.0 inclui catálogo público de problemas/soluções, busca textual e geográfica,
+taxonomia/recomendações, identidade e perfis, contribuições moderadas, interações,
+reputação, notificações, contato, páginas legais/LGPD, administração, acessibilidade,
+i18n e operação de produção.
 
 ## Arquitetura e segurança
 
@@ -23,25 +22,26 @@ em [ARCHITECTURE.md](../ARCHITECTURE.md). Autorização combina guards de interf
 políticas/RPCs no banco; credenciais privilegiadas ficam fora do browser; migrations são
 versionadas e o smoke bloqueia mutações.
 
+Nenhum documento público deve conter valores reais de secrets, tokens, senhas, chaves,
+identificadores privados de infraestrutura ou dados pessoais desnecessários.
+
 ## Acessibilidade e operação
 
-Teclado, skip link, foco, landmarks, mensagens acessíveis, 320 px/desktop e catálogos
-pt-BR/en-US têm cobertura automatizada, sem alegação de certificação WCAG externa. A
-operação possui verify, E2E, preflight, migrations/health, deploy, smoke pós-deploy e
-monitor diário. Incidentes e rollback seguem o [runbook](operations-runbook.md).
+Teclado, skip link, foco, landmarks, mensagens acessíveis, viewport estreito/desktop e
+catálogos pt-BR/en-US têm cobertura automatizada, sem alegação de certificação WCAG
+externa. A operação possui verify, E2E, preflight, migrations/health, deploy, smoke
+pós-deploy e monitor diário. Incidentes e rollback seguem o
+[runbook](operations-runbook.md).
 
-## Evidências de produção
+## Evidências
 
-O baseline pós-Sprint 59 é o [run 32802239294](https://github.com/Lucasegg/banco-de-solucoes/actions/runs/32802239294),
-no qual verify, E2E, migrate-and-health, deploy e a reexecução do smoke ficaram verdes.
-A primeira tentativa teve `ECONNRESET` em `manifest.webmanifest`; a causa operacional foi
-registrada, nenhuma assertion funcional falhou e a execução seguinte passou inteira.
-Os links do preflight e monitor da Sprint 60 ainda estão **PENDENTES** na PR e devem
-referenciar exatamente o SHA final.
+Evidências de runs, SHAs e PRs são históricas por natureza. Um run verde comprova somente
+a revisão que ele executou. Para estado corrente, valide o SHA da `main`, o último
+**Verify, migrate and deploy** e o smoke pós-deploy correspondente. Não reutilize um run
+antigo como prova de saúde atual.
 
 ## Riscos residuais e limitações conhecidas
 
-- HashRouter sem SSR/prerender limita SEO individual de rotas.
 - GitHub Pages, Supabase, DNS, OAuth e Resend são dependências externas.
 - Smoke não cria conta, conteúdo, contato ou ação administrativa; integrações mutáveis
   exigem validação controlada e consentida.
@@ -50,25 +50,9 @@ referenciar exatamente o SHA final.
 - Não há licença definitiva; uso/redistribuição não são automaticamente autorizados.
 - Conteúdo depende de moderação humana, e atendimento LGPD depende do administrador.
 
-## Fora do escopo
-
-Novas funcionalidades, aplicativo nativo, SSR, tradução automática de conteúdo,
-operação offline, SLA comercial, auditoria externa/certificação, troca de infraestrutura,
-alteração de domínio, nova migration/RLS e automação de ações destrutivas não integram a
-Sprint 60.
-
-## Critérios de conclusão 1.0
-
-1. Baseline da Sprint 59 presente e patch revisado sem mudança sensível não declarada.
-2. `npm ci`, contratos cumulativos/57–60, auditorias, migrations estáticas, build, bundle,
-   E2E e `git diff --check` verdes.
-3. PR revisada e Actions verdes no SHA final.
-4. Production Preflight e Daily production health monitor verdes no mesmo SHA, com URLs.
-5. Deploy e smoke pós-deploy verdes antes de declarar a versão publicada concluída.
-
 ## Manutenção futura
 
 Manter fluxo branch/PR, dependências em lotes pequenos, migration aditiva imutável,
-regressão por defeito e revisão periódica de logs, custos, entregabilidade, acessibilidade,
-secrets, DNS/certificado e políticas. Uma futura mudança deve atualizar arquitetura,
-runbook e riscos junto do código; não reutilize o marco 1.0 como evidência do novo SHA.
+regressão por defeito e revisão periódica de logs, custos, entregabilidade,
+acessibilidade, secrets, DNS/certificado e políticas. Toda mudança relevante deve
+atualizar arquitetura, runbook e riscos junto do código.
