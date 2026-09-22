@@ -2,7 +2,7 @@
 
 ## 1. Visão
 
-Criar uma plataforma colaborativa e open source que conecte problemas, soluções, pessoas, empresas e projetos em uma base mundial de conhecimento acionável.
+Criar uma plataforma colaborativa que conecte problemas, soluções, pessoas, empresas e projetos em uma base mundial de conhecimento acionável.
 
 ## 2. Problema
 
@@ -14,7 +14,7 @@ Informações sobre problemas sociais, técnicos, ambientais, educacionais e org
 - Pesquisadores e especialistas que analisam causas e evidências.
 - Empreendedores e empresas que propõem soluções.
 - Comunidades e governos que buscam referências de execução.
-- Desenvolvedores open source que desejam colaborar com a plataforma.
+- Desenvolvedores que desejam colaborar com a plataforma.
 
 ## 4. Proposta de valor
 
@@ -23,50 +23,50 @@ Informações sobre problemas sociais, técnicos, ambientais, educacionais e org
 - Destacar impacto, maturidade, evidências e responsáveis.
 - Facilitar descoberta e colaboração entre atores.
 
-## 5. Escopo da Fase 1
+## 5. Estado atual da versão 1.0
 
-### Incluído
+A aplicação está publicada em produção em <https://www.bancodesolucoes.com.br/> e utiliza backend real no Supabase.
 
-- Aplicação estática em React, TypeScript, Vite e TailwindCSS.
-- Documentação fundacional do produto e arquitetura.
-- Navegação entre páginas principais.
-- Dados mockados tipados para problemas e soluções.
-- Formulários sem persistência real.
-- Preparação para integração futura com Supabase.
-- Pipeline de build e GitHub Pages.
+### Entregue
 
-### Fora de escopo por enquanto
+- React + TypeScript + Vite + TailwindCSS.
+- GitHub Actions e GitHub Pages.
+- Supabase Auth e PostgreSQL com RLS.
+- Persistência real de problemas, soluções, perfis, comentários, favoritos, contribuições, notificações e demais domínios versionados.
+- Busca textual e geográfica, taxonomia e recomendações.
+- Moderação, auditoria, reputação e notificações.
+- Perfis públicos e autenticação com fluxos protegidos.
+- Realtime e Storage nos fluxos suportados.
+- Fale Conosco por Edge Function.
+- Internacionalização pt-BR/en-US.
+- Páginas legais, LGPD, SEO técnico, social metadata e monitoramento operacional.
+- Testes de unidade/contrato, E2E e smoke de produção somente leitura.
 
-- Autenticação.
-- Banco de dados real.
-- Busca avançada server-side.
-- Comentários, votos e reputação.
-- Moderação automatizada.
-- Internacionalização completa.
+### Ainda fora do escopo atual
 
-## 6. Funcionalidades
+- API pública de terceiros.
+- Exportação ampla de dados abertos.
+- Convites para projetos/times.
+- SSR/prerenderização completa.
+- Tradução automática de conteúdo e novos idiomas além dos suportados.
+- SLA comercial ou auditoria/certificação externa.
 
-| Funcionalidade | Descrição | Fase |
-| --- | --- | --- |
-| Home | Apresenta visão, métricas mockadas e chamadas para ação | 1 |
-| Explorar Problemas | Lista problemas com filtros visuais simples | 1 |
-| Explorar Soluções | Lista soluções conectadas a problemas | 1 |
-| Detalhes | Mostra contexto, impacto e relacionamentos | 1 |
-| Cadastro | Formulários para novos problemas e soluções | 1 |
-| Supabase | Preparação de configuração e contratos | 1 |
+## 6. Requisitos não funcionais
 
-## 7. Requisitos não funcionais
-
-- Interface minimalista inspirada em Notion, GitHub, Linear e Vercel.
+- Interface responsiva, acessível e simples.
 - Código tipado e organizado por domínio.
 - Build reprodutível via npm.
-- Deploy automatizado em GitHub Pages.
-- Baixa complexidade inicial para facilitar contribuição.
+- Deploy automatizado e rastreável.
+- RLS e autorização server-side para dados persistentes.
+- Migrations versionadas e imutáveis após aplicação.
+- Nenhuma credencial privilegiada no frontend ou no repositório.
+- Operação fail-closed nos gates críticos de entrega.
 
-## 8. Métricas de sucesso futuras
+## 7. Métricas de sucesso
 
 - Número de problemas cadastrados.
 - Número de soluções conectadas a problemas.
 - Taxa de problemas com pelo menos uma solução.
-- Contribuições externas aceitas.
-- Projetos iniciados a partir de conexões na plataforma.
+- Contribuições revisadas e aceitas.
+- Engajamento com comentários, favoritos e notificações.
+- Saúde operacional dos pipelines e smoke de produção.
