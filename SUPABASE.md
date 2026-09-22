@@ -8,10 +8,7 @@ A documentação abaixo descreve o estado operacional atual. Trechos de sprints 
 
 ## Client
 
-O client fica em `src/integrations/supabase/client.ts` e usa somente as variáveis públicas do Vite:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+O client fica em `src/integrations/supabase/client.ts` e usa somente configuração pública destinada ao navegador. Os nomes exatos das variáveis permanecem nos arquivos de configuração do código e não são repetidos nesta documentação pública.
 
 Quando ausentes, ambientes locais podem operar sem conexão ao projeto remoto conforme o código permitir. Isso não altera o fato de que a produção publicada é conectada ao backend real.
 
@@ -67,7 +64,7 @@ Migrations já aplicadas são imutáveis. Mudanças de banco devem entrar como m
 
 ## Configuração e segredos
 
-Somente nomes de configuração são documentados. Nunca versione ou copie para Markdown valores reais de:
+A documentação pública usa apenas categorias genéricas e não reproduz nomes internos nem valores de configuração. Nunca versione ou copie para Markdown:
 
 - tokens de gerenciamento;
 - senhas de banco;
