@@ -4,7 +4,7 @@ O Banco de Soluções existe para transformar conhecimento disperso sobre proble
 
 ## Mais do que um catálogo
 
-A plataforma não é apenas uma lista estática de problemas e soluções. Um catálogo tradicional organiza itens; o Banco de Soluções procura preservar relações, histórico, evidências, adaptações e aprendizados. Cada registro deve responder não só “o que existe?”, mas também “para qual problema isso serve?”, “em que contexto funcionou?”, “quais limites são conhecidos?” e “como pode evoluir?”.
+A plataforma não é apenas uma lista estática. Problemas, soluções, relações, histórico, evidências e contribuições são persistidos no backend de produção e evoluem com a comunidade. Cada registro deve ajudar a responder não só “o que existe?”, mas também “para qual problema isso serve?”, “em que contexto funcionou?”, “quais limites são conhecidos?” e “como pode evoluir?”.
 
 ## Como problemas e soluções se conectam
 
@@ -20,4 +20,4 @@ Contribuições permitem sugerir correções, atualizações, novas evidências,
 
 ## Memória coletiva de soluções aplicáveis
 
-A visão futura é construir uma memória coletiva mundial de soluções aplicáveis: uma base viva que conecta problemas, práticas, evidências, pessoas e organizações. Com dados confiáveis, revisão comunitária e interoperabilidade futura com backend, a plataforma poderá apoiar decisões públicas, projetos sociais, iniciativas open source e replicação responsável de soluções em diferentes contextos.
+A plataforma já opera com backend persistente, autenticação e mecanismos de colaboração. A visão de longo prazo continua sendo ampliar essa memória coletiva mundial com interoperabilidade futura, dados confiáveis, revisão comunitária e replicação responsável de soluções em diferentes contextos.
